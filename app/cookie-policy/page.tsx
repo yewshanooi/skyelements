@@ -35,7 +35,7 @@ export default function CookiePolicyPage() {
             <AccordionTrigger>What are cookies</AccordionTrigger>
             <AccordionContent className="flex flex-col gap-4 text-balance">
               <p>
-                As is common practice with almost all professional websites, this site uses cookies, which are tiny files that are downloaded to your computer, to improve your experience. This page describes what information they gather, how we use it, and why we sometimes need to store these cookies. We will also share how you can prevent these cookies from being stored; however, this may downgrade or 'break' certain elements of the site's functionality.
+                As is common practice with almost all professional websites, this site uses cookies, which are tiny files that are downloaded to your computer, to improve your experience. This page describes what information they gather, how we use it, and why we sometimes need to store these cookies. We will also share how you can prevent these cookies from being stored; however, this may downgrade or &apos;break&apos; certain elements of the site&apos;s functionality.
               </p>
             </AccordionContent>
           </AccordionItem>
@@ -67,7 +67,7 @@ export default function CookiePolicyPage() {
             <AccordionTrigger>Disabling cookies</AccordionTrigger>
             <AccordionContent className="flex flex-col gap-4 text-balance">
               <p>
-                You can prevent the setting of cookies by adjusting the settings on your browser (see your browser's Help for how to do this). Be aware that disabling cookies will affect the functionality of this and many other websites that you visit. Disabling cookies will usually also result in certain functionality and features of this site being disabled. Therefore, it is recommended that you do not disable cookies.
+                You can prevent the setting of cookies by adjusting the settings on your browser (see your browser&apos;s Help for how to do this). Be aware that disabling cookies will affect the functionality of this and many other websites that you visit. Disabling cookies will usually also result in certain functionality and features of this site being disabled. Therefore, it is recommended that you do not disable cookies.
               </p>
             </AccordionContent>
           </AccordionItem>
@@ -75,7 +75,7 @@ export default function CookiePolicyPage() {
             <AccordionTrigger>More information</AccordionTrigger>
             <AccordionContent className="flex flex-col gap-4 text-balance">
               <p>
-                Hopefully that has clarified things for you, and as was previously mentioned, if there is something that you aren't sure whether you need or not, it's usually safer to leave cookies enabled in case it does interact with one of the features you use on our site.
+                Hopefully that has clarified things for you, and as was previously mentioned, if there is something that you aren&apos;t sure whether you need or not, it&apos;s usually safer to leave cookies enabled in case it does interact with one of the features you use on our site.
               </p>
             </AccordionContent>
           </AccordionItem>
