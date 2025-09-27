@@ -24,7 +24,7 @@ export default function CookiePolicyPage() {
         </p>
       </div>
 
-      <div className="w-full max-w-xl mx-auto mt-12">
+      <div className="w-full max-w-3xl mx-auto mt-12">
         <Accordion
           type="single"
           collapsible

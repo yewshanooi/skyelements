@@ -27,101 +27,98 @@ export default function CreditsPage() {
         </p>
       </div>
 
-      <Card className="w-full max-w-sm mt-16">
-        <CardHeader>
-          <CardTitle>Google Fonts</CardTitle>
-          <CardDescription>
-            Geist & Geist Mono font family
-          </CardDescription>
-          <CardAction>
-            <a href="https://fonts.google.com/?query=Geist" target="_blank">
-              <Button variant="secondary" size="icon" className="size-8">
-                <ChevronRightIcon />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-16 w-full max-w-3xl">
+        <Card className="w-full">
+          <CardHeader>
+            <CardTitle>Google Fonts</CardTitle>
+            <CardDescription>
+              Geist & Geist Mono font family
+            </CardDescription>
+            <CardAction>
+              <Button asChild variant="secondary" size="icon" className="size-8">
+                <a href="https://fonts.google.com/?query=Geist" target="_blank">
+                  <ChevronRightIcon />
+                </a>
               </Button>
-            </a>
-          </CardAction>
-        </CardHeader>
-      </Card>
-
-      <Card className="w-full max-w-sm mt-4">
-        <CardHeader>
-          <CardTitle>Icons8</CardTitle>
-          <CardDescription>
-            Icons — Sodium
-          </CardDescription>
-          <CardAction>
-            <a href="https://icons8.com/" target="_blank">
-              <Button variant="secondary" size="icon" className="size-8">
-                <ChevronRightIcon />
+            </CardAction>
+          </CardHeader>
+        </Card>
+        <Card className="w-full">
+          <CardHeader>
+            <CardTitle>Icons8</CardTitle>
+            <CardDescription>
+              Icons — Sodium
+            </CardDescription>
+            <CardAction>
+              <Button asChild variant="secondary" size="icon" className="size-8">
+                <a href="https://icons8.com/" target="_blank">
+                  <ChevronRightIcon />
+                </a>
               </Button>
-            </a>
-          </CardAction>
-        </CardHeader>
-      </Card>
-
-      <Card className="w-full max-w-sm mt-4">
-        <CardHeader>
-          <CardTitle>Lucide</CardTitle>
-          <CardDescription>
-            Icons — Skye
-          </CardDescription>
-          <CardAction>
-            <a href="https://lucide.dev/" target="_blank">
-              <Button variant="secondary" size="icon" className="size-8">
-                <ChevronRightIcon />
+            </CardAction>
+          </CardHeader>
+        </Card>
+        <Card className="w-full">
+          <CardHeader>
+            <CardTitle>Lucide</CardTitle>
+            <CardDescription>
+              Icons — Skye
+            </CardDescription>
+            <CardAction>
+              <Button asChild variant="secondary" size="icon" className="size-8">
+                <a href="https://lucide.dev/" target="_blank">
+                  <ChevronRightIcon />
+                </a>
               </Button>
-            </a>
-          </CardAction>
-        </CardHeader>
-      </Card>
-
-      <Card className="w-full max-w-sm mt-4">
-        <CardHeader>
-          <CardTitle>Next.js</CardTitle>
-          <CardDescription>
-            Web development framework
-          </CardDescription>
-          <CardAction>
-            <a href="https://nextjs.org/" target="_blank">
-              <Button variant="secondary" size="icon" className="size-8">
-                <ChevronRightIcon />
+            </CardAction>
+          </CardHeader>
+        </Card>
+        <Card className="w-full">
+          <CardHeader>
+            <CardTitle>Next.js</CardTitle>
+            <CardDescription>
+              Web development framework
+            </CardDescription>
+            <CardAction>
+              <Button asChild variant="secondary" size="icon" className="size-8">
+                <a href="https://nextjs.org/" target="_blank">
+                  <ChevronRightIcon />
+                </a>
               </Button>
-            </a>
-          </CardAction>
-        </CardHeader>
-      </Card>
-
-      <Card className="w-full max-w-sm mt-4">
-        <CardHeader>
-          <CardTitle>shadcn</CardTitle>
-          <CardDescription>
-            UI component library
-          </CardDescription>
-          <CardAction>
-            <a href="https://ui.shadcn.com/" target="_blank">
-              <Button variant="secondary" size="icon" className="size-8">
-                <ChevronRightIcon />
+            </CardAction>
+          </CardHeader>
+        </Card>
+        <Card className="w-full">
+          <CardHeader>
+            <CardTitle>shadcn</CardTitle>
+            <CardDescription>
+              UI component library
+            </CardDescription>
+            <CardAction>
+              <Button asChild variant="secondary" size="icon" className="size-8">
+                <a href="https://ui.shadcn.com/" target="_blank">
+                  <ChevronRightIcon />
+                </a>
               </Button>
-            </a>
-          </CardAction>
-        </CardHeader>
-      </Card>
-
-      <Card className="w-full max-w-sm mt-4">
-        <CardHeader>
-          <CardTitle>Vercel</CardTitle>
-          <CardDescription>
-            Web hosting & CDN
-          </CardDescription>
-          <CardAction>
-            <a href="https://vercel.com/" target="_blank">
-              <Button variant="secondary" size="icon" className="size-8">
-                <ChevronRightIcon />
+            </CardAction>
+          </CardHeader>
+        </Card>
+        <Card className="w-full">
+          <CardHeader>
+            <CardTitle>Vercel</CardTitle>
+            <CardDescription>
+              Web hosting & CDN
+            </CardDescription>
+            <CardAction>
+              <Button asChild variant="secondary" size="icon" className="size-8">
+                <a href="https://vercel.com/" target="_blank">
+                  <ChevronRightIcon />
+                </a>
               </Button>
-            </a>
-          </CardAction>
-        </CardHeader>
-      </Card>
+            </CardAction>
+          </CardHeader>
+        </Card>
+      </div>
 
     </main>
   );
