@@ -21,7 +21,9 @@ export function NavigationBar() {
 
           <NavigationMenuItem>
             <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
-              <Link href="/">Home</Link>
+              <Link href="/">
+                Home
+              </Link>
             </NavigationMenuLink>
           </NavigationMenuItem>
 
@@ -59,25 +61,41 @@ export function NavigationBar() {
 
           <NavigationMenuItem>
             <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
-              <Link href="/commands">Commands</Link>
+              <Link href="/commands">
+                Commands
+              </Link>
             </NavigationMenuLink>
           </NavigationMenuItem>
 
           <NavigationMenuItem>
             <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
-              <Link href="/branding">Branding</Link>
+              <Link href="/branding">
+                Branding
+              </Link>
             </NavigationMenuLink>
           </NavigationMenuItem>
 
           <NavigationMenuItem>
             <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
-              <Link href="/credits">Credits</Link>
+              <Link href="/credits">
+                Credits
+              </Link>
             </NavigationMenuLink>
           </NavigationMenuItem>
 
           <NavigationMenuItem>
             <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
-              <Link href="/cookie-policy">Cookie Policy</Link>
+              <Link href="/cookie-policy">
+                Cookie Policy
+              </Link>
+            </NavigationMenuLink>
+          </NavigationMenuItem>
+
+          <NavigationMenuItem>
+            <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
+              <a href="https://github.com/yewshanooi/skye" target="_blank">
+                GitHub
+              </a>
             </NavigationMenuLink>
           </NavigationMenuItem>
           
