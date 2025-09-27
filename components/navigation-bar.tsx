@@ -15,7 +15,7 @@ import {
 
 export function NavigationBar() {
   return (
-    <div className="flex justify-center my-6 px-4">
+    <div className="flex justify-center my-4 px-2">
       <NavigationMenu viewport={false}>
         <NavigationMenuList>
 
