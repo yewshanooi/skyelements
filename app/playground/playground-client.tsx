@@ -348,7 +348,7 @@ export function PlaygroundClient() {
             <ContextMenuContent className="w-42">
               <ContextMenuItem onClick={() => copyToClipboard(getSelectedText() || editorRef.current?.textContent || '')}>
                 <Copy className="mr-2 h-4 w-4" />
-                Copy Text
+                Copy
               </ContextMenuItem>
               <ContextMenuItem onClick={pasteFromClipboard}>
                 <Clipboard className="mr-2 h-4 w-4" />
@@ -365,13 +365,13 @@ export function PlaygroundClient() {
                   Export
                 </ContextMenuSubTrigger>
                 <ContextMenuSubContent className="w-42">
+                  <ContextMenuItem onClick={() => copyToClipboard(editorRef.current?.innerHTML || '')}>
+                    <Copy className="mr-2 h-4 w-4" />
+                    Copy as HTML
+                  </ContextMenuItem>
                   <ContextMenuItem onClick={downloadText}>
                     <Download className="mr-2 h-4 w-4" />
                     Download as TXT
-                  </ContextMenuItem>
-                  <ContextMenuItem onClick={() => copyToClipboard(editorRef.current?.innerHTML || '')}>
-                    <Copy className="mr-2 h-4 w-4" />
-                    Copy HTML
                   </ContextMenuItem>
                   <ContextMenuItem onClick={() => {
                     const text = editorRef.current?.textContent || '';
