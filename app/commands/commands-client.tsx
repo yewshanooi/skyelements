@@ -69,7 +69,7 @@ export function CommandsClient() {
           <CardHeader>
             <CardTitle>Cat Fact</CardTitle>
             <CardDescription>
-              Get a random cat fact.
+              Get a random cat fact
             </CardDescription>
             <CardAction>
               <CardDescription>catfact.ninja — v1</CardDescription>
