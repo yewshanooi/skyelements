@@ -28,7 +28,7 @@ export function CommandsClient() {
       }
       setCatFactResult(data.fact);
     } catch (error) {
-      setCatFactResult('Error: Failed to fetch cat fact');
+      setCatFactResult(`Error: ${error}`);
     } finally {
       setLoading(prev => ({ ...prev, cat: false }));
     }
@@ -45,7 +45,7 @@ export function CommandsClient() {
       }
       setGeneralFactResult(data.fact);
     } catch (error) {
-      setGeneralFactResult('Error: Failed to fetch general fact');
+      setGeneralFactResult(`Error: ${error}`);
     } finally {
       setLoading(prev => ({ ...prev, general: false }));
     }
@@ -81,8 +81,8 @@ export function CommandsClient() {
               <Button
                 onClick={runCatFact}
                 variant="secondary"
-                size="sm"
                 disabled={loading.cat}
+                className="cursor-pointer disabled:cursor-not-allowed"
               >
                 <Terminal />
                 {loading.cat ? 'Loading...' : 'Run Command'}
@@ -114,8 +114,8 @@ export function CommandsClient() {
               <Button
                 onClick={runGeneralFact}
                 variant="secondary"
-                size="sm"
                 disabled={loading.general}
+                className="cursor-pointer disabled:cursor-not-allowed"
               >
                 <Terminal />
                 {loading.general ? 'Loading...' : 'Run Command'}
