@@ -43,7 +43,7 @@ export default function BrandingPage() {
                   alt="SkyElements Green 1 Logo"
                   width={100}
                   height={100}
-                  className="h-16 w-auto"
+                  className="h-14 w-auto"
                 />
               </div>
             </CardContent>
@@ -59,7 +59,7 @@ export default function BrandingPage() {
                   alt="SkyElements Green 2 Logo"
                   width={100}
                   height={100}
-                  className="h-16 w-auto"
+                  className="h-14 w-auto"
                 />
               </div>
             </CardContent>
@@ -75,7 +75,7 @@ export default function BrandingPage() {
                   alt="SkyElements Monochrome 1 Logo"
                   width={100}
                   height={100}
-                  className="h-16 w-auto"
+                  className="h-14 w-auto"
                 />
               </div>
             </CardContent>
@@ -91,7 +91,7 @@ export default function BrandingPage() {
                   alt="SkyElements Monochrome 2 Logo"
                   width={100}
                   height={100}
-                  className="h-16 w-auto"
+                  className="h-14 w-auto"
                 />
               </div>
             </CardContent>
@@ -113,7 +113,7 @@ export default function BrandingPage() {
                     alt="SkyElements Logo"
                     width={239}
                     height={55}
-                    className="h-14 w-auto"
+                    className="h-12 w-auto"
                     // priority
                   />
                 </div>
@@ -125,8 +125,8 @@ export default function BrandingPage() {
         <div className="flex-1 flex flex-col items-center">
           <h2 className="text-xl font-semibold text-center text-primary mb-6">Media Kit</h2>
           <Card className="w-full max-w-sm">
-            <CardContent className="mt-4 mb-4">
-              <CardDescription className="text-center mb-5">
+            <CardContent className="mt-4 mb-3">
+              <CardDescription className="text-center mb-4">
                 Click here to download the latest media kit.
               </CardDescription>
               <div className="flex justify-center">

@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
+import { ExternalLink } from "lucide-react"
 
 import {
   NavigationMenu,
@@ -93,8 +94,8 @@ export function NavigationBar() {
 
           <NavigationMenuItem>
             <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
-              <a href="https://github.com/yewshanooi/skye" target="_blank">
-                GitHub
+              <a href="https://github.com/yewshanooi/skye" target="_blank" className="flex-row items-center gap-2">
+                GitHub <ExternalLink />
               </a>
             </NavigationMenuLink>
           </NavigationMenuItem>
