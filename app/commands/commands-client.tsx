@@ -22,6 +22,10 @@ export function CommandsClient() {
     try {
       const response = await fetch('https://catfact.ninja/fact');
       const data = await response.json();
+      if (response.status === 429) {
+        setCatFactResult('Error: Rate limit exceeded. Please try again later.');
+        return;
+      }
       if (!response.ok) {
         setCatFactResult('Error: Failed to fetch cat fact');
         return;
