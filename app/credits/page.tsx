@@ -35,7 +35,7 @@ export default function CreditsPage() {
               Geist & Geist Mono font family
             </CardDescription>
             <CardAction>
-              <Button asChild variant="secondary" size="icon" className="size-8">
+              <Button asChild variant="secondary">
                 <a href="https://fonts.google.com/?query=Geist" target="_blank">
                   <ChevronRightIcon />
                 </a>
@@ -50,7 +50,7 @@ export default function CreditsPage() {
               Icons — Sodium
             </CardDescription>
             <CardAction>
-              <Button asChild variant="secondary" size="icon" className="size-8">
+              <Button asChild variant="secondary">
                 <a href="https://icons8.com/" target="_blank">
                   <ChevronRightIcon />
                 </a>
@@ -62,10 +62,10 @@ export default function CreditsPage() {
           <CardHeader>
             <CardTitle>Lucide</CardTitle>
             <CardDescription>
-              Icons — Skye
+              Icons — SkyElements
             </CardDescription>
             <CardAction>
-              <Button asChild variant="secondary" size="icon" className="size-8">
+              <Button asChild variant="secondary">
                 <a href="https://lucide.dev/" target="_blank">
                   <ChevronRightIcon />
                 </a>
@@ -80,7 +80,7 @@ export default function CreditsPage() {
               Web development framework
             </CardDescription>
             <CardAction>
-              <Button asChild variant="secondary" size="icon" className="size-8">
+              <Button asChild variant="secondary">
                 <a href="https://nextjs.org/" target="_blank">
                   <ChevronRightIcon />
                 </a>
@@ -95,7 +95,7 @@ export default function CreditsPage() {
               UI component library
             </CardDescription>
             <CardAction>
-              <Button asChild variant="secondary" size="icon" className="size-8">
+              <Button asChild variant="secondary">
                 <a href="https://ui.shadcn.com/" target="_blank">
                   <ChevronRightIcon />
                 </a>
@@ -110,7 +110,7 @@ export default function CreditsPage() {
               Web hosting & CDN
             </CardDescription>
             <CardAction>
-              <Button asChild variant="secondary" size="icon" className="size-8">
+              <Button asChild variant="secondary">
                 <a href="https://vercel.com/" target="_blank">
                   <ChevronRightIcon />
                 </a>

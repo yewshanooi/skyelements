@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Skye",
-  description: "The future of everything elements",
+  title: "SkyElements",
+  description: "Home of everything elements",
 };
 
 export default function Page() {
@@ -11,10 +11,10 @@ return (
 
       <div className="flex flex-col gap-4">
         <h1 className="scroll-m-20 text-4xl text-center font-semibold tracking-tight text-balance">
-          Skye
+          SkyElements
         </h1>
-        <p className="text-muted-foreground text-center text-l">
-          The future of everything elements. Coming Soon.
+        <p className="text-muted-foreground text-center text-l max-w-xl">
+          Home of everything elements. Run open source projects on the web or your local device with just a few commands.
         </p>
       </div>
 

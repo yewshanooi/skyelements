@@ -94,7 +94,7 @@ export function NavigationBar() {
 
           <NavigationMenuItem>
             <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
-              <a href="https://github.com/yewshanooi/skye" target="_blank" className="flex-row items-center gap-2">
+              <a href="https://github.com/yewshanooi/skyelements" target="_blank" className="flex-row items-center gap-2">
                 GitHub <ExternalLink />
               </a>
             </NavigationMenuLink>
