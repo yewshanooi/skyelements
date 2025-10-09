@@ -18,14 +18,11 @@ export default function SodiumPage() {
           <Image
             src="/logo/sodium.png"
             alt="Sodium Logo"
-            width={75}
-            height={75}
+            width={165}
+            height={55}
             className="h-16 w-auto"
           />
         </div>
-        <h1 className="scroll-m-20 text-4xl text-center font-semibold tracking-tight text-balance">
-          Sodium
-        </h1>
         <p className="text-muted-foreground text-center text-l">
           Open source discord bot with application commands and a user-friendly interface.
         </p>

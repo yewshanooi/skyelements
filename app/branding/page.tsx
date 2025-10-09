@@ -131,7 +131,7 @@ export default function BrandingPage() {
               </CardDescription>
               <div className="flex justify-center">
                 <Button asChild variant="secondary">
-                  <a href="/asset/SkyElements_Media_Kit_v6.zip">
+                  <a href="/asset/SkyElements_Media_Kit.zip">
                     <Download /> Download
                   </a>
                 </Button>
