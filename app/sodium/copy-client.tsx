@@ -28,7 +28,7 @@ export default function CopyClient() {
     <Item variant="outline">
       <ItemContent>
         <ItemDescription>
-          <code className="bg-muted">
+          <code className="block bg-muted rounded-sm px-2 py-1 overflow-x-auto break-all max-w-full">
             git clone https://github.com/yewshanooi/sodium.git
           </code>
         </ItemDescription>

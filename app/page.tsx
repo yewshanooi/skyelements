@@ -1,5 +1,15 @@
 import type { Metadata } from "next";
+import { Button } from "@/components/ui/button"
+import { ChevronRight, ExternalLink } from "lucide-react"
 import Image from "next/image";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 
 export const metadata: Metadata = {
   title: "SkyElements",
@@ -23,6 +33,69 @@ return (
         <p className="text-muted-foreground text-center text-l max-w-xl">
           Home of everything elements. Run open source projects on the web or your local device with just a few commands.
         </p>
+      </div>
+
+      <h2 className="mt-16 text-xl font-semibold text-center text-primary">
+        Projects
+      </h2>
+
+      <div className="grid grid-cols-1 gap-4 mt-6 w-full max-w-sm">
+        <Card className="w-full">
+          <CardHeader>
+            <CardTitle>
+              <div className="flex justify-center items-center">
+                <Image
+                  src="/logo/sodium.png"
+                  alt="Sodium Logo"
+                  width={165}
+                  height={55}
+                  className="h-12 w-auto"
+                />
+              </div>
+            </CardTitle>
+
+            <CardContent>
+              <CardDescription className="text-center mb-6">
+                Open source discord bot with application commands and a user-friendly interface.
+              </CardDescription>
+              <div className="flex justify-center">
+                <Button asChild variant="secondary">
+                  <a href="/sodium">
+                    View more <ChevronRight/>
+                  </a>
+                </Button>
+              </div>
+            </CardContent>
+          </CardHeader>
+        </Card>
+      </div>
+
+      <h2 className="mt-16 text-xl font-semibold text-center text-primary">
+        News
+      </h2>
+
+      <div className="grid grid-cols-1 gap-4 mt-6 w-full max-w-sm">
+        <Card className="w-full">
+          <CardHeader>
+            <CardTitle>Sodium</CardTitle>
+            <CardDescription>
+              New music streaming features, TCG-based commands, bug fixes, and more!
+            </CardDescription>
+            <CardAction>
+              <CardDescription>Discord Bot</CardDescription>
+            </CardAction>
+          </CardHeader>
+
+          <CardContent>
+            <div className="flex justify-center">
+              <Button asChild variant="secondary">
+                <a href="https://github.com/yewshanooi/sodium/releases/" target="_blank">
+                  View on GitHub <ExternalLink />
+                </a>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
     </main>

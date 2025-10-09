@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { ChevronRightIcon } from "lucide-react"
+import { ExternalLink } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -37,7 +37,7 @@ export default function CreditsPage() {
             <CardAction>
               <Button asChild variant="secondary">
                 <a href="https://fonts.google.com/?query=Geist" target="_blank">
-                  <ChevronRightIcon />
+                  <ExternalLink />
                 </a>
               </Button>
             </CardAction>
@@ -52,7 +52,7 @@ export default function CreditsPage() {
             <CardAction>
               <Button asChild variant="secondary">
                 <a href="https://icons8.com/" target="_blank">
-                  <ChevronRightIcon />
+                  <ExternalLink />
                 </a>
               </Button>
             </CardAction>
@@ -67,7 +67,7 @@ export default function CreditsPage() {
             <CardAction>
               <Button asChild variant="secondary">
                 <a href="https://lucide.dev/" target="_blank">
-                  <ChevronRightIcon />
+                  <ExternalLink />
                 </a>
               </Button>
             </CardAction>
@@ -82,7 +82,7 @@ export default function CreditsPage() {
             <CardAction>
               <Button asChild variant="secondary">
                 <a href="https://nextjs.org/" target="_blank">
-                  <ChevronRightIcon />
+                  <ExternalLink />
                 </a>
               </Button>
             </CardAction>
@@ -97,7 +97,7 @@ export default function CreditsPage() {
             <CardAction>
               <Button asChild variant="secondary">
                 <a href="https://ui.shadcn.com/" target="_blank">
-                  <ChevronRightIcon />
+                  <ExternalLink />
                 </a>
               </Button>
             </CardAction>
@@ -112,7 +112,7 @@ export default function CreditsPage() {
             <CardAction>
               <Button asChild variant="secondary">
                 <a href="https://vercel.com/" target="_blank">
-                  <ChevronRightIcon />
+                  <ExternalLink />
                 </a>
               </Button>
             </CardAction>

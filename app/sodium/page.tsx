@@ -33,7 +33,7 @@ export default function SodiumPage() {
       </div>
 
       <div className="mt-8">
-        <Button asChild variant="default">
+        <Button asChild variant="secondary">
           <a href="https://github.com/yewshanooi/sodium/blob/main/README.md#guides" target="_blank">
             Get started <ExternalLink />
           </a>
