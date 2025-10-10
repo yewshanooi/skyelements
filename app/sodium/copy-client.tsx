@@ -8,7 +8,7 @@ import {
   ItemContent,
   ItemDescription,
 } from "@/components/ui/item";
-import { Copy, Check } from "lucide-react";
+import { Copy } from "lucide-react";
 
 export default function CopyClient() {
   const [copied, setCopied] = useState(false);
@@ -39,7 +39,7 @@ export default function CopyClient() {
           variant="secondary"
           className="cursor-pointer disabled:cursor-not-allowed"
         >
-          {copied ? <Check /> : <Copy />}
+          {!copied && <Copy />}
           {copied ? 'Copied!' : 'Copy'}
         </Button>
       </ItemActions>

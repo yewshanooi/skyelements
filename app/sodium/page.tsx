@@ -40,6 +40,10 @@ export default function SodiumPage() {
         </Button>
       </div>
 
+      <div className="text-muted-foreground text-sm mt-8">
+        <p>*By clicking &quot;Get started&quot;, you agree to the <a href="https://github.com/yewshanooi/sodium/blob/main/LICENSE" target="_blank"><u>license</u></a></p>
+      </div>
+
     </main>
   );
 }

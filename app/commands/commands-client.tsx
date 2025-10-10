@@ -88,7 +88,7 @@ export function CommandsClient() {
                 disabled={loading.cat}
                 className="cursor-pointer disabled:cursor-not-allowed"
               >
-                <Terminal />
+                {!loading.cat && <Terminal />}
                 {loading.cat ? 'Loading...' : 'Run Command'}
               </Button>
             </div>
@@ -121,7 +121,7 @@ export function CommandsClient() {
                 disabled={loading.general}
                 className="cursor-pointer disabled:cursor-not-allowed"
               >
-                <Terminal />
+                {!loading.general && <Terminal />}
                 {loading.general ? 'Loading...' : 'Run Command'}
               </Button>
             </div>
