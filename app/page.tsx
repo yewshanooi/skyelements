@@ -35,67 +35,64 @@ return (
         </p>
       </div>
 
-      <h2 className="mt-16 text-xl font-semibold text-center text-primary">
-        Projects
-      </h2>
+      <div className="flex flex-col md:flex-row justify-center gap-4 mt-16 w-full max-w-3xl">
+        {/* Projects Card */}
+        <div className="flex-1 flex flex-col items-center mb-12">
+          <h2 className="text-xl font-semibold text-center text-primary mb-6">Projects</h2>
+          <Card className="w-full max-w-sm">
+            <CardHeader>
+              <CardTitle>
+                <div className="flex justify-center items-center">
+                  <Image
+                    src="/logo/sodium.png"
+                    alt="Sodium Logo"
+                    width={165}
+                    height={55}
+                    className="h-12 w-auto"
+                  />
+                </div>
+              </CardTitle>
 
-      <div className="grid grid-cols-1 gap-4 mt-6 w-full max-w-sm">
-        <Card className="w-full">
-          <CardHeader>
-            <CardTitle>
-              <div className="flex justify-center items-center">
-                <Image
-                  src="/logo/sodium.png"
-                  alt="Sodium Logo"
-                  width={165}
-                  height={55}
-                  className="h-12 w-auto"
-                />
-              </div>
-            </CardTitle>
+              <CardContent>
+                <CardDescription className="text-center mb-6">
+                  Open source discord bot with application commands and a user-friendly interface.
+                </CardDescription>
+                <div className="flex justify-center">
+                  <Button asChild variant="secondary">
+                    <a href="/sodium">
+                      View more <ChevronRight/>
+                    </a>
+                  </Button>
+                </div>
+              </CardContent>
+            </CardHeader>
+          </Card>
+        </div>
+        {/* News Card */}
+        <div className="flex-1 flex flex-col items-center">
+          <h2 className="text-xl font-semibold text-center text-primary mb-6">News</h2>
+          <Card className="w-full max-w-sm">
+            <CardHeader className="mt-3">
+              <CardTitle>Sodium</CardTitle>
+              <CardDescription>
+                New music streaming features, TCG-based commands, bug fixes, and more!
+              </CardDescription>
+              <CardAction>
+                <CardDescription>Discord Bot</CardDescription>
+              </CardAction>
+            </CardHeader>
 
             <CardContent>
-              <CardDescription className="text-center mb-6">
-                Open source discord bot with application commands and a user-friendly interface.
-              </CardDescription>
               <div className="flex justify-center">
                 <Button asChild variant="secondary">
-                  <a href="/sodium">
-                    View more <ChevronRight/>
+                  <a href="https://github.com/yewshanooi/sodium/releases/" target="_blank">
+                    View on GitHub <ExternalLink />
                   </a>
                 </Button>
               </div>
             </CardContent>
-          </CardHeader>
-        </Card>
-      </div>
-
-      <h2 className="mt-16 text-xl font-semibold text-center text-primary">
-        News
-      </h2>
-
-      <div className="grid grid-cols-1 gap-4 mt-6 w-full max-w-sm">
-        <Card className="w-full">
-          <CardHeader>
-            <CardTitle>Sodium</CardTitle>
-            <CardDescription>
-              New music streaming features, TCG-based commands, bug fixes, and more!
-            </CardDescription>
-            <CardAction>
-              <CardDescription>Discord Bot</CardDescription>
-            </CardAction>
-          </CardHeader>
-
-          <CardContent>
-            <div className="flex justify-center">
-              <Button asChild variant="secondary">
-                <a href="https://github.com/yewshanooi/sodium/releases/" target="_blank">
-                  View on GitHub <ExternalLink />
-                </a>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+          </Card>
+        </div>
       </div>
 
     </main>
