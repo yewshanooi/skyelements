@@ -25,7 +25,7 @@ export default function CopyClient() {
   };
 
   return (
-    <Item variant="outline">
+    <Item variant="outline" className="rounded-xl">
       <ItemContent>
         <ItemDescription>
           <code className="block bg-muted rounded-sm px-2 py-1 overflow-x-auto break-all max-w-full">
