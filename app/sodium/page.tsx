@@ -6,6 +6,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardContent
 } from "@/components/ui/card";
 import Image from "next/image";
 import CopyClient from "./copy-client";
@@ -162,6 +163,131 @@ export default function SodiumPage() {
           </Card>
         </a>
       </div>
+
+      <div className="grid grid-cols-1 gap-4 mt-24 w-full max-w-3xl">
+        <Card className="w-full bg-[#f5f5f4] px-2 py-8">
+          <CardHeader>
+            <CardTitle>
+              <h2 className="text-xl font-semibold text-primary mb-2">Useful and detailed embeds</h2>
+            </CardTitle>
+            <CardDescription>
+              <p className="text-base mb-4">
+                Sodium replies to command requests with a meaningful message embed. Content is displayed in an organised manner with various text formatting. This will greatly enhance user&apos;s experience when viewing commands.
+              </p>
+              *Image simulated for illustrative purposes. Actual UI may be different.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex justify-center">
+              <Image
+                src="/sodium/sodium-weather.png"
+                alt="Sodium Weather Embed"
+                // 45% of original image size
+                width={156.6}
+                height={237.6}
+              />
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="w-full bg-[#f5f5f4] px-2 py-8">
+          <CardHeader>
+            <CardTitle>
+              <h2 className="text-xl font-semibold text-primary mb-2">Visit external links with ease</h2>
+            </CardTitle>
+            <CardDescription>
+              <p className="text-base mb-4">
+                Sodium uses buttons for commands that require users to view an external website. Additionally, links will be checked by Discord&apos;s built-in trust protection system to further protect users from malicious websites.
+              </p>
+              *Image simulated for illustrative purposes. Actual UI may be different.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex justify-center">
+              <Image
+                src="/sodium/sodium-button.png"
+                alt="Sodium Command Button"
+                // 45% of original image size
+                width={261.45}
+                height={31.5}
+              />
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="w-full bg-[#f5f5f4] px-2 py-8">
+          <CardHeader>
+            <CardTitle>
+              <h2 className="text-xl font-semibold text-primary mb-2">Seamless integration within channels</h2>
+            </CardTitle>
+            <CardDescription>
+              <p className="text-base mb-4">
+                Sodium commands are integrated within Discord channels. Commands can be requested using the slash ( / ) symbol in text channels. Furthermore, users can easily enter optional or required parameters in a text box.
+              </p>
+              *Image simulated for illustrative purposes. Actual UI may be different.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex justify-center">
+              <Image
+                src="/sodium/sodium-menu.png"
+                alt="Sodium Command Menu"
+                // 45% of original image size
+                width={320.4}
+                height={76.05}
+              />
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="w-full bg-[#f5f5f4] px-2 py-8">
+          <CardHeader>
+            <CardTitle>
+              <h2 className="text-xl font-semibold text-primary mb-2">AI-powered conversations</h2>
+            </CardTitle>
+            <CardDescription>
+              <p className="text-base mb-4">
+                Sodium uses Gemini 2.0 Flash, a new model for the agentic era, to provide an AI chatbot experience within Discord channels. Users may run the command in direct messages for additional privacy.
+              </p>
+              *Gemini may display inaccurate info, including about people, so double-check its responses.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex justify-center">
+              <Image
+                src="/sodium/sodium-gemini.png"
+                alt="Sodium Gemini Embed"
+                // 45% of original image size
+                width={414.9}
+                height={411.75}
+              />
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="w-full bg-[#f5f5f4] px-2 py-8">
+          <CardHeader>
+            <CardTitle>
+              <h2 className="text-xl font-semibold text-primary mb-2">Built-in text summarization</h2>
+            </CardTitle>
+            <CardDescription>
+              <p className="text-base mb-4">
+                Sodium uses facebook/bart-large-cnn, a large model trained and fine-tuned on the CNN/Daily Mail dataset. User input data will be processed on-device rather than sent to a server, ensuring total confidentiality.
+              </p>
+              *Image simulated for illustrative purposes. Actual UI may be different.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex justify-center">
+              <Image
+                src="/sodium/sodium-summarize.png"
+                alt="Sodium Gemini Embed"
+                // 45% of original image size
+                width={418.05}
+                height={158.85}
+              />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      
 
       <div className="text-muted-foreground text-sm mt-24 mb-16 w-full max-w-3xl">
         <p>
