@@ -75,7 +75,7 @@ return (
             <CardHeader className="mt-3">
               <CardTitle>Sodium</CardTitle>
               <CardDescription>
-                New music streaming features, TCG-based commands, bug fixes, and more!
+                Even more music streaming features, npm scripts, updated workflow, and more!
               </CardDescription>
               <CardAction>
                 <CardDescription>Discord Bot</CardDescription>

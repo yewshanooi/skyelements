@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, FolderSync, ArrowDownToLine } from "lucide-react";
+import { Separator } from "@/components/ui/separator"
+import { ExternalLink, FolderSync, ArrowDownToLine, Joystick, Wrench, ShieldUser, Music2 } from "lucide-react";
 import {
   Card,
   CardDescription,
@@ -10,6 +11,7 @@ import {
 } from "@/components/ui/card";
 import Image from "next/image";
 import CopyClient from "./copy-client";
+import { ModeToggle } from "./theme-client";
 
 export const metadata: Metadata = {
   title: "Sodium",
@@ -88,7 +90,7 @@ export default function SodiumPage() {
               <div className="flex items-center gap-6">
                 <Image
                   src="/icon/icons8-gemini-96.png"
-                  alt="AI Chatbot Icon"
+                  alt="Google Gemini Logo"
                   width={32}
                   height={32}
                 />
@@ -108,7 +110,7 @@ export default function SodiumPage() {
               <div className="flex items-center gap-6">
                 <Image
                   src="/icon/icons8-hugging-face-96.png"
-                  alt="Text Summarizer Icon"
+                  alt="Hugging Face Logo"
                   width={32}
                   height={32}
                 />
@@ -128,7 +130,7 @@ export default function SodiumPage() {
               <div className="flex items-center gap-6">
                 <Image
                   src="/icon/icons8-leaf-96.png"
-                  alt="Logs & Leaderboard Icon"
+                  alt="MongoDB Logo"
                   width={32}
                   height={32}
                 />
@@ -148,7 +150,7 @@ export default function SodiumPage() {
               <div className="flex items-center gap-6">
                 <Image
                   src="/icon/icons8-lavalink-96.png"
-                  alt="Music Streaming Icon"
+                  alt="Lavalink Logo"
                   width={32}
                   height={32}
                 />
@@ -165,7 +167,7 @@ export default function SodiumPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 mt-24 w-full max-w-3xl">
-        <Card className="w-full bg-[#f5f5f4] px-2 py-8">
+        <Card className="w-full px-2 py-8">
           <CardHeader>
             <CardTitle>
               <h2 className="text-xl font-semibold text-primary mb-2">Useful and detailed embeds</h2>
@@ -181,7 +183,7 @@ export default function SodiumPage() {
             <div className="flex justify-center">
               <Image
                 src="/sodium/sodium-weather.png"
-                alt="Sodium Weather Embed"
+                alt="Sodium - Weather Embed"
                 // 45% of original image size
                 width={156.6}
                 height={237.6}
@@ -189,7 +191,7 @@ export default function SodiumPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="w-full bg-[#f5f5f4] px-2 py-8">
+        <Card className="w-full px-2 py-8">
           <CardHeader>
             <CardTitle>
               <h2 className="text-xl font-semibold text-primary mb-2">Visit external links with ease</h2>
@@ -205,7 +207,7 @@ export default function SodiumPage() {
             <div className="flex justify-center">
               <Image
                 src="/sodium/sodium-button.png"
-                alt="Sodium Command Button"
+                alt="Sodium - Command Button"
                 // 45% of original image size
                 width={261.45}
                 height={31.5}
@@ -213,7 +215,7 @@ export default function SodiumPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="w-full bg-[#f5f5f4] px-2 py-8">
+        <Card className="w-full px-2 py-8">
           <CardHeader>
             <CardTitle>
               <h2 className="text-xl font-semibold text-primary mb-2">Seamless integration within channels</h2>
@@ -229,7 +231,7 @@ export default function SodiumPage() {
             <div className="flex justify-center">
               <Image
                 src="/sodium/sodium-menu.png"
-                alt="Sodium Command Menu"
+                alt="Sodium - Command Menu"
                 // 45% of original image size
                 width={320.4}
                 height={76.05}
@@ -237,7 +239,7 @@ export default function SodiumPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="w-full bg-[#f5f5f4] px-2 py-8">
+        <Card className="w-full px-2 py-8">
           <CardHeader>
             <CardTitle>
               <h2 className="text-xl font-semibold text-primary mb-2">AI-powered conversations</h2>
@@ -253,7 +255,7 @@ export default function SodiumPage() {
             <div className="flex justify-center">
               <Image
                 src="/sodium/sodium-gemini.png"
-                alt="Sodium Gemini Embed"
+                alt="Sodium - Gemini Embed"
                 // 45% of original image size
                 width={414.9}
                 height={411.75}
@@ -261,7 +263,7 @@ export default function SodiumPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="w-full bg-[#f5f5f4] px-2 py-8">
+        <Card className="w-full px-2 py-8">
           <CardHeader>
             <CardTitle>
               <h2 className="text-xl font-semibold text-primary mb-2">Built-in text summarization</h2>
@@ -277,7 +279,7 @@ export default function SodiumPage() {
             <div className="flex justify-center">
               <Image
                 src="/sodium/sodium-summarize.png"
-                alt="Sodium Gemini Embed"
+                alt="Sodium - Summarize Embed"
                 // 45% of original image size
                 width={418.05}
                 height={158.85}
@@ -287,13 +289,134 @@ export default function SodiumPage() {
         </Card>
       </div>
 
-      <div className="text-muted-foreground text-sm mt-24 mb-16 w-full max-w-3xl">
+      <h2 className="mt-24 text-xl font-semibold text-center text-primary">
+        Featured Commands
+      </h2>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6 w-full max-w-3xl">
+        <Card className="w-full">
+          <CardHeader>
+            <div className="flex items-center gap-6">
+              <Image
+                src="/icon/icons8-youtube-96.png"
+                alt="YouTube Logo"
+                width={32}
+                height={32}
+              />
+              <div className="space-y-1.5">
+                <CardTitle>Watch Together</CardTitle>
+                <CardDescription>
+                  /youtube
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+        </Card>
+        <Card className="w-full">
+          <CardHeader>
+            <div className="flex items-center gap-6">
+              <Image
+                src="/icon/icons8-spotify-96.png"
+                alt="Spotify Logo"
+                width={32}
+                height={32}
+              />
+              <div className="space-y-1.5">
+                <CardTitle>Now Playing</CardTitle>
+                <CardDescription>
+                  /spotify
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+        </Card>
+      </div>
+
+      <h2 className="mt-24 text-xl font-semibold text-center text-primary">
+        All Commands
+      </h2>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6 w-full max-w-3xl">
+        <Card className="w-full">
+          <CardHeader>
+            <div className="flex items-center gap-6">
+              <div className="p-1">
+                <div className="flex items-center justify-center mb-4">
+                  <Joystick className="h-6 w-6 mr-2" />
+                  <CardTitle>Fun</CardTitle>
+                </div>
+                <CardDescription>
+                  8ball, achievement, beep, coinflip, color, compliment, diceroll, fact <b>[cat | dog | general | useless]</b>, fortnite, giphy, grandarchive, hypixel, leagueoflegends, lyrics, meme, minecraft, mtg, nasa, neko, pokemon, rps, spotify, urban, word, wynncraft, youtube
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+        </Card>
+        <Card className="w-full">
+          <CardHeader>
+            <div className="flex items-center gap-6">
+              <div className="p-1">
+                <div className="flex items-center justify-center mb-4">
+                  <Wrench className="h-6 w-6 mr-2" />
+                  <CardTitle>Utility</CardTitle>
+                </div>
+                <CardDescription>
+                  afk, botpresence, botsetnick, calculator, crypto, dictionary, gemini, github, guildrename, help, info <b>[channel | client | guild | role | user]</b>, invite, leaderboard <b>[add | remove | reset | view]</b>, leave, message, mongodb <b>[initialize | delete]</b>, news, npm, ping, qrcode, say, summarize, thread, weather, wikipedia
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+        </Card>
+        <Card className="w-full">
+          <CardHeader>
+            <div className="flex items-center gap-6">
+              <div className="p-1">
+                <div className="flex items-center justify-center mb-4">
+                  <ShieldUser className="h-6 w-6 mr-2" />
+                  <CardTitle>Moderation</CardTitle>
+                </div>
+                <CardDescription>
+                  ban, channel <b>[delete | lock | rename | unlock]</b>, deafen, kick, logs <b>[add | remove | reset | view]</b>, purge, role <b>[add | remove]</b>, setnick, slowmode, timeout, unban, undeafen, untimeout, warn
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+        </Card>
+        <Card className="w-full">
+          <CardHeader>
+            <div className="flex items-center gap-6">
+              <div className="p-1">
+                <div className="flex items-center justify-center mb-4">
+                  <Music2 className="h-6 w-6 mr-2" />
+                  <CardTitle>Music</CardTitle>
+                </div>
+                <CardDescription>
+                  autoplay, filter, loop, nowplaying, pause, play, queue, resume, seek, shuffle, skip, stop, volume
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+        </Card>
+      </div>
+
+      <div className="text-muted-foreground text-sm mt-24 w-full max-w-3xl">
         <p>
           ¹ Based on discord.js&apos;s stable branch <a href="https://github.com/discordjs/discord.js/releases" target="_blank"><u>release</u></a> schedule.<br />
           ² No fees or subscriptions required. Users must abide by the <a href="https://github.com/yewshanooi/sodium/blob/main/LICENSE" target="_blank"><u>license</u></a> to modify or distribute the bot.<br />
           ³ Gemini is a large language model developed by Google DeepMind. It is the successor to LaMDA and PaLM 2.<br />
           ⁴ Transformers.js is an npm package developed by Hugging Face to run pre-trained machine learning models.
         </p>
+      </div>
+
+      <Separator className="mt-12 mb-12 max-w-3xl" />
+
+      <div className="text-muted-foreground text-sm mb-12 w-full max-w-3xl">
+        <div className="flex justify-between items-center">
+          <p>
+            &copy; SkyElements. All rights reserved.
+          </p>
+          <ModeToggle />
+        </div>
       </div>
 
     </main>

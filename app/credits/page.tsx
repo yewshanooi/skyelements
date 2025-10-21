@@ -62,7 +62,7 @@ export default function CreditsPage() {
           <CardHeader>
             <CardTitle>Lucide</CardTitle>
             <CardDescription>
-              Icons — SkyElements
+              Icons — SkyElements, Sodium
             </CardDescription>
             <CardAction>
               <Button asChild variant="secondary">
