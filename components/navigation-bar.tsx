@@ -2,8 +2,8 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { ExternalLink } from "lucide-react"
-
+import { usePathname } from "next/navigation"
+import { ExternalLink, Menu, X } from "lucide-react"
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -13,11 +13,34 @@ import {
   NavigationMenuTrigger,
   navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu"
+import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu"
 
 export function NavigationBar() {
+  const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false)
+  const pathname = usePathname()
+
+  // Get current page name for mobile menu button
+  const getCurrentPageName = () => {
+    if (pathname === "/") return "Home"
+    if (pathname === "/sodium") return "Home › Sodium › About"
+    if (pathname === "/commands") return "Home › Sodium › Commands"
+    if (pathname === "/branding") return "Home › Branding"
+    if (pathname === "/credits") return "Home › Credits"
+    if (pathname === "/cookie-policy") return "Home › Cookie Policy"
+    return "Menu"
+  }
+
   return (
     <div className="flex justify-center my-4 px-2">
-      <NavigationMenu viewport={false}>
+      {/* Desktop Navigation */}
+      <NavigationMenu viewport={false} className="hidden md:flex">
         <NavigationMenuList>
 
           <NavigationMenuItem>
@@ -47,25 +70,17 @@ export function NavigationBar() {
                     </Link>
                   </NavigationMenuLink>
                 </li>
-                <ListItem href="https://github.com/yewshanooi/sodium/blob/main/README.md#guides" title="Get Started">
+                <ListItem href="/commands" title="Commands">
+                  Preview commands from Sodium
+                </ListItem>
+                <ListItem href="https://github.com/yewshanooi/sodium/blob/main/README.md#guides" title={<>Get Started <ExternalLink className="ml-1 h-4 w-4" /></>}>
                   Customize & host your own Sodium bot
                 </ListItem>
-                <ListItem href="https://github.com/yewshanooi/sodium/blob/main/LICENSE" title="License">
+                <ListItem href="https://github.com/yewshanooi/sodium/blob/main/LICENSE" title={<>License <ExternalLink className="ml-1 h-4 w-4" /></>}>
                   Sodium is licensed under MIT License
-                </ListItem>
-                <ListItem href="https://github.com/yewshanooi/sodium" title="Source Code">
-                  Check out the source code at GitHub
                 </ListItem>
               </ul>
             </NavigationMenuContent>
-          </NavigationMenuItem>
-
-          <NavigationMenuItem>
-            <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
-              <Link href="/commands">
-                Commands
-              </Link>
-            </NavigationMenuLink>
           </NavigationMenuItem>
 
           <NavigationMenuItem>
@@ -102,6 +117,106 @@ export function NavigationBar() {
           
         </NavigationMenuList>
       </NavigationMenu>
+
+      {/* Mobile Navigation */}
+      <div className="flex md:hidden w-full max-w-sm">
+        <DropdownMenu open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+          <DropdownMenuTrigger asChild>
+            <Button 
+              variant="outline" 
+              className="w-full justify-between"
+              aria-label="Toggle menu"
+            >
+              <span>{getCurrentPageName()}</span>
+              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent 
+            align="center" 
+            className="w-[calc(100vw-2rem)] max-w-md max-h-[70vh] overflow-y-auto"
+          >
+            <DropdownMenuItem asChild>
+              <Link href="/" className="w-full cursor-pointer">
+                Home
+              </Link>
+            </DropdownMenuItem>
+
+            <DropdownMenuSeparator />
+            
+            <div className="px-2 py-1.5">
+              <div className="text-sm font-semibold mb-2 text-muted-foreground">Sodium</div>
+              <DropdownMenuItem asChild>
+                <Link href="/sodium" className="w-full cursor-pointer pl-4">
+                  About
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/commands" className="w-full cursor-pointer pl-4">
+                  Commands
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <a 
+                  href="https://github.com/yewshanooi/sodium/blob/main/README.md#guides" 
+                  className="w-full cursor-pointer pl-4"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Get Started <ExternalLink className="h-4 w-4" />
+                </a>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <a 
+                  href="https://github.com/yewshanooi/sodium/blob/main/LICENSE" 
+                  className="w-full cursor-pointer pl-4"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  License <ExternalLink className="h-4 w-4" />
+                </a>
+              </DropdownMenuItem>
+            </div>
+
+            <DropdownMenuSeparator />
+
+            <DropdownMenuItem asChild>
+              <Link href="/branding" className="w-full cursor-pointer">
+                Branding
+              </Link>
+            </DropdownMenuItem>
+
+            <DropdownMenuSeparator />
+
+            <DropdownMenuItem asChild>
+              <Link href="/credits" className="w-full cursor-pointer">
+                Credits
+              </Link>
+            </DropdownMenuItem>
+
+            <DropdownMenuSeparator />
+
+            <DropdownMenuItem asChild>
+              <Link href="/cookie-policy" className="w-full cursor-pointer">
+                Cookie Policy
+              </Link>
+            </DropdownMenuItem>
+
+            <DropdownMenuSeparator />
+
+            <DropdownMenuItem asChild>
+              <a 
+                href="https://github.com/yewshanooi/skyelements" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="w-full cursor-pointer flex items-center gap-2"
+              >
+                GitHub <ExternalLink className="h-4 w-4" />
+              </a>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
     </div>
   )
 }
@@ -111,12 +226,15 @@ function ListItem({
   children,
   href,
   ...props
-}: React.ComponentPropsWithoutRef<"li"> & { href: string }) {
+}: Omit<React.ComponentPropsWithoutRef<"li">, "title"> & { 
+  href: string
+  title: React.ReactNode 
+}) {
   return (
     <li {...props}>
       <NavigationMenuLink asChild>
         <Link href={href}>
-          <div className="text-sm leading-none font-medium">{title}</div>
+          <div className="text-sm leading-none font-medium flex items-center gap-1">{title}</div>
           <p className="text-muted-foreground line-clamp-2 text-sm leading-snug">
             {children}
           </p>
