@@ -73,10 +73,10 @@ export function NavigationBar() {
                 <ListItem href="/commands" title="Commands">
                   Preview commands from Sodium
                 </ListItem>
-                <ListItem href="https://github.com/yewshanooi/sodium/blob/main/README.md#guides" title={<>Get Started <ExternalLink className="ml-1 h-4 w-4" /></>}>
+                <ListItem href="https://github.com/yewshanooi/sodium/blob/main/README.md#guides" title={<>Get Started <ExternalLink className="ml-1 h-4 w-4" /></>} target="_blank">
                   Customize & host your own Sodium bot
                 </ListItem>
-                <ListItem href="https://github.com/yewshanooi/sodium/blob/main/LICENSE" title={<>License <ExternalLink className="ml-1 h-4 w-4" /></>}>
+                <ListItem href="https://github.com/yewshanooi/sodium/blob/main/LICENSE" title={<>License <ExternalLink className="ml-1 h-4 w-4" /></>} target="_blank">
                   Sodium is licensed under MIT License
                 </ListItem>
               </ul>
@@ -157,20 +157,18 @@ export function NavigationBar() {
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <a 
-                  href="https://github.com/yewshanooi/sodium/blob/main/README.md#guides" 
+                  href="https://github.com/yewshanooi/sodium/blob/main/README.md#guides"
                   className="w-full cursor-pointer pl-4"
                   target="_blank"
-                  rel="noopener noreferrer"
                 >
                   Get Started <ExternalLink className="h-4 w-4" />
                 </a>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <a 
-                  href="https://github.com/yewshanooi/sodium/blob/main/LICENSE" 
+                  href="https://github.com/yewshanooi/sodium/blob/main/LICENSE"
                   className="w-full cursor-pointer pl-4"
                   target="_blank"
-                  rel="noopener noreferrer"
                 >
                   License <ExternalLink className="h-4 w-4" />
                 </a>
@@ -205,10 +203,9 @@ export function NavigationBar() {
 
             <DropdownMenuItem asChild>
               <a 
-                href="https://github.com/yewshanooi/skyelements" 
-                target="_blank" 
-                rel="noopener noreferrer"
+                href="https://github.com/yewshanooi/skyelements"
                 className="w-full cursor-pointer flex items-center gap-2"
+                target="_blank"
               >
                 GitHub <ExternalLink className="h-4 w-4" />
               </a>
@@ -225,15 +222,17 @@ function ListItem({
   title,
   children,
   href,
+  target,
   ...props
 }: Omit<React.ComponentPropsWithoutRef<"li">, "title"> & { 
   href: string
-  title: React.ReactNode 
+  title: React.ReactNode
+  target?: string
 }) {
   return (
     <li {...props}>
       <NavigationMenuLink asChild>
-        <Link href={href}>
+        <Link href={href} target={target}>
           <div className="text-sm leading-none font-medium flex items-center gap-1">{title}</div>
           <p className="text-muted-foreground line-clamp-2 text-sm leading-snug">
             {children}
