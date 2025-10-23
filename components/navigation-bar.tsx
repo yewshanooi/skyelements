@@ -21,6 +21,8 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
+import { Separator } from "@/components/ui/separator"
+import { ModeToggle } from "./theme-client";
 
 export function NavigationBar() {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false)
@@ -29,16 +31,16 @@ export function NavigationBar() {
   // Get current page name for mobile menu button
   const getCurrentPageName = () => {
     if (pathname === "/") return "Home"
-    if (pathname === "/sodium") return "Home › Sodium › About"
-    if (pathname === "/commands") return "Home › Sodium › Commands"
-    if (pathname === "/branding") return "Home › Branding"
-    if (pathname === "/credits") return "Home › Credits"
-    if (pathname === "/cookie-policy") return "Home › Cookie Policy"
+    if (pathname === "/sodium") return "Sodium — About"
+    if (pathname === "/commands") return "Sodium — Commands"
+    if (pathname === "/branding") return "Branding"
+    if (pathname === "/credits") return "Credits"
+    if (pathname === "/cookie-policy") return "Cookie Policy"
     return "Menu"
   }
 
   return (
-    <div className="flex justify-center my-4 px-2">
+    <div className="flex justify-center m-5 px-3 py-2">
       {/* Desktop Navigation */}
       <NavigationMenu viewport={false} className="hidden md:flex">
         <NavigationMenuList>
@@ -116,15 +118,21 @@ export function NavigationBar() {
           </NavigationMenuItem>
           
         </NavigationMenuList>
+
+        <Separator orientation="vertical" className="mx-4 self-center" />
+
+        {/* Desktop Theme Toggle */}
+        <ModeToggle />
       </NavigationMenu>
 
+
       {/* Mobile Navigation */}
-      <div className="flex md:hidden w-full max-w-sm">
+      <div className="flex md:hidden w-full max-w-sm gap-4">
         <DropdownMenu open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
           <DropdownMenuTrigger asChild>
             <Button 
               variant="outline" 
-              className="w-full justify-between"
+              className="flex-1 justify-between"
               aria-label="Toggle menu"
             >
               <span>{getCurrentPageName()}</span>
@@ -132,8 +140,8 @@ export function NavigationBar() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent 
-            align="center" 
-            className="w-[calc(100vw-2rem)] max-w-md max-h-[70vh] overflow-y-auto"
+            align="start" 
+            className="w-[var(--radix-dropdown-menu-trigger-width)] max-h-[70vh] overflow-y-auto"
           >
             <DropdownMenuItem asChild>
               <Link href="/" className="w-full cursor-pointer">
@@ -212,6 +220,9 @@ export function NavigationBar() {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+
+        {/* Mobile Theme Toggle */}
+        <ModeToggle />
       </div>
 
     </div>

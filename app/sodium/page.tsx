@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/card";
 import Image from "next/image";
 import CopyClient from "./copy-client";
-import { ModeToggle } from "./theme-client";
 
 export const metadata: Metadata = {
   title: "Sodium",
@@ -410,12 +409,11 @@ export default function SodiumPage() {
 
       <Separator className="mt-12 mb-12 max-w-3xl" />
 
-      <div className="text-muted-foreground text-sm mb-12 w-full max-w-3xl">
-        <div className="flex justify-between items-center">
-          <p>
+      <div className="text-muted-foreground text-sm mb-6 w-full max-w-3xl">
+        <div className="flex justify-center">
+          <p className="text-center">
             &copy; SkyElements. All rights reserved.
           </p>
-          <ModeToggle />
         </div>
       </div>
 
