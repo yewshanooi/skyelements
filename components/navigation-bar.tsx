@@ -67,7 +67,7 @@ export function NavigationBar() {
                         Sodium
                       </div>
                       <p className="text-muted-foreground text-sm leading-tight">
-                        Open source discord bot with application commands and a user-friendly interface
+                        Multipurpose discord bot with application commands and a user-friendly interface
                       </p>
                     </Link>
                   </NavigationMenuLink>

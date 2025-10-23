@@ -30,8 +30,8 @@ return (
             className="h-16 w-auto"
           />
         </div>
-        <p className="text-muted-foreground text-center text-l max-w-xl">
-          Home of everything elements. Run open source projects on the web or your local device with just a few commands.
+        <p className="text-muted-foreground text-center text-l max-w-2xl">
+          Home of everything elements. Run open source projects with just a few commands.
         </p>
       </div>
 
@@ -55,7 +55,7 @@ return (
 
               <CardContent>
                 <CardDescription className="text-center mb-6">
-                  Open source discord bot with application commands and a user-friendly interface.
+                  Multipurpose discord bot with application commands and a user-friendly interface.
                 </CardDescription>
                 <div className="flex justify-center">
                   <Button asChild variant="secondary">

@@ -14,7 +14,7 @@ import CopyClient from "./copy-client";
 
 export const metadata: Metadata = {
   title: "Sodium",
-  description: "Open source discord bot with application commands and a user-friendly interface",
+  description: "Multipurpose discord bot with application commands and a user-friendly interface",
 };
 
 export default function SodiumPage() {
@@ -32,7 +32,7 @@ export default function SodiumPage() {
           />
         </div>
         <p className="text-muted-foreground text-center text-l">
-          Open source discord bot with application commands and a user-friendly interface.
+          Multipurpose discord bot with application commands and a user-friendly interface.
         </p>
       </div>
 
