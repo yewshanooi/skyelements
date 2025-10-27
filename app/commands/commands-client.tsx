@@ -2,6 +2,7 @@
 
 import { Terminal } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import {
   Card,
   CardAction,
@@ -76,7 +77,9 @@ export function CommandsClient() {
               Get a random cat fact
             </CardDescription>
             <CardAction>
-              <CardDescription>catfact.ninja — v1</CardDescription>
+              <CardDescription>
+                <Badge variant="outline">catfact.ninja — v1</Badge>
+              </CardDescription>
             </CardAction>
           </CardHeader>
           
@@ -109,7 +112,9 @@ export function CommandsClient() {
               Get a random general fact
             </CardDescription>
             <CardAction>
-              <CardDescription>nekos.life — v2</CardDescription>
+              <CardDescription>
+                <Badge variant="outline">nekos.life — v2</Badge>
+              </CardDescription>
             </CardAction>
           </CardHeader>
           

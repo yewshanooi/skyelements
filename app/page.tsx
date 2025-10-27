@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { ChevronRight, ExternalLink } from "lucide-react"
 import Image from "next/image";
 import {
@@ -72,13 +73,15 @@ return (
         <div className="flex-1 flex flex-col items-center">
           <h2 className="text-xl font-semibold text-center text-primary mb-6">News</h2>
           <Card className="w-full max-w-sm">
-            <CardHeader className="mt-3">
+            <CardHeader className="mt-5 mb-3">
               <CardTitle>Sodium</CardTitle>
               <CardDescription>
                 Even more music streaming features, npm scripts, updated workflow, and more!
               </CardDescription>
               <CardAction>
-                <CardDescription>Discord Bot</CardDescription>
+                <CardDescription>
+                  <Badge variant="outline">v1.8.4</Badge>
+                </CardDescription>
               </CardAction>
             </CardHeader>
 
