@@ -97,7 +97,7 @@ export function CommandsClient() {
             </div>
             
             {catFactResult && (
-              <div className="mt-6 p-4 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
+              <div className="mt-6 p-4 bg-neutral-50 dark:bg-neutral-950/20 rounded-lg border border-neutral-200 dark:border-neutral-800">
                 {/* <p className="text-sm font-semibold mb-2">Result:</p> */}
                 <p className="text-sm">{catFactResult}</p>
               </div>
@@ -132,7 +132,7 @@ export function CommandsClient() {
             </div>
             
             {generalFactResult && (
-              <div className="mt-6 p-4 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
+              <div className="mt-6 p-4 bg-neutral-50 dark:bg-neutral-950/20 rounded-lg border border-neutral-200 dark:border-neutral-800">
                 {/* <p className="text-sm font-semibold mb-2">Result:</p> */}
                 <p className="text-sm">{generalFactResult}</p>
               </div>
