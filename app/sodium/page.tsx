@@ -123,7 +123,7 @@ export default function SodiumPage() {
             </CardHeader>
           </Card>
         </a>
-        <a href="https://www.mongodb.com/atlas" target="_blank">
+        <a href="https://www.mongodb.com/products/platform" target="_blank">
           <Card className="w-full">
             <CardHeader>
               <div className="flex items-center gap-6">

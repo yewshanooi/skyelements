@@ -11,6 +11,17 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { useState } from 'react';
 
 export function CommandsClient() {
@@ -84,24 +95,36 @@ export function CommandsClient() {
           </CardHeader>
           
           <CardContent>
+
             <div className="flex gap-2">
-              <Button
-                onClick={runCatFact}
-                variant="secondary"
-                disabled={loading.cat}
-                className="cursor-pointer disabled:cursor-not-allowed"
-              >
-                {!loading.cat && <Terminal />}
-                {loading.cat ? 'Loading...' : 'Run Command'}
-              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    onClick={runCatFact}
+                    variant="secondary"
+                    disabled={loading.cat}
+                    className="cursor-pointer disabled:cursor-not-allowed"
+                  >
+                    {!loading.cat && <Terminal />}
+                    {loading.cat ? 'Loading...' : 'Run Command'}
+                  </Button>
+                </AlertDialogTrigger>
+                {catFactResult && (
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Cat Fact</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        {catFactResult}
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Close</AlertDialogCancel>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                )}
+              </AlertDialog>
             </div>
-            
-            {catFactResult && (
-              <div className="mt-6 p-4 bg-neutral-50 dark:bg-neutral-950/20 rounded-lg border border-neutral-200 dark:border-neutral-800">
-                {/* <p className="text-sm font-semibold mb-2">Result:</p> */}
-                <p className="text-sm">{catFactResult}</p>
-              </div>
-            )}
+
           </CardContent>
         </Card>
 
@@ -119,24 +142,36 @@ export function CommandsClient() {
           </CardHeader>
           
           <CardContent>
+
             <div className="flex gap-2">
-              <Button
-                onClick={runGeneralFact}
-                variant="secondary"
-                disabled={loading.general}
-                className="cursor-pointer disabled:cursor-not-allowed"
-              >
-                {!loading.general && <Terminal />}
-                {loading.general ? 'Loading...' : 'Run Command'}
-              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    onClick={runGeneralFact}
+                    variant="secondary"
+                    disabled={loading.general}
+                    className="cursor-pointer disabled:cursor-not-allowed"
+                  >
+                    {!loading.general && <Terminal />}
+                    {loading.general ? 'Loading...' : 'Run Command'}
+                  </Button>
+                </AlertDialogTrigger>
+                {generalFactResult && (
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>General Fact</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        {generalFactResult}
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Close</AlertDialogCancel>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                )}
+              </AlertDialog>
             </div>
-            
-            {generalFactResult && (
-              <div className="mt-6 p-4 bg-neutral-50 dark:bg-neutral-950/20 rounded-lg border border-neutral-200 dark:border-neutral-800">
-                {/* <p className="text-sm font-semibold mb-2">Result:</p> */}
-                <p className="text-sm">{generalFactResult}</p>
-              </div>
-            )}
+
           </CardContent>
         </Card>
 
