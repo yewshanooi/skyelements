@@ -13,14 +13,12 @@ import {
 } from "@/components/ui/card"
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { useState } from 'react';
 
@@ -28,44 +26,47 @@ export function CommandsClient() {
   const [catFactResult, setCatFactResult] = useState<string>('');
   const [generalFactResult, setGeneralFactResult] = useState<string>('');
   const [loading, setLoading] = useState({ cat: false, general: false });
+  const [dialogOpen, setDialogOpen] = useState({ cat: false, general: false });
 
-  const runCatFact = async () => {
-    setLoading(prev => ({ ...prev, cat: true }));
+  const fetchFact = async (
+    type: 'cat' | 'general',
+    url: string,
+    setResult: (result: string) => void,
+    errorMessage: string
+  ) => {
+    setLoading(prev => ({ ...prev, [type]: true }));
+    setResult('');
     try {
-      const response = await fetch('https://catfact.ninja/fact');
+      const response = await fetch(url);
       const data = await response.json();
+
       if (response.status === 429) {
-        setCatFactResult('Error: Rate limit exceeded. Please try again later.');
+        setResult('Error: Rate limit exceeded. Please try again later.');
+        setDialogOpen(prev => ({ ...prev, [type]: true }));
         return;
       }
+
       if (!response.ok) {
-        setCatFactResult('Error: Failed to fetch cat fact');
+        setResult(errorMessage);
+        setDialogOpen(prev => ({ ...prev, [type]: true }));
         return;
       }
-      setCatFactResult(data.fact);
+
+      setResult(data.fact);
+      setDialogOpen(prev => ({ ...prev, [type]: true }));
     } catch (error) {
-      setCatFactResult(`Error: ${error}`);
+      setResult(`Error: ${error}`);
+      setDialogOpen(prev => ({ ...prev, [type]: true }));
     } finally {
-      setLoading(prev => ({ ...prev, cat: false }));
+      setLoading(prev => ({ ...prev, [type]: false }));
     }
   };
 
-  const runGeneralFact = async () => {
-    setLoading(prev => ({ ...prev, general: true }));
-    try {
-      const response = await fetch('https://nekos.life/api/v2/fact');
-      const data = await response.json();
-      if (!response.ok) {
-        setGeneralFactResult('Error: Failed to fetch general fact');
-        return;
-      }
-      setGeneralFactResult(data.fact);
-    } catch (error) {
-      setGeneralFactResult(`Error: ${error}`);
-    } finally {
-      setLoading(prev => ({ ...prev, general: false }));
-    }
-  };
+  const runCatFact = () => 
+    fetchFact('cat', 'https://catfact.ninja/fact', setCatFactResult, 'Error: Failed to fetch cat fact');
+
+  const runGeneralFact = () => 
+    fetchFact('general', 'https://nekos.life/api/v2/fact', setGeneralFactResult, 'Error: Failed to fetch general fact');
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-start p-8">
@@ -97,31 +98,27 @@ export function CommandsClient() {
           <CardContent>
 
             <div className="flex gap-2">
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button
-                    onClick={runCatFact}
-                    variant="secondary"
-                    disabled={loading.cat}
-                    className="cursor-pointer disabled:cursor-not-allowed"
-                  >
-                    {!loading.cat && <Terminal />}
-                    {loading.cat ? 'Loading...' : 'Run Command'}
-                  </Button>
-                </AlertDialogTrigger>
-                {catFactResult && (
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Cat Fact</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        {catFactResult}
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Close</AlertDialogCancel>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                )}
+              <AlertDialog open={dialogOpen.cat} onOpenChange={(open) => setDialogOpen(prev => ({ ...prev, cat: open }))}>
+                <Button
+                  onClick={runCatFact}
+                  variant="secondary"
+                  disabled={loading.cat}
+                  className="cursor-pointer disabled:cursor-not-allowed"
+                >
+                  {!loading.cat && <Terminal />}
+                  {loading.cat ? 'Loading...' : 'Run Command'}
+                </Button>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Cat Fact</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      {catFactResult}
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Close</AlertDialogCancel>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
               </AlertDialog>
             </div>
 
@@ -144,31 +141,27 @@ export function CommandsClient() {
           <CardContent>
 
             <div className="flex gap-2">
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button
-                    onClick={runGeneralFact}
-                    variant="secondary"
-                    disabled={loading.general}
-                    className="cursor-pointer disabled:cursor-not-allowed"
-                  >
-                    {!loading.general && <Terminal />}
-                    {loading.general ? 'Loading...' : 'Run Command'}
-                  </Button>
-                </AlertDialogTrigger>
-                {generalFactResult && (
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>General Fact</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        {generalFactResult}
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Close</AlertDialogCancel>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                )}
+              <AlertDialog open={dialogOpen.general} onOpenChange={(open) => setDialogOpen(prev => ({ ...prev, general: open }))}>
+                <Button
+                  onClick={runGeneralFact}
+                  variant="secondary"
+                  disabled={loading.general}
+                  className="cursor-pointer disabled:cursor-not-allowed"
+                >
+                  {!loading.general && <Terminal />}
+                  {loading.general ? 'Loading...' : 'Run Command'}
+                </Button>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>General Fact</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      {generalFactResult}
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Close</AlertDialogCancel>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
               </AlertDialog>
             </div>
 
