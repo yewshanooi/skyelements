@@ -123,4 +123,14 @@
   code, pre {
     font-family: var(--font-geist-mono);
   }
+
+  ::selection {
+    background-color: #171717;
+    color: #ededed;
+  }
+
+  .dark ::selection {
+    background-color: #ededed;
+    color: #171717;
+  }
 }
