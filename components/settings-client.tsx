@@ -1,6 +1,6 @@
 "use client"
 
-import { Moon, Sun, Settings, ChartLine, LogOut } from "lucide-react"
+import { Moon, Sun, Settings, User, LogOut } from "lucide-react"
 import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
 import {
@@ -17,7 +17,7 @@ import {
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu"
 
-export function ModeToggle() {
+export function SettingsToggle() {
   const { theme, setTheme } = useTheme()
 
   return (
@@ -33,8 +33,8 @@ export function ModeToggle() {
         <DropdownMenuLabel>Settings</DropdownMenuLabel>
 
         {/* <DropdownMenuItem>
-          <ChartLine />
-          Dashboard
+          <User />
+          Profile
         </DropdownMenuItem> */}
 
         <DropdownMenuSub>
@@ -67,9 +67,9 @@ export function ModeToggle() {
           </DropdownMenuPortal>
         </DropdownMenuSub>
 
-        {/* <DropdownMenuSeparator /> */}
+        {/* <DropdownMenuSeparator />
 
-        {/* <DropdownMenuItem variant="destructive">
+        <DropdownMenuItem variant="destructive">
           <LogOut />
           Log Out
         </DropdownMenuItem> */}

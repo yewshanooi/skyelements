@@ -22,7 +22,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 import { Separator } from "@/components/ui/separator"
-import { ModeToggle } from "./theme-client";
+import { SettingsToggle } from "./settings-client";
 
 export function NavigationBar() {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false)
@@ -121,8 +121,8 @@ export function NavigationBar() {
 
         <Separator orientation="vertical" className="mx-4 self-center" />
 
-        {/* Desktop Theme Toggle */}
-        <ModeToggle />
+        {/* Desktop Settings Toggle */}
+        <SettingsToggle />
       </NavigationMenu>
 
 
@@ -221,8 +221,8 @@ export function NavigationBar() {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* Mobile Theme Toggle */}
-        <ModeToggle />
+        {/* Mobile Settings Toggle */}
+        <SettingsToggle />
       </div>
 
     </div>
