@@ -1,7 +1,8 @@
 "use client"
 
-import { Moon, Sun, Settings, User, LogOut } from "lucide-react"
+import { Moon, Sun, Settings, LogIn, LogOut } from "lucide-react"
 import { useTheme } from "next-themes"
+// import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -32,13 +33,15 @@ export function SettingsToggle() {
       <DropdownMenuContent align="end">
         <DropdownMenuLabel>Settings</DropdownMenuLabel>
 
-        {/* <DropdownMenuItem>
-          <User />
-          Profile
-        </DropdownMenuItem> */}
+        {/* <Link href="/login">
+          <DropdownMenuItem className="cursor-pointer">
+            <LogIn />
+            Log In
+          </DropdownMenuItem>
+        </Link> */}
 
         <DropdownMenuSub>
-          <DropdownMenuSubTrigger>
+          <DropdownMenuSubTrigger className="cursor-pointer">
             <Sun className="h-[1.2rem] w-[1.2rem] scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90" />
             <Moon className="absolute h-[1.2rem] w-[1.2rem] scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0" />
             Theme
@@ -48,18 +51,21 @@ export function SettingsToggle() {
               <DropdownMenuCheckboxItem
                 checked={theme === "light"}
                 onCheckedChange={() => setTheme("light")}
+                className="cursor-pointer"
               >
                 Light
               </DropdownMenuCheckboxItem>
               <DropdownMenuCheckboxItem
                 checked={theme === "dark"}
                 onCheckedChange={() => setTheme("dark")}
+                className="cursor-pointer"
               >
                 Dark
               </DropdownMenuCheckboxItem>
               <DropdownMenuCheckboxItem
                 checked={theme === "system"}
                 onCheckedChange={() => setTheme("system")}
+                className="cursor-pointer"
               >
                 System
               </DropdownMenuCheckboxItem>
