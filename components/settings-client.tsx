@@ -1,8 +1,7 @@
 "use client"
 
-import { Moon, Sun, Settings, LogIn, LogOut } from "lucide-react"
+import { Moon, Sun, Settings } from "lucide-react"
 import { useTheme } from "next-themes"
-// import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -32,13 +31,6 @@ export function SettingsToggle() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuLabel>Settings</DropdownMenuLabel>
-
-        {/* <Link href="/login">
-          <DropdownMenuItem className="cursor-pointer">
-            <LogIn />
-            Log In
-          </DropdownMenuItem>
-        </Link> */}
 
         <DropdownMenuSub>
           <DropdownMenuSubTrigger className="cursor-pointer">
@@ -72,13 +64,6 @@ export function SettingsToggle() {
             </DropdownMenuSubContent>
           </DropdownMenuPortal>
         </DropdownMenuSub>
-
-        {/* <DropdownMenuSeparator />
-
-        <DropdownMenuItem variant="destructive">
-          <LogOut />
-          Log Out
-        </DropdownMenuItem> */}
 
       </DropdownMenuContent>
     </DropdownMenu>
