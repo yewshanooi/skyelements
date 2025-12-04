@@ -247,7 +247,7 @@ export default function SodiumPage() {
               <p className="text-base mb-4">
                 Sodium uses Gemini 2.5 Flash, a new model for the agentic era, to provide an AI chatbot experience within Discord channels. Users may run the command in direct messages for additional privacy.
               </p>
-              *Gemini may display inaccurate info, including about people, so double-check its responses.
+              *Gemini can make mistakes, so double-check it.
             </CardDescription>
           </CardHeader>
           <CardContent>
