@@ -55,7 +55,7 @@ export default function SodiumPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-24 w-full max-w-3xl">
         <Card className="w-full">
           <CardHeader>
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-6 mt-2">
               <div className="p-1">
                 <FolderSync className="h-6 w-6" />
               </div>
@@ -70,7 +70,7 @@ export default function SodiumPage() {
         </Card>
         <Card className="w-full">
           <CardHeader>
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-6 mt-2">
               <div className="p-1">
                 <ArrowDownToLine className="h-6 w-6" />
               </div>
@@ -86,7 +86,7 @@ export default function SodiumPage() {
         <a href="https://deepmind.google/models/gemini/" target="_blank">
           <Card className="w-full">
             <CardHeader>
-              <div className="flex items-center gap-6">
+              <div className="flex items-center gap-6 mt-2">
                 <Image
                   src="/icon/icons8-gemini-96.png"
                   alt="Google Gemini Logo"
@@ -103,10 +103,10 @@ export default function SodiumPage() {
             </CardHeader>
           </Card>
         </a>
-        <a href="https://huggingface.co/docs/transformers.js/index" target="_blank">
+        <a href="https://huggingface.co/docs/transformers.js/v3.0.0/index" target="_blank">
           <Card className="w-full">
             <CardHeader>
-              <div className="flex items-center gap-6">
+              <div className="flex items-center gap-6 mt-2">
                 <Image
                   src="/icon/icons8-hugging-face-96.png"
                   alt="Hugging Face Logo"
@@ -126,7 +126,7 @@ export default function SodiumPage() {
         <a href="https://www.mongodb.com/products/platform" target="_blank">
           <Card className="w-full">
             <CardHeader>
-              <div className="flex items-center gap-6">
+              <div className="flex items-center gap-6 mt-2">
                 <Image
                   src="/icon/icons8-leaf-96.png"
                   alt="MongoDB Logo"
@@ -146,7 +146,7 @@ export default function SodiumPage() {
         <a href="https://lavalink.dev/" target="_blank">
           <Card className="w-full">
             <CardHeader>
-              <div className="flex items-center gap-6">
+              <div className="flex items-center gap-6 mt-2">
                 <Image
                   src="/icon/icons8-lavalink-96.png"
                   alt="Lavalink Logo"
@@ -295,7 +295,7 @@ export default function SodiumPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6 w-full max-w-3xl">
         <Card className="w-full">
           <CardHeader>
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-6 mt-2">
               <Image
                 src="/icon/icons8-youtube-96.png"
                 alt="YouTube Logo"
@@ -313,7 +313,7 @@ export default function SodiumPage() {
         </Card>
         <Card className="w-full">
           <CardHeader>
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-6 mt-2">
               <Image
                 src="/icon/icons8-spotify-96.png"
                 alt="Spotify Logo"
