@@ -76,11 +76,11 @@ return (
             <CardHeader className="mt-5 mb-3">
               <CardTitle>Sodium</CardTitle>
               <CardDescription>
-                Even more music streaming features, npm scripts, updated workflow, and more!
+                CodeQL actions, Lavalink YouTube plugin, npm package updates, and bug fixes.
               </CardDescription>
               <CardAction>
                 <CardDescription>
-                  <Badge variant="outline">v1.8.4</Badge>
+                  <Badge variant="outline">v1.8.5</Badge>
                 </CardDescription>
               </CardAction>
             </CardHeader>
