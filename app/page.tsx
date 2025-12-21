@@ -17,42 +17,42 @@ export const metadata: Metadata = {
   description: "Home of everything elements",
 };
 
-export default function Page() {
-return (
-    <main className="flex min-h-screen flex-col items-center justify-start p-8">
+export default async function Page() {
+  return (
+      <main className="flex min-h-screen flex-col items-center justify-start p-8">
 
-      <div className="flex flex-col gap-4">
-        <div className="flex justify-center">
-          <Image
-            src="/logo/skyelements.png"
-            alt="SkyElements Logo"
-            width={239}
-            height={55}
-            className="h-16 w-auto"
-          />
+        <div className="flex flex-col gap-4">
+          <div className="flex justify-center">
+            <Image
+              src="/logo/skyelements.png"
+              alt="SkyElements Logo"
+              width={239}
+              height={55}
+              className="h-16 w-auto"
+            />
+          </div>
+          <p className="text-muted-foreground text-center text-l max-w-2xl">
+            Home of everything elements. Run open source projects with just a few commands.
+          </p>
         </div>
-        <p className="text-muted-foreground text-center text-l max-w-2xl">
-          Home of everything elements. Run open source projects with just a few commands.
-        </p>
-      </div>
 
-      <div className="flex flex-col md:flex-row justify-center gap-4 mt-16 w-full max-w-3xl">
-        {/* Projects Card */}
-        <div className="flex-1 flex flex-col items-center mb-12">
-          <h2 className="text-xl font-semibold text-center text-primary mb-6">Projects</h2>
-          <Card className="w-full max-w-sm">
-            <CardHeader>
-              <CardTitle>
-                <div className="flex justify-center items-center">
-                  <Image
-                    src="/logo/sodium.png"
-                    alt="Sodium Logo"
-                    width={165}
-                    height={55}
-                    className="h-12 w-auto"
-                  />
-                </div>
-              </CardTitle>
+        <div className="flex flex-col md:flex-row justify-center gap-4 mt-16 w-full max-w-3xl">
+          {/* Projects Card */}
+          <div className="flex-1 flex flex-col items-center mb-12">
+            <h2 className="text-xl font-semibold text-center text-primary mb-6">Projects</h2>
+            <Card className="w-full max-w-sm">
+              <CardHeader>
+                <CardTitle>
+                  <div className="flex justify-center items-center">
+                    <Image
+                      src="/logo/sodium.png"
+                      alt="Sodium Logo"
+                      width={165}
+                      height={55}
+                      className="h-12 w-auto"
+                    />
+                  </div>
+                </CardTitle>
 
               <CardContent>
                 <CardDescription className="text-center mb-6">
@@ -85,19 +85,19 @@ return (
               </CardAction>
             </CardHeader>
 
-            <CardContent>
-              <div className="flex justify-center">
-                <Button asChild variant="secondary">
-                  <a href="https://github.com/yewshanooi/sodium/releases/" target="_blank">
-                    View on GitHub <ExternalLink />
-                  </a>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+              <CardContent>
+                <div className="flex justify-center">
+                  <Button asChild variant="secondary">
+                    <a href="https://github.com/yewshanooi/sodium/releases/" target="_blank">
+                      View on GitHub <ExternalLink />
+                    </a>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
-      </div>
 
-    </main>
+      </main>
   );
 }
