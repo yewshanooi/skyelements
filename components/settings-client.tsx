@@ -32,6 +32,10 @@ export function SettingsToggle() {
       <DropdownMenuContent align="end">
         <DropdownMenuLabel>Settings</DropdownMenuLabel>
 
+        {/* Add Dashboard here when user is logged in */}
+
+        {/* Add Log In here when user is logged out */}
+
         <DropdownMenuSub>
           <DropdownMenuSubTrigger className="cursor-pointer">
             <Sun className="h-[1.2rem] w-[1.2rem] scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90" />
@@ -64,6 +68,8 @@ export function SettingsToggle() {
             </DropdownMenuSubContent>
           </DropdownMenuPortal>
         </DropdownMenuSub>
+
+        {/* Add Log Out here when user is logged in */}
 
       </DropdownMenuContent>
     </DropdownMenu>
