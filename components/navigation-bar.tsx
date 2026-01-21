@@ -31,6 +31,7 @@ export function NavigationBar() {
   // Get current page name for mobile menu button
   const getCurrentPageName = () => {
     if (pathname === "/") return "Home"
+    if (pathname === "/skye") return "Skye"
     if (pathname === "/sodium") return "Sodium — About"
     if (pathname === "/commands") return "Sodium — Commands"
     if (pathname === "/branding") return "Branding"
@@ -49,6 +50,14 @@ export function NavigationBar() {
             <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
               <Link href="/">
                 Home
+              </Link>
+            </NavigationMenuLink>
+          </NavigationMenuItem>
+
+          <NavigationMenuItem>
+            <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
+              <Link href="/skye">
+                Skye
               </Link>
             </NavigationMenuLink>
           </NavigationMenuItem>
@@ -146,6 +155,14 @@ export function NavigationBar() {
             <DropdownMenuItem asChild>
               <Link href="/" className="w-full cursor-pointer">
                 Home
+              </Link>
+            </DropdownMenuItem>
+
+            <DropdownMenuSeparator />
+
+            <DropdownMenuItem asChild>
+              <Link href="/skye" className="w-full cursor-pointer">
+                Skye
               </Link>
             </DropdownMenuItem>
 
