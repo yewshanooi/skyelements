@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from "react";
-import { ArrowUpIcon, Plus } from "lucide-react";
+import { ArrowUpIcon, ChevronDown, Plus } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {
@@ -127,9 +127,10 @@ export function ChatClient({ userEmail }: { userEmail: string }) {
             <DropdownMenuTrigger asChild>
               <InputGroupButton variant="secondary" className="cursor-pointer">
                 {models.find(m => m.id === selectedModel)?.label}
+                <ChevronDown />
               </InputGroupButton>
             </DropdownMenuTrigger>
-            <DropdownMenuContent side="top" align="start">
+            <DropdownMenuContent side="bottom" align="start">
               <DropdownMenuLabel>Model</DropdownMenuLabel>
 
               {models.map((model) => (
@@ -142,9 +143,12 @@ export function ChatClient({ userEmail }: { userEmail: string }) {
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
+            
           </DropdownMenu>
           <InputGroupText className="ml-auto">
-            {prompt.length > 0 ? `${prompt.length} ${prompt.length === 1 ? 'character' : 'characters'}` : ''}
+            {prompt.length > 0 && (
+              <span className="hidden md:inline">{`${prompt.length} ${prompt.length === 1 ? 'character' : 'characters'}`}</span>
+            )}
           </InputGroupText>
           <Separator orientation="vertical" className="!h-4" />
           <InputGroupButton

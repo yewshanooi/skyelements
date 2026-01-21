@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from "react";
-import { SquarePen } from "lucide-react"
+import { SquarePen, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge";
 import { ChatClient } from "./chat-client";
@@ -27,8 +27,8 @@ export function PageClient({ userEmail, signout }: { userEmail: string, signout:
         </Button>
 
         <form action={signout}>
-          <Button type="submit" className="cursor-pointer disabled:cursor-not-allowed">
-              Sign Out
+          <Button type="submit" size="icon" className="cursor-pointer disabled:cursor-not-allowed">
+              <LogOut />
           </Button>
         </form>
       </div>
