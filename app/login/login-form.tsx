@@ -1,7 +1,8 @@
 'use client';
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { Turnstile } from '@marsidev/react-turnstile'
+import { useActionState, useState } from "react";
 import {
   Card,
   CardContent,
@@ -21,10 +22,11 @@ import AuthButton from "../_components/AuthButton";
 
 export default function LoginForm() {
     const [state, formAction] = useActionState(login, null);
+    const [captchaToken, setCaptchaToken] = useState<string | undefined>();
 
     return (
         <div className="flex min-h-svh w-full items-start justify-center p-6 md:p-10">
-            <div className="w-full max-w-sm mt-8">
+            <div className="w-full max-w-sm">
                 <Card>
                     <CardHeader className="text-center">
                         <img 
@@ -65,6 +67,13 @@ export default function LoginForm() {
                                         <p className="text-sm text-red-600 mt-1">{state.error}</p>
                                     )}
                                 </Field>
+                                <div className="flex justify-center">
+                                    <Turnstile
+                                        siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
+                                        onSuccess={(token) => setCaptchaToken(token)}
+                                    />
+                                    <input type="hidden" name="captchaToken" value={captchaToken || ""} />
+                                </div>
                                 <Field>
                                     <AuthButton>Continue</AuthButton>
                                     <FieldDescription className="text-center">
