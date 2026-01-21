@@ -37,6 +37,8 @@ export function NavigationBar() {
     if (pathname === "/branding") return "Branding"
     if (pathname === "/credits") return "Credits"
     if (pathname === "/cookie-policy") return "Cookie Policy"
+    if (pathname === "/login") return "Login"
+    if (pathname === "/signup") return "Sign Up"
     return "Page Not Found"
   }
 

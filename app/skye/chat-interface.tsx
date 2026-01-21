@@ -113,6 +113,7 @@ export function ChatInterface({ userEmail }: { userEmail: string }) {
           </InputGroupButton>
         </InputGroupAddon>
       </InputGroup>
+
     </div>
   );
 }
