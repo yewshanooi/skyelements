@@ -20,7 +20,7 @@ export async function generateContent(prompt: string, model: string = "gemini-2.
     
     // Rate limit error
     if (error?.status === 429) {
-      return "⚠️ **Free Quota Exceeded**\n\nWe've hit the daily free quota for the Lite tier. Please try again tomorrow or contact support to upgrade your plan.";
+      return `⚠️ **Free Quota Exceeded**\n\nWe've hit the daily free quota for the ${model} model. Please change to another model or try again tomorrow.`;
     }
     
     return "Sorry, I couldn't generate a response at this time.";

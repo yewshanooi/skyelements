@@ -7,14 +7,12 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuLabel,
-  DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuCheckboxItem,
   DropdownMenuSub,
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,
   DropdownMenuPortal,
-  DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu"
 
 export function SettingsToggle() {
@@ -29,12 +27,8 @@ export function SettingsToggle() {
           <span className="sr-only">Toggle settings</span>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
+      <DropdownMenuContent side="bottom" align="end">
         <DropdownMenuLabel>Settings</DropdownMenuLabel>
-
-        {/* Add Dashboard here when user is logged in */}
-
-        {/* Add Log In here when user is logged out */}
 
         <DropdownMenuSub>
           <DropdownMenuSubTrigger className="cursor-pointer">
@@ -68,8 +62,6 @@ export function SettingsToggle() {
             </DropdownMenuSubContent>
           </DropdownMenuPortal>
         </DropdownMenuSub>
-
-        {/* Add Log Out here when user is logged in */}
 
       </DropdownMenuContent>
     </DropdownMenu>

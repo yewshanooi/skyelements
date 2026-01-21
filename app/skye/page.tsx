@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { createClient } from "@/utils/supabase/server";
 import { redirectIfNotAuthenticated } from "@/utils/redirectIfNotAuthenticated";
 import { signout } from "../(auth)/actions";
-import { ChatInterface } from "./chat-interface";
+import { ChatClient } from "./chat-client";
 
 export const metadata: Metadata = {
   title: "Skye",
@@ -33,7 +33,7 @@ export default async function SkyePage() {
         </form>
       </div>
 
-      <ChatInterface userEmail={data.user?.email ?? 'User'} />
+      <ChatClient userEmail={data.user?.email ?? 'User'} />
 
       {/* <div className="text-muted-foreground text-sm mt-4 max-w-3xl">
         <p>Skye can make mistakes, so double-check it</p>

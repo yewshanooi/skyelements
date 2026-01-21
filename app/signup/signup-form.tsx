@@ -42,7 +42,13 @@ export default function SignupForm() {
                             <FieldGroup>
                                 <Field>
                                     <FieldLabel htmlFor="email">Email</FieldLabel>
-                                    <Input id="email" name="email" type="email" autoFocus required />
+                                    <Input 
+                                        id="email" 
+                                        name="email" 
+                                        type="email" 
+                                        // autoFocus 
+                                        required 
+                                    />
                                 </Field>
                                 <Field>
                                     <div className="flex items-center">
