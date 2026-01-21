@@ -69,6 +69,7 @@ export function ChatClient({ userEmail }: { userEmail: string }) {
     if (!prompt.trim()) return;
     
     setLoading(true);
+    setResponse(null);
     setPrompt("");
 
     try {
