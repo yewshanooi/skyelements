@@ -22,9 +22,8 @@ export function SettingsToggle() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="secondary" size="icon" className="cursor-pointer">
-          
           <Settings />
-          <span className="sr-only">Toggle settings</span>
+          
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent side="bottom" align="end">

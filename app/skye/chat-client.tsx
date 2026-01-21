@@ -22,6 +22,12 @@ import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner"
 import { generateContent } from "./actions";
 
+const models = [
+  { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
+  { id: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite' },
+  { id: 'gemini-3-flash-preview', label: 'Gemini 3 Flash Preview' },
+];
+
 const randomQueries = [
     // What..? questions
     'What is the meaning of life?',
@@ -119,18 +125,22 @@ export function ChatClient({ userEmail }: { userEmail: string }) {
           <DropdownMenu>
             
             <DropdownMenuTrigger asChild>
-              <InputGroupButton variant="secondary">
-                {selectedModel === "gemini-2.5-flash" && "Gemini 2.5 Flash"}
-                {selectedModel === "gemini-2.5-flash-lite" && "Gemini 2.5 Flash Lite"}
-                {selectedModel === "gemini-3-flash-preview" && "Gemini 3 Flash Preview"}
+              <InputGroupButton variant="secondary" className="cursor-pointer">
+                {models.find(m => m.id === selectedModel)?.label}
               </InputGroupButton>
             </DropdownMenuTrigger>
-            <DropdownMenuContent side="top" align="start" >
+            <DropdownMenuContent side="top" align="start">
               <DropdownMenuLabel>Model</DropdownMenuLabel>
 
-              <DropdownMenuItem onSelect={() => setSelectedModel("gemini-2.5-flash")}>Gemini 2.5 Flash</DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => setSelectedModel("gemini-2.5-flash-lite")}>Gemini 2.5 Flash Lite</DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => setSelectedModel("gemini-3-flash-preview")}>Gemini 3 Flash Preview</DropdownMenuItem>
+              {models.map((model) => (
+                <DropdownMenuItem 
+                  key={model.id}
+                  onSelect={() => setSelectedModel(model.id)} 
+                  className="cursor-pointer"
+                >
+                  {model.label}
+                </DropdownMenuItem>
+              ))}
             </DropdownMenuContent>
           </DropdownMenu>
           <InputGroupText className="ml-auto">
@@ -139,7 +149,7 @@ export function ChatClient({ userEmail }: { userEmail: string }) {
           <Separator orientation="vertical" className="!h-4" />
           <InputGroupButton
             variant="default"
-            className="rounded-full"
+            className="rounded-full cursor-pointer"
             size="icon-xs"
             onClick={handleSend}
             disabled={loading || !prompt.trim()}
