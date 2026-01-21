@@ -81,7 +81,7 @@ export function ChatInterface({ userEmail }: { userEmail: string }) {
           </InputGroupButton> */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <InputGroupButton variant="ghost">
+              <InputGroupButton variant="secondary">
                 {selectedModel === "gemini-2.5-flash" && "Gemini 2.5 Flash"}
                 {selectedModel === "gemini-2.5-flash-lite" && "Gemini 2.5 Flash Lite"}
                 {selectedModel === "gemini-3-flash-preview" && "Gemini 3 Flash (Preview)"}
