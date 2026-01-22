@@ -61,12 +61,14 @@ export default function SignupForm() {
                                         <p className="text-sm text-red-600 mt-1">{state.error}</p>
                                     )}
                                 </Field>
-                                <div className="flex justify-center">
-                                    <Turnstile
-                                        siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
-                                        onSuccess={(token) => setCaptchaToken(token)}
-                                    />
-                                    <input type="hidden" name="captchaToken" value={captchaToken || ""} />
+                                <div className="flex justify-center overflow-hidden">
+                                    <div className="scale-[0.85] sm:scale-100 origin-center">
+                                        <Turnstile
+                                            siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
+                                            onSuccess={(token) => setCaptchaToken(token)}
+                                        />
+                                        <input type="hidden" name="captchaToken" value={captchaToken || ""} />
+                                    </div>
                                 </div>
                                 <Field>
                                     <AuthButton>Create an account</AuthButton>

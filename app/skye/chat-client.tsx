@@ -92,9 +92,9 @@ export function ChatClient({ userEmail }: { userEmail: string }) {
 
   return (
     <div className="w-full max-w-3xl mx-auto mt-12">
-      <div className="min-h-[100px] mb-6">
+      <div className="mb-18">
          {response ? (
-           <div className="px-6 prose prose-neutral dark:prose-invert max-w-none mb-12">
+           <div className="mb-12 px-6 prose prose-neutral dark:prose-invert max-w-none">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>
                 {response}
               </ReactMarkdown>
