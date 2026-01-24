@@ -9,7 +9,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuLabel,
+  DropdownMenuShortcut,
 } from "@/components/ui/dropdown-menu";
 import {
   InputGroup,
@@ -21,12 +21,30 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner"
 import { generateContent } from "./actions";
+import Image from 'next/image'
 
 const models = [
-  { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
-  { id: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite' },
-  { id: 'gemini-3-flash-preview', label: 'Gemini 3 Flash Preview' },
+  { id: 'gemini-3-flash-preview', label: 'Gemini 3 Flash', icon: '/skye/google.png', shortcut: 'Preview' },
+  { id: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash', icon: '/skye/google.png', shortcut: 'Lite' },
+  { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', icon: '/skye/google.png', shortcut: '' },
+  { id: 'openrouter:tngtech/deepseek-r1t2-chimera:free', label: 'R1T2 Chimera', icon: '/skye/deepseek.png', shortcut: '' },
+  { id: 'openrouter:deepseek/deepseek-r1-0528:free', label: 'R1', icon: '/skye/deepseek.png', shortcut: '0528' },
+  { id: 'openrouter:z-ai/glm-4.5-air:free', label: 'GLM 4.5 Air', icon: '/skye/zai.png', shortcut: '' },
+  { id: 'openrouter:qwen/qwen3-coder:free', label: 'Qwen3 Coder', icon: '/skye/qwen.png', shortcut: '480B' },
+  { id: 'openrouter:qwen/qwen3-next-80b-a3b-instruct:free', label: 'Qwen3 Next Instruct', icon: '/skye/qwen.png', shortcut: '80B' },
+  { id: 'openrouter:meta-llama/llama-3.3-70b-instruct:free', label: 'Llama 3.3 Instruct', icon: '/skye/meta.png', shortcut: '70B' },
+  { id: 'openrouter:nvidia/nemotron-3-nano-30b-a3b:free', label: 'Nemotron 3 Nano', icon: '/skye/nvidia.png', shortcut: '30B' },
+  { id: 'openrouter:mistralai/mistral-small-3.1-24b-instruct:free', label: 'Mistral Small 3.1', icon: '/skye/mistral.png', shortcut: '24B' },
+  { id: 'openrouter:moonshotai/kimi-k2:free', label: 'Kimi K2', icon: '/skye/moonshot.png', shortcut: '0711' },
 ];
+
+
+// Providers that are rate-limited:
+//
+// Qwen
+// Mistral
+// Moonshot AI
+
 
 const sampleQueries = [
     // What..? questions
@@ -127,20 +145,34 @@ export function ChatClient() {
             
             <DropdownMenuTrigger asChild>
               <InputGroupButton variant="secondary" className="cursor-pointer">
+                <Image 
+                  src={models.find(m => m.id === selectedModel)?.icon ?? ''} 
+                  alt={models.find(m => m.id === selectedModel)?.label ?? 'Model icon'}
+                  width={16} 
+                  height={16}
+                  className="mr-1"
+                />
                 {models.find(m => m.id === selectedModel)?.label}
                 <ChevronDown />
               </InputGroupButton>
             </DropdownMenuTrigger>
             <DropdownMenuContent side="bottom" align="start">
-              <DropdownMenuLabel>Models</DropdownMenuLabel>
-
               {models.map((model) => (
                 <DropdownMenuItem 
                   key={model.id}
                   onSelect={() => setSelectedModel(model.id)} 
-                  className="cursor-pointer"
+                  className="cursor-pointer flex items-center gap-2"
                 >
+                  <Image 
+                    src={model.icon} 
+                    alt={model.label}
+                    width={16} 
+                    height={16}
+                  />
                   {model.label}
+                  <DropdownMenuShortcut>
+                    {model.shortcut}
+                  </DropdownMenuShortcut>
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
