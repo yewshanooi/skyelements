@@ -6,7 +6,7 @@ import { PageClient } from "./page-client";
 
 export const metadata: Metadata = {
   title: "Skye",
-  description: "An AI assistant by SkyElements",
+  description: "An AI chatbot powered by Google Gemini models",
 };
 
 export default async function SkyePage() {

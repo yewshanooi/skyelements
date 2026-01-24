@@ -75,13 +75,13 @@ export default async function Page() {
         <h2 className="text-xl font-semibold text-center text-primary mb-6">News</h2>
         <Card className="w-full max-w-sm">
           <CardHeader className="mt-5 mb-3">
-            <CardTitle>Sodium</CardTitle>
+            <CardTitle>Skye</CardTitle>
             <CardDescription>
-              CodeQL actions, Lavalink YouTube plugin, npm package updates, and bug fixes.
+              An AI chatbot powered by Google Gemini models. Try it out now.
             </CardDescription>
             <CardAction>
               <CardDescription>
-                <Badge variant="outline">v1.8.5</Badge>
+                <Badge variant="outline">Beta</Badge>
               </CardDescription>
             </CardAction>
           </CardHeader>
@@ -89,9 +89,9 @@ export default async function Page() {
             <CardContent>
               <div className="flex justify-center">
                 <Button asChild variant="secondary">
-                  <a href="https://github.com/yewshanooi/sodium/releases/" target="_blank">
-                    View on GitHub <ExternalLink />
-                  </a>
+                  <Link href="/skye">
+                    View more <ChevronRight/>
+                  </Link>
                 </Button>
               </div>
             </CardContent>

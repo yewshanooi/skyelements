@@ -28,7 +28,7 @@ const models = [
   { id: 'gemini-3-flash-preview', label: 'Gemini 3 Flash Preview' },
 ];
 
-const randomQueries = [
+const sampleQueries = [
     // What..? questions
     'What is the meaning of life?',
     'What are the latest advancements in AI?',
@@ -54,7 +54,7 @@ const randomQueries = [
     'How does the human immune system function?'
 ];
 
-export function ChatClient({ userEmail }: { userEmail: string }) {
+export function ChatClient() {
   const [welcomeMessage, setwelcomeMessage] = useState("");
   const [prompt, setPrompt] = useState("");
   const [response, setResponse] = useState<string | null>(null);
@@ -62,7 +62,7 @@ export function ChatClient({ userEmail }: { userEmail: string }) {
   const [selectedModel, setSelectedModel] = useState("gemini-2.5-flash");
 
   useEffect(() => {
-    setwelcomeMessage(randomQueries[Math.floor(Math.random() * randomQueries.length)]);
+    setwelcomeMessage(sampleQueries[Math.floor(Math.random() * sampleQueries.length)]);
   }, []);
 
   const handleSend = async () => {
@@ -101,7 +101,7 @@ export function ChatClient({ userEmail }: { userEmail: string }) {
            </div>
          ) : (
            <p className="mt-6 px-6 text-muted-foreground italic flex items-center gap-2">
-            {loading ? <><Spinner /> Thinking...</> : welcomeMessage ? <>Greetings, {userEmail}. <br/> Ask something like: "{welcomeMessage}"</> : ""}
+            {loading ? <><Spinner /> Thinking...</> : welcomeMessage ? <>"{welcomeMessage}"</> : ""}
            </p>
          )}
       </div>
@@ -132,7 +132,7 @@ export function ChatClient({ userEmail }: { userEmail: string }) {
               </InputGroupButton>
             </DropdownMenuTrigger>
             <DropdownMenuContent side="bottom" align="start">
-              <DropdownMenuLabel>Model</DropdownMenuLabel>
+              <DropdownMenuLabel>Models</DropdownMenuLabel>
 
               {models.map((model) => (
                 <DropdownMenuItem 

@@ -23,7 +23,6 @@ export function SettingsToggle() {
       <DropdownMenuTrigger asChild>
         <Button variant="secondary" size="icon" className="cursor-pointer">
           <Settings />
-          
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent side="bottom" align="end">

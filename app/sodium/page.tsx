@@ -48,7 +48,7 @@ export default function SodiumPage() {
         </Button>
       </div>
 
-      <div className="text-muted-foreground text-sm mt-8 max-w-3xl">
+      <div className="text-muted-foreground text-xs mt-8 max-w-3xl">
         <p>*By clicking &quot;Get started&quot;, you agree to the <a href="https://github.com/yewshanooi/sodium/blob/main/LICENSE" target="_blank"><u>license</u></a></p>
       </div>
 
@@ -175,7 +175,9 @@ export default function SodiumPage() {
               <p className="text-base mb-4">
                 Sodium replies to command requests with a meaningful message embed. Content is displayed in an organised manner with various text formatting. This will greatly enhance user&apos;s experience when viewing commands.
               </p>
-              *Image simulated for illustrative purposes. Actual UI may be different.
+              <div className="text-muted-foreground text-xs">
+                <p>*Image simulated for illustrative purposes. Actual UI may be different.</p>
+              </div>
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -199,7 +201,9 @@ export default function SodiumPage() {
               <p className="text-base mb-4">
                 Sodium uses buttons for commands that require users to view an external website. Additionally, links will be checked by Discord&apos;s built-in trust protection system to further protect users from malicious websites.
               </p>
-              *Image simulated for illustrative purposes. Actual UI may be different.
+              <div className="text-muted-foreground text-xs">
+                <p>*Image simulated for illustrative purposes. Actual UI may be different.</p>
+              </div>
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -223,7 +227,9 @@ export default function SodiumPage() {
               <p className="text-base mb-4">
                 Sodium commands are integrated within Discord channels. Commands can be requested using the slash ( / ) symbol in text channels. Furthermore, users can easily enter optional or required parameters in a text box.
               </p>
-              *Image simulated for illustrative purposes. Actual UI may be different.
+              <div className="text-muted-foreground text-xs">
+                <p>*Image simulated for illustrative purposes. Actual UI may be different.</p>
+              </div>
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -247,7 +253,9 @@ export default function SodiumPage() {
               <p className="text-base mb-4">
                 Sodium uses Gemini 2.5 Flash, a new model for the agentic era, to provide an AI chatbot experience within Discord channels. Users may run the command in direct messages for additional privacy.
               </p>
-              *Gemini can make mistakes, so double-check it.
+              <div className="text-muted-foreground text-xs">
+                <p>*Gemini can make mistakes, so double-check it.</p>
+              </div>
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -271,7 +279,9 @@ export default function SodiumPage() {
               <p className="text-base mb-4">
                 Sodium uses facebook/bart-large-cnn, a large model trained and fine-tuned on the CNN/Daily Mail dataset. User input data will be processed on-device rather than sent to a server, ensuring total confidentiality.
               </p>
-              *Image simulated for illustrative purposes. Actual UI may be different.
+              <div className="text-muted-foreground text-xs">
+                <p>*Image simulated for illustrative purposes. Actual UI may be different.</p>
+              </div>
             </CardDescription>
           </CardHeader>
           <CardContent>
