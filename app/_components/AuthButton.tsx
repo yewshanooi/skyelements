@@ -2,13 +2,14 @@
 
 import { useFormStatus } from "react-dom";
 import { Button } from "@/components/ui/button"
+import { Spinner } from "@/components/ui/spinner"
 
 export default function AuthButton({
     children,
-    pendingText = 'Loading...'
+    pendingText = <Spinner />
 }: {
     children: React.ReactNode;
-    pendingText?: string;
+    pendingText?: React.ReactNode;
 }) {
     const { pending } = useFormStatus();
 
@@ -20,5 +21,5 @@ export default function AuthButton({
         >
             {pending ? pendingText : children}
         </Button>
-    )
+    );
 }
