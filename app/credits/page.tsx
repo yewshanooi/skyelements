@@ -30,6 +30,36 @@ export default function CreditsPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-16 w-full max-w-3xl">
         <Card className="w-full">
           <CardHeader>
+            <CardTitle>Cloudflare</CardTitle>
+            <CardDescription>
+              Turnstile CAPTCHA — Skye
+            </CardDescription>
+            <CardAction>
+              <Button asChild variant="secondary">
+                <a href="https://www.cloudflare.com/application-services/products/turnstile/" target="_blank">
+                  <ExternalLink />
+                </a>
+              </Button>
+            </CardAction>
+          </CardHeader>
+        </Card>
+        <Card className="w-full">
+          <CardHeader>
+            <CardTitle>Google AI Studio</CardTitle>
+            <CardDescription>
+              Gemini API — Skye
+            </CardDescription>
+            <CardAction>
+              <Button asChild variant="secondary">
+                <a href="https://aistudio.google.com/" target="_blank">
+                  <ExternalLink />
+                </a>
+              </Button>
+            </CardAction>
+          </CardHeader>
+        </Card>
+        <Card className="w-full">
+          <CardHeader>
             <CardTitle>Google Fonts</CardTitle>
             <CardDescription>
               Geist & Geist Mono font family
@@ -90,6 +120,21 @@ export default function CreditsPage() {
         </Card>
         <Card className="w-full">
           <CardHeader>
+            <CardTitle>OpenRouter</CardTitle>
+            <CardDescription>
+             AI models API — Skye
+            </CardDescription>
+            <CardAction>
+              <Button asChild variant="secondary">
+                <a href="https://openrouter.ai/" target="_blank">
+                  <ExternalLink />
+                </a>
+              </Button>
+            </CardAction>
+          </CardHeader>
+        </Card>
+        <Card className="w-full">
+          <CardHeader>
             <CardTitle>shadcn</CardTitle>
             <CardDescription>
               UI component library
@@ -97,6 +142,21 @@ export default function CreditsPage() {
             <CardAction>
               <Button asChild variant="secondary">
                 <a href="https://ui.shadcn.com/" target="_blank">
+                  <ExternalLink />
+                </a>
+              </Button>
+            </CardAction>
+          </CardHeader>
+        </Card>
+        <Card className="w-full">
+          <CardHeader>
+            <CardTitle>Supabase</CardTitle>
+            <CardDescription>
+              Auth — Skye
+            </CardDescription>
+            <CardAction>
+              <Button asChild variant="secondary">
+                <a href="https://supabase.com/auth" target="_blank">
                   <ExternalLink />
                 </a>
               </Button>

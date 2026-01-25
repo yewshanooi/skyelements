@@ -56,7 +56,7 @@ export async function generateContent(prompt: string, model: string = "gemini-2.
     }
   }
 
-  // Google Gemini models
+  // Google AI Studio models
   if (!process.env.GOOGLE_API_KEY) {
     throw new Error("GOOGLE_API_KEY is not set.");
   }

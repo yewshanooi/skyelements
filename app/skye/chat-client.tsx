@@ -10,6 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuShortcut,
+  DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import {
   InputGroup,
@@ -35,17 +36,10 @@ const models = [
   { id: 'openrouter:qwen/qwen3-next-80b-a3b-instruct:free', label: 'Qwen3 Next Instruct', icon: '/skye/qwen.png', shortcut: '80B' },
   { id: 'openrouter:meta-llama/llama-3.3-70b-instruct:free', label: 'Llama 3.3 Instruct', icon: '/skye/meta.png', shortcut: '70B' },
   { id: 'openrouter:nvidia/nemotron-3-nano-30b-a3b:free', label: 'Nemotron 3 Nano', icon: '/skye/nvidia.png', shortcut: '30B' },
-  { id: 'openrouter:openai/gpt-oss-120b:free', label: 'gpt-oss', icon: '/skye/openai-black.png', shortcut: '120B' },
+  { id: 'openrouter:openai/gpt-oss-120b:free', label: 'GPT OSS', icon: '/skye/openai-black.png', shortcut: '120B' },
   { id: 'openrouter:mistralai/mistral-small-3.1-24b-instruct:free', label: 'Mistral Small 3.1', icon: '/skye/mistral.png', shortcut: '24B' },
   { id: 'openrouter:moonshotai/kimi-k2:free', label: 'Kimi K2', icon: '/skye/moonshot.png', shortcut: '0711' },
 ];
-
-
-// Providers that are rate-limited:
-//
-// Qwen
-// Mistral
-// Moonshot AI
 
 
 const sampleQueries = [
@@ -73,6 +67,7 @@ const sampleQueries = [
     'How do vaccines work?',
     'How does the human immune system function?'
 ];
+
 
 export function ChatClient() {
   const [welcomeMessage, setwelcomeMessage] = useState("");
@@ -159,6 +154,8 @@ export function ChatClient() {
               </InputGroupButton>
             </DropdownMenuTrigger>
             <DropdownMenuContent side="bottom" align="start">
+              <DropdownMenuLabel>Models</DropdownMenuLabel>
+
               {models.map((model) => (
                 <DropdownMenuItem 
                   key={model.id}
