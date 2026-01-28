@@ -19,6 +19,13 @@ import {
   InputGroupText,
   InputGroupTextarea,
 } from "@/components/ui/input-group";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner"
 import { generateContent } from "./actions";
@@ -105,18 +112,30 @@ export function ChatClient() {
   };
 
   return (
-    <div className="w-full max-w-3xl mx-auto mt-12">
-      <div className="mb-18">
+    <div className="w-full max-w-3xl mx-auto">
+      <div className="mt-12 mb-12">
          {response ? (
-           <div className="mb-12 px-6 prose prose-neutral dark:prose-invert max-w-none">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {response}
-              </ReactMarkdown>
-           </div>
+            <Card className="w-full">
+              <CardHeader>
+                <CardDescription>
+                  <div className="p-2 text-base">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {response}
+                    </ReactMarkdown>
+                  </div>
+                </CardDescription>
+              </CardHeader>
+            </Card>
          ) : (
-           <p className="mt-6 px-6 text-muted-foreground italic flex items-center gap-2">
-            {loading ? <><Spinner /> Thinking...</> : welcomeMessage ? <>"{welcomeMessage}"</> : ""}
-           </p>
+            <Card className="w-full">
+              <CardHeader>
+                <CardDescription>
+                  <p className="p-2 text-base italic flex items-center gap-2">
+                    {loading ? <><Spinner /> Thinking...</> : welcomeMessage ? <>"{welcomeMessage}"</> : ""}
+                  </p>
+                </CardDescription>
+              </CardHeader>
+            </Card>
          )}
       </div>
   
