@@ -109,8 +109,8 @@ export function ChatClient() {
     <div className="w-full max-w-3xl mx-auto">
       <div className="mt-12 mb-12">
          {response ? (
-            // FIX: Fix issue with text overflowing on mobile when response text has URLs or code snippets
-            <div className="p-4">
+            // FIX: Temporary solution for text overflow by adding a horizontal scrollbar
+            <div className="p-4 overflow-x-auto">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>
                 {response}
               </ReactMarkdown>
