@@ -19,17 +19,11 @@ import {
   InputGroupText,
   InputGroupTextarea,
 } from "@/components/ui/input-group";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner"
 import { generateContent } from "./actions";
 import Image from 'next/image'
+
 
 const models = [
   { id: 'gemini-3-flash-preview', label: 'Gemini 3 Flash', icon: '/skye/google.png', shortcut: 'Preview' },
@@ -115,27 +109,16 @@ export function ChatClient() {
     <div className="w-full max-w-3xl mx-auto">
       <div className="mt-12 mb-12">
          {response ? (
-            <Card className="w-full">
-              <CardHeader>
-                <CardDescription>
-                  <div className="p-2 text-base">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {response}
-                    </ReactMarkdown>
-                  </div>
-                </CardDescription>
-              </CardHeader>
-            </Card>
+            // FIX: Fix issue with text overflowing on mobile when response text has URLs or code snippets
+            <div className="p-4">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {response}
+              </ReactMarkdown>
+            </div>
          ) : (
-            <Card className="w-full">
-              <CardHeader>
-                <CardDescription>
-                  <p className="p-2 text-base italic flex items-center gap-2">
-                    {loading ? <><Spinner /> Thinking...</> : welcomeMessage ? <>"{welcomeMessage}"</> : ""}
-                  </p>
-                </CardDescription>
-              </CardHeader>
-            </Card>
+            <p className="p-4 text-muted-foreground italic flex items-center gap-2">
+              {loading ? <><Spinner /> Thinking...</> : welcomeMessage ? <>"{welcomeMessage}"</> : ""}
+            </p>
          )}
       </div>
   

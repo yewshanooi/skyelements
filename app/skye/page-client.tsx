@@ -26,7 +26,7 @@ export function PageClient({ userEmail, signout }: { userEmail: string, signout:
       <div className="flex flex-row items-center gap-4 w-full max-w-3xl">
         <h1 className="scroll-m-20 text-3xl font-semibold text-balance flex items-center gap-2">
           Skye
-          <Badge variant="outline">Beta</Badge>
+          {/* <Badge variant="outline">Beta</Badge> */}
         </h1>
         
         <Button variant="secondary" className="cursor-pointer ml-auto" onClick={handleNewChat}>
