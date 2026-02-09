@@ -65,7 +65,7 @@ export function PageClient({ userEmail, signout }: { userEmail: string, signout:
       <ChatClient key={chatKey} />
 
       <div className="text-muted-foreground text-xs mt-4 max-w-3xl">
-        <p>Skye can make mistakes, so double-check it</p>
+        <p>Skye is AI and can make mistakes.</p>
       </div>
 
     </main>

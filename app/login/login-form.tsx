@@ -64,7 +64,7 @@ export default function LoginForm() {
                                     </div>
                                     <Input id="password" name="password" type="password" required />
                                     {state?.error && (
-                                        <p className="text-sm text-red-600 mt-1">{state.error}</p>
+                                        <FieldDescription className="text-red-600">{state.error}</FieldDescription>
                                     )}
                                 </Field>
                                 <div className="flex justify-center overflow-hidden">

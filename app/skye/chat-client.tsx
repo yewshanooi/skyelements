@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from "react";
+import { useTheme } from "next-themes";
 import { ArrowUpIcon, ChevronDown, Plus } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -37,7 +38,7 @@ const models = [
   { id: 'openrouter:qwen/qwen3-next-80b-a3b-instruct:free', label: 'Qwen3 Next Instruct', icon: '/skye/qwen.png', shortcut: '80B' },
   { id: 'openrouter:meta-llama/llama-3.3-70b-instruct:free', label: 'Llama 3.3 Instruct', icon: '/skye/meta.png', shortcut: '70B' },
   { id: 'openrouter:nvidia/nemotron-3-nano-30b-a3b:free', label: 'Nemotron 3 Nano', icon: '/skye/nvidia.png', shortcut: '30B' },
-  { id: 'openrouter:openai/gpt-oss-120b:free', label: 'GPT OSS', icon: '/skye/openai-black.png', shortcut: '120B' },
+  { id: 'openrouter:openai/gpt-oss-120b:free', label: 'GPT OSS', icon: '/skye/openai-dark.png', shortcut: '120B' },
   { id: 'openrouter:mistralai/mistral-small-3.1-24b-instruct:free', label: 'Mistral Small 3.1', icon: '/skye/mistral.png', shortcut: '24B' }
 ];
 
@@ -70,6 +71,7 @@ const sampleQueries = [
 
 
 export function ChatClient() {
+  const { theme } = useTheme();
   const [welcomeMessage, setwelcomeMessage] = useState("");
   const [prompt, setPrompt] = useState("");
   const [response, setResponse] = useState<string | null>(null);
@@ -79,6 +81,13 @@ export function ChatClient() {
   useEffect(() => {
     setwelcomeMessage(sampleQueries[Math.floor(Math.random() * sampleQueries.length)]);
   }, []);
+
+  const getModelIcon = (modelId: string, iconPath: string) => {
+    if (modelId.includes('openai')) {
+      return theme === 'dark' ? '/skye/openai-light.png' : '/skye/openai-dark.png';
+    }
+    return iconPath;
+  };
 
   const handleSend = async () => {
     if (!prompt.trim()) return;
@@ -144,7 +153,7 @@ export function ChatClient() {
             <DropdownMenuTrigger asChild>
               <InputGroupButton variant="secondary" className="cursor-pointer">
                 <Image 
-                  src={models.find(m => m.id === selectedModel)?.icon ?? ''} 
+                  src={getModelIcon(selectedModel, models.find(m => m.id === selectedModel)?.icon ?? '')} 
                   alt={models.find(m => m.id === selectedModel)?.label ?? 'Model icon'}
                   width={16} 
                   height={16}
@@ -164,7 +173,7 @@ export function ChatClient() {
                   className="cursor-pointer flex items-center gap-2"
                 >
                   <Image 
-                    src={model.icon} 
+                    src={getModelIcon(model.id, model.icon)} 
                     alt={model.label}
                     width={16} 
                     height={16}
