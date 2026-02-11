@@ -1,6 +1,6 @@
 "use client"
 
-import { Moon, Sun, Settings, LogOut, LogIn } from "lucide-react"
+import { Moon, Sun, Settings, LogOut, LogIn, Bot } from "lucide-react"
 import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
 import {
@@ -15,6 +15,7 @@ import {
   DropdownMenuPortal,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuShortcut,
 } from "@/components/ui/dropdown-menu"
 import Link from "next/link"
 
@@ -39,6 +40,14 @@ export function SettingsToggle({ userEmail, signout }: SettingsToggleProps = {})
           <>
             <DropdownMenuLabel>{userEmail}</DropdownMenuLabel>
             <DropdownMenuSeparator />
+            <DropdownMenuItem asChild className="cursor-pointer">
+              <Link href="/skye">
+                <Bot /> Skye 
+                  <DropdownMenuShortcut>
+                    AI chatbot ✨
+                  </DropdownMenuShortcut>
+              </Link>
+            </DropdownMenuItem>
             <DropdownMenuSub>
               <DropdownMenuSubTrigger className="cursor-pointer">
                 <Sun className="h-[1.2rem] w-[1.2rem] scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90" />

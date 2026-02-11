@@ -23,7 +23,7 @@ export default async function Page() {
     <main className="flex min-h-screen flex-col items-center justify-start p-8 pt-21 md:pt-26">
 
       <div className="flex flex-col gap-4">
-        <div className="flex justify-center md:hidden">
+        <div className="flex justify-center lg:hidden">
           <Image
             src="/logo/skyelements.png"
             alt="SkyElements Logo"

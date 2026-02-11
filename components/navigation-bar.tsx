@@ -56,7 +56,7 @@ export function NavigationBar({ userEmail, signout }: NavigationBarProps = {}) {
     <div className="sticky top-4 z-50 flex justify-center px-4">
       <div className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-gray-200/20 rounded-xl shadow-xs px-6 py-3 w-full max-w-7xl">
         {/* Desktop Navigation */}
-        <div className="hidden md:grid grid-cols-3 items-center gap-8">
+        <div className="hidden lg:grid grid-cols-3 items-center gap-8">
           <div className="flex justify-start">
             <Link href="/" className="flex-shrink-0">
               <Image 
@@ -72,14 +72,6 @@ export function NavigationBar({ userEmail, signout }: NavigationBarProps = {}) {
           <div className="flex justify-center">
             <NavigationMenu viewport={false}>
               <NavigationMenuList>
-
-            <NavigationMenuItem>
-              <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
-                <Link href="/skye">
-                  Skye
-                </Link>
-              </NavigationMenuLink>
-            </NavigationMenuItem>
 
             <NavigationMenuItem>
               <NavigationMenuTrigger className="cursor-pointer">Sodium</NavigationMenuTrigger>
@@ -156,7 +148,7 @@ export function NavigationBar({ userEmail, signout }: NavigationBarProps = {}) {
 
 
       {/* Mobile Navigation */}
-      <div className="flex md:hidden w-full max-w-sm gap-4">
+      <div className="flex lg:hidden w-full max-w-sm gap-4">
         <DropdownMenu open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
           <DropdownMenuTrigger asChild>
             <Button 
@@ -174,14 +166,6 @@ export function NavigationBar({ userEmail, signout }: NavigationBarProps = {}) {
             <DropdownMenuItem asChild>
               <Link href="/" className="w-full cursor-pointer">
                 Home
-              </Link>
-            </DropdownMenuItem>
-
-            <DropdownMenuSeparator />
-
-            <DropdownMenuItem asChild>
-              <Link href="/skye" className="w-full cursor-pointer">
-                Skye
               </Link>
             </DropdownMenuItem>
 
