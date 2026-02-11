@@ -81,7 +81,7 @@ export default async function Page() {
             </CardDescription>
             <CardAction>
               <CardDescription>
-                <Badge variant="outline">New</Badge>
+                <Badge variant="outline">Beta</Badge>
               </CardDescription>
             </CardAction>
           </CardHeader>

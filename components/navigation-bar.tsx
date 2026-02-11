@@ -24,9 +24,19 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { SettingsToggle } from "./settings-client";
 
-export function NavigationBar() {
+interface NavigationBarProps {
+  userEmail?: string | null;
+  signout?: () => Promise<void>;
+}
+
+export function NavigationBar({ userEmail, signout }: NavigationBarProps = {}) {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false)
   const pathname = usePathname()
+
+  // Hide navigation bar on protected routes when not authenticated to prevent flash
+  if (pathname === "/skye" && !userEmail) {
+    return null
+  }
 
   // Get current page name for mobile menu button
   const getCurrentPageName = () => {
@@ -140,7 +150,7 @@ export function NavigationBar() {
           </div>
 
           <div className="flex justify-end">
-            <SettingsToggle />
+            <SettingsToggle userEmail={userEmail} signout={signout} />
           </div>
         </div>
 
@@ -248,7 +258,7 @@ export function NavigationBar() {
         </DropdownMenu>
 
         {/* Mobile Settings Toggle */}
-        <SettingsToggle />
+        <SettingsToggle userEmail={userEmail} signout={signout} />
       </div>
       </div>
     </div>
