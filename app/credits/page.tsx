@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 
 export default function CreditsPage() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-start p-8">
+    <main className="flex min-h-screen flex-col items-center justify-start p-8 pt-24">
 
       <div className="flex flex-col gap-4">
         <h1 className="scroll-m-20 text-4xl text-center font-semibold text-balance">

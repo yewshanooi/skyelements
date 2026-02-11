@@ -20,10 +20,10 @@ export const metadata: Metadata = {
 
 export default async function Page() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-start p-8">
+    <main className="flex min-h-screen flex-col items-center justify-start p-8 pt-21 md:pt-26">
 
       <div className="flex flex-col gap-4">
-        <div className="flex justify-center">
+        <div className="flex justify-center md:hidden">
           <Image
             src="/logo/skyelements.png"
             alt="SkyElements Logo"

@@ -25,7 +25,7 @@ export default function SignupForm() {
     const [captchaToken, setCaptchaToken] = useState<string | undefined>();
 
     return (
-        <div className="flex min-h-svh w-full items-start justify-center p-6 md:p-10">
+        <div className="flex min-h-svh w-full items-start justify-center p-8 pt-24">
             <div className="w-full max-w-sm">
                 <Card>
                     <CardHeader className="text-center">
