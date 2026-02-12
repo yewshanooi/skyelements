@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 
 export default function SodiumPage() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-start p-8 pt-21">
+    <main className="flex min-h-screen flex-col items-center justify-start p-8 pt-16 lg:pt-24">
 
       <div className="flex flex-col gap-4">
         <div className="flex justify-center">

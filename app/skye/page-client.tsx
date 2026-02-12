@@ -14,7 +14,7 @@ export function PageClient() {
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-start p-8 pt-24">
+    <main className="flex min-h-screen flex-col items-center justify-start p-8 pt-16 lg:pt-24">
 
       <div className="flex flex-row items-center gap-4 w-full max-w-3xl">
         <h1 className="scroll-m-20 text-3xl font-semibold text-balance flex items-center gap-2">
