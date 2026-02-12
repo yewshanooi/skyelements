@@ -62,7 +62,7 @@ export default function SignupForm() {
                                     )}
                                 </Field>
                                 <div className="flex justify-center overflow-hidden">
-                                    <div className="scale-[0.80] sm:scale-100 origin-center">
+                                    <div className="scale-[0.80] lg:scale-100 origin-center">
                                         <Turnstile
                                             siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
                                             onSuccess={(token) => setCaptchaToken(token)}

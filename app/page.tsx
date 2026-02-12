@@ -23,24 +23,18 @@ export default async function Page() {
     <main className="flex min-h-screen flex-col items-center justify-start p-8 pt-16 lg:pt-24">
 
       <div className="flex flex-col gap-4">
-        <div className="flex justify-center lg:hidden">
-          <Image
-            src="/logo/skyelements.png"
-            alt="SkyElements Logo"
-            width={239}
-            height={55}
-            className="h-16 w-auto"
-          />
-        </div>
+        <h1 className="scroll-m-20 text-3xl text-center font-semibold text-balance">
+          Home of everything elements
+        </h1>
         <p className="text-muted-foreground text-center text-l max-w-2xl">
-          Home of everything elements. Run open source projects with just a few commands.
+          Run open source projects with just a few commands.
         </p>
       </div>
 
       <div className="flex flex-col md:flex-row justify-center gap-4 mt-16 w-full max-w-3xl">
         {/* Projects Card */}
         <div className="flex-1 flex flex-col items-center mb-12">
-          <h2 className="text-xl font-semibold text-center text-primary mb-6">Projects</h2>
+        <h2 className="text-xl font-semibold text-center text-primary mb-6">Projects</h2>
           <Card className="w-full max-w-sm">
             <CardHeader>
               <CardTitle>
@@ -55,36 +49,37 @@ export default async function Page() {
                 </div>
               </CardTitle>
 
-            <CardContent>
-              <CardDescription className="text-center mb-6">
-                Multipurpose discord bot with application commands and a user-friendly interface.
-              </CardDescription>
-              <div className="flex justify-center">
-                <Button asChild variant="secondary">
-                  <Link href="/sodium">
-                    View more <ChevronRight/>
-                  </Link>
-                </Button>
-              </div>
-            </CardContent>
-          </CardHeader>
-        </Card>
-      </div>
-      {/* News Card */}
-      <div className="flex-1 flex flex-col items-center">
+              <CardContent>
+                <CardDescription className="text-center mb-6">
+                  Multipurpose discord bot with application commands and a user-friendly interface.
+                </CardDescription>
+                <div className="flex justify-center">
+                  <Button asChild variant="secondary">
+                    <Link href="/sodium">
+                      View more <ChevronRight/>
+                    </Link>
+                  </Button>
+                </div>
+              </CardContent>
+            </CardHeader>
+          </Card>
+        </div>
+
+        {/* News Card */}
+        <div className="flex-1 flex flex-col items-center">
         <h2 className="text-xl font-semibold text-center text-primary mb-6">News</h2>
-        <Card className="w-full max-w-sm">
-          <CardHeader className="mt-5 mb-3">
-            <CardTitle>Skye</CardTitle>
-            <CardDescription>
-              An AI chatbot powered by Google AI Studio & OpenRouter. Try it out now.
-            </CardDescription>
-            <CardAction>
+          <Card className="w-full max-w-sm">
+            <CardHeader className="mt-5 mb-3">
+              <CardTitle>Skye</CardTitle>
               <CardDescription>
-                <Badge variant="outline">Beta</Badge>
+                An AI chatbot powered by Google AI Studio & OpenRouter. Try it out now.
               </CardDescription>
-            </CardAction>
-          </CardHeader>
+              <CardAction>
+                <CardDescription>
+                  <Badge variant="outline">Beta</Badge>
+                </CardDescription>
+              </CardAction>
+            </CardHeader>
 
             <CardContent>
               <div className="flex justify-center">
@@ -97,8 +92,8 @@ export default async function Page() {
             </CardContent>
           </Card>
         </div>
-      </div>
 
+      </div>
     </main>
   );
 }

@@ -38,20 +38,6 @@ export function NavigationBar({ userEmail, signout }: NavigationBarProps = {}) {
     return null
   }
 
-  // Get current page name for mobile menu button
-  const getCurrentPageName = () => {
-    if (pathname === "/") return "Home"
-    if (pathname === "/skye") return "Skye"
-    if (pathname === "/sodium") return "Sodium — About"
-    if (pathname === "/commands") return "Sodium — Commands"
-    if (pathname === "/branding") return "Branding"
-    if (pathname === "/credits") return "Credits"
-    if (pathname === "/cookie-policy") return "Cookie Policy"
-    if (pathname === "/login") return "Login"
-    if (pathname === "/signup") return "Sign Up"
-    return "Page Not Found"
-  }
-
   return (
     <div className="sticky top-4 z-50 flex justify-center px-4">
       <div className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-gray-200/20 rounded-xl shadow-xs px-6 py-3 w-full max-w-7xl">
@@ -148,20 +134,25 @@ export function NavigationBar({ userEmail, signout }: NavigationBarProps = {}) {
 
 
       {/* Mobile Navigation */}
-      <div className="flex lg:hidden w-full max-w-sm gap-4">
+      <div className="flex lg:hidden w-full items-center gap-2">
+        <Link href="/" className="flex-shrink-0">
+          <Image 
+            src="/logo/skyelements.png" 
+            alt="SkyElements Logo" 
+            width={160} 
+            height={55}
+          />
+        </Link>
+        
         <DropdownMenu open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
           <DropdownMenuTrigger asChild>
-            <Button 
-              variant="outline" 
-              className="flex-1 justify-between"
-            >
-              <span>{getCurrentPageName()}</span>
+            <Button variant="outline" size="icon" className="cursor-pointer ml-auto">
               {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent 
-            align="start" 
-            className="w-[var(--radix-dropdown-menu-trigger-width)] max-h-[70vh] overflow-y-auto"
+            align="end" 
+            className="w-50 max-h-[70vh] overflow-y-auto"
           >
             <DropdownMenuItem asChild>
               <Link href="/" className="w-full cursor-pointer">

@@ -31,7 +31,7 @@ export default function SodiumPage() {
             className="h-16 w-auto"
           />
         </div>
-        <p className="text-muted-foreground text-center text-l">
+        <p className="text-muted-foreground text-center text-l max-w-3xl">
           Multipurpose discord bot with application commands and a user-friendly interface.
         </p>
       </div>
