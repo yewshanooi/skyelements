@@ -180,7 +180,7 @@ export function ChatClient() {
           </DropdownMenu>
           <InputGroupText className="ml-auto">
             {prompt.length > 0 && (
-              <span className="hidden md:inline">{`${prompt.length} ${prompt.length === 1 ? 'character' : 'characters'}`}</span>
+              <span className="hidden lg:inline">{`${prompt.length} ${prompt.length === 1 ? 'character' : 'characters'}`}</span>
             )}
           </InputGroupText>
           <Separator orientation="vertical" className="!h-4" />

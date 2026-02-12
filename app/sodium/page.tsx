@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 
 export default function SodiumPage() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-start p-8">
+    <main className="flex min-h-screen flex-col items-center justify-start p-8 pt-16 lg:pt-24">
 
       <div className="flex flex-col gap-4">
         <div className="flex justify-center">
@@ -31,7 +31,7 @@ export default function SodiumPage() {
             className="h-16 w-auto"
           />
         </div>
-        <p className="text-muted-foreground text-center text-l">
+        <p className="text-muted-foreground text-center text-l max-w-3xl">
           Multipurpose discord bot with application commands and a user-friendly interface.
         </p>
       </div>

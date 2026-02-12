@@ -17,13 +17,13 @@ export const metadata: Metadata = {
 
 export default function BrandingPage() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-start p-8">
+    <main className="flex min-h-screen flex-col items-center justify-start p-8 pt-16 lg:pt-24">
 
       <div className="flex flex-col gap-4">
-        <h1 className="scroll-m-20 text-4xl text-center font-semibold text-balance">
+        <h1 className="scroll-m-20 text-3xl text-center font-semibold text-balance">
           Branding
         </h1>
-        <p className="text-muted-foreground text-center text-l">
+        <p className="text-muted-foreground text-center text-l max-w-3xl">
           Our icons, logo, and media kit.
         </p>
       </div>

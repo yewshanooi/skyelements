@@ -25,7 +25,7 @@ export default function SignupForm() {
     const [captchaToken, setCaptchaToken] = useState<string | undefined>();
 
     return (
-        <div className="flex min-h-svh w-full items-start justify-center p-6 md:p-10">
+        <div className="flex min-h-svh w-full items-start justify-center p-8 pt-16 lg:pt-24">
             <div className="w-full max-w-sm">
                 <Card>
                     <CardHeader className="text-center">
@@ -62,7 +62,7 @@ export default function SignupForm() {
                                     )}
                                 </Field>
                                 <div className="flex justify-center overflow-hidden">
-                                    <div className="scale-[0.85] sm:scale-100 origin-center">
+                                    <div className="scale-[0.80] lg:scale-100 origin-center">
                                         <Turnstile
                                             siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
                                             onSuccess={(token) => setCaptchaToken(token)}
