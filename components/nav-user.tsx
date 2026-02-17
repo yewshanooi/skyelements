@@ -1,19 +1,17 @@
 "use client"
 
 import {
-  BadgeCheck,
-  Bell,
   ChevronsUpDown,
   Sun,
+  Moon,
   LogOut,
-  Sparkles,
   User,
 } from "lucide-react"
+import { useTheme } from "next-themes"
 
 import {
   Avatar,
   AvatarFallback,
-  AvatarImage,
 } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -23,6 +21,11 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuPortal,
+  DropdownMenuCheckboxItem,
 } from "@/components/ui/dropdown-menu"
 import {
   SidebarMenu,
@@ -33,14 +36,15 @@ import {
 
 export function NavUser({
   user,
+  signout,
 }: {
   user: {
-    name: string
     email: string
-    avatar: string
   }
+  signout?: () => Promise<void>
 }) {
   const { isMobile } = useSidebar()
+  const { theme, setTheme } = useTheme()
 
   return (
     <SidebarMenu>
@@ -52,14 +56,13 @@ export function NavUser({
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
               <Avatar className="h-8 w-8 rounded-lg">
-                <AvatarImage src={user.avatar} alt={user.name} />
                 <AvatarFallback className="rounded-lg">
                   <User className="size-4" />
                 </AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">{user.name}</span>
-                <span className="truncate text-xs">{user.email}</span>
+                <span className="truncate font-medium">{user.email}</span>
+                <span className="truncate text-xs">Free Plan</span>
               </div>
               <ChevronsUpDown className="ml-auto size-4" />
             </SidebarMenuButton>
@@ -73,24 +76,55 @@ export function NavUser({
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <Avatar className="h-8 w-8 rounded-lg">
-                  <AvatarImage src={user.avatar} alt={user.name} />
                   <AvatarFallback className="rounded-sm">
                     <User className="size-4" />
                   </AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">{user.name}</span>
-                  <span className="truncate text-xs">{user.email}</span>
+                  <span className="truncate font-medium">{user.email}</span>
+                  <span className="truncate text-xs">Free Plan</span>
                 </div>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem>
-                <Sun />
-                Theme
-              </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger className="cursor-pointer">
+                  <Sun className="h-[1.2rem] w-[1.2rem] scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90" />
+                  <Moon className="absolute h-[1.2rem] w-[1.2rem] scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0" />
+                  Theme
+                </DropdownMenuSubTrigger>
+                <DropdownMenuPortal>
+                  <DropdownMenuSubContent>
+                    <DropdownMenuCheckboxItem
+                      checked={theme === "light"}
+                      onCheckedChange={() => setTheme("light")}
+                      className="cursor-pointer"
+                    >
+                      Light
+                    </DropdownMenuCheckboxItem>
+                    <DropdownMenuCheckboxItem
+                      checked={theme === "dark"}
+                      onCheckedChange={() => setTheme("dark")}
+                      className="cursor-pointer"
+                    >
+                      Dark
+                    </DropdownMenuCheckboxItem>
+                    <DropdownMenuCheckboxItem
+                      checked={theme === "system"}
+                      onCheckedChange={() => setTheme("system")}
+                      className="cursor-pointer"
+                    >
+                      System
+                    </DropdownMenuCheckboxItem>
+                  </DropdownMenuSubContent>
+                </DropdownMenuPortal>
+              </DropdownMenuSub>
+              <DropdownMenuItem 
+                variant="destructive" 
+                onClick={() => signout?.()} 
+                className="cursor-pointer"
+              >
                 <LogOut />
                 Logout
               </DropdownMenuItem>

@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { redirectIfNotAuthenticated } from "@/utils/redirectIfNotAuthenticated";
 import { PageClient } from "./page-client";
 import { AppSidebar } from "@/components/app-sidebar"
+import { signout } from "../(auth)/actions"
+import { createClient } from "@/utils/supabase/server"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -25,9 +27,17 @@ export const metadata: Metadata = {
 export default async function Page() {
   await redirectIfNotAuthenticated();
 
+  const supabase = await createClient();
+  const { data } = await supabase.auth.getUser();
+  const userEmail = data.user?.email ?? "user@example.com";
+
+  const user = {
+    email: userEmail,
+  };
+
   return (
     <SidebarProvider>
-      <AppSidebar />
+      <AppSidebar user={user} signout={signout} />
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2">
           <div className="flex items-center gap-2 px-4">
@@ -39,7 +49,7 @@ export default async function Page() {
             <Breadcrumb>
               <BreadcrumbList>
                 <BreadcrumbItem>
-                  Chat 1
+                  New Chat
                 </BreadcrumbItem> 
               </BreadcrumbList>
             </Breadcrumb>

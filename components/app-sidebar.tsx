@@ -18,32 +18,30 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 
-const data = {
-  user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
+const defaultChats = [
+  {
+    name: "Chat 1",
+    url: "#",
+    icon: MessagesSquare,
   },
-  chats: [
-    {
-      name: "Chat 1",
-      url: "#",
-      icon: MessagesSquare,
-    },
-    {
-      name: "Chat 2",
-      url: "#",
-      icon: MessagesSquare,
-    },
-    {
-      name: "Chat 3",
-      url: "#",
-      icon: MessagesSquare,
-    },
-  ],
-}
+  {
+    name: "Chat 2",
+    url: "#",
+    icon: MessagesSquare,
+  },
+  {
+    name: "Chat 3",
+    url: "#",
+    icon: MessagesSquare,
+  },
+]
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export function AppSidebar({ user, signout, ...props }: React.ComponentProps<typeof Sidebar> & {
+  user: {
+    email: string
+  }
+  signout?: () => Promise<void>
+}) {
   return (
     <Sidebar variant="inset" {...props}>
       <SidebarHeader>
@@ -64,10 +62,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavChats chats={data.chats} />
+        <NavChats chats={defaultChats} />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser user={user} signout={signout} />
       </SidebarFooter>
     </Sidebar>
   )

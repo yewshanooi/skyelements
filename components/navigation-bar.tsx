@@ -22,14 +22,9 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
-import { SettingsToggle } from "./settings-client";
+import { ThemeToggle } from "./theme-client";
 
-interface NavigationBarProps {
-  userEmail?: string | null;
-  signout?: () => Promise<void>;
-}
-
-export function NavigationBar({ userEmail, signout }: NavigationBarProps = {}) {
+export function NavigationBar() {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false)
   const pathname = usePathname()
 
@@ -59,76 +54,84 @@ export function NavigationBar({ userEmail, signout }: NavigationBarProps = {}) {
             <NavigationMenu viewport={false}>
               <NavigationMenuList>
 
-            <NavigationMenuItem>
-              <NavigationMenuTrigger className="cursor-pointer">Sodium</NavigationMenuTrigger>
-              <NavigationMenuContent>
-                <ul className="grid gap-2 md:w-[400px] lg:w-[500px] lg:grid-cols-[.75fr_1fr]">
-                  <li className="row-span-3">
-                    <NavigationMenuLink asChild>
-                      <Link
-                        href="/sodium"
-                        className="from-muted/50 to-muted flex h-full w-full flex-col justify-end rounded-md bg-linear-to-b p-6 no-underline outline-hidden select-none focus:shadow-md"
-                      >
-                        <div className="mt-4 mb-2 text-lg font-medium">
-                          Sodium
-                        </div>
-                        <p className="text-muted-foreground text-sm leading-tight">
-                          Multipurpose discord bot with application commands and a user-friendly interface
-                        </p>
-                      </Link>
-                    </NavigationMenuLink>
-                  </li>
-                  <ListItem href="/commands" title="Commands">
-                    Preview commands from Sodium
-                  </ListItem>
-                  <ListItem href="https://github.com/yewshanooi/sodium/blob/main/README.md#guides" title={<>Get Started <ExternalLink className="ml-1 h-4 w-4" /></>} target="_blank">
-                    Customize & host your own Sodium bot
-                  </ListItem>
-                  <ListItem href="https://github.com/yewshanooi/sodium/blob/main/LICENSE" title={<>License <ExternalLink className="ml-1 h-4 w-4" /></>} target="_blank">
-                    Sodium is licensed under MIT License
-                  </ListItem>
-                </ul>
-              </NavigationMenuContent>
-            </NavigationMenuItem>
+                <NavigationMenuItem>
+                  <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
+                    <Link href="/skye">
+                      Skye
+                    </Link>
+                  </NavigationMenuLink>
+                </NavigationMenuItem>
 
-            <NavigationMenuItem>
-              <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
-                <Link href="/branding">
-                  Branding
-                </Link>
-              </NavigationMenuLink>
-            </NavigationMenuItem>
+                <NavigationMenuItem>
+                  <NavigationMenuTrigger className="cursor-pointer">Sodium</NavigationMenuTrigger>
+                  <NavigationMenuContent>
+                    <ul className="grid gap-2 md:w-[400px] lg:w-[500px] lg:grid-cols-[.75fr_1fr]">
+                      <li className="row-span-3">
+                        <NavigationMenuLink asChild>
+                          <Link
+                            href="/sodium"
+                            className="from-muted/50 to-muted flex h-full w-full flex-col justify-end rounded-md bg-linear-to-b p-6 no-underline outline-hidden select-none focus:shadow-md"
+                          >
+                            <div className="mt-4 mb-2 text-lg font-medium">
+                              Sodium
+                            </div>
+                            <p className="text-muted-foreground text-sm leading-tight">
+                              Multipurpose discord bot with application commands and a user-friendly interface
+                            </p>
+                          </Link>
+                        </NavigationMenuLink>
+                      </li>
+                      <ListItem href="/commands" title="Commands">
+                        Preview commands from Sodium
+                      </ListItem>
+                      <ListItem href="https://github.com/yewshanooi/sodium/blob/main/README.md#guides" title={<>Get Started <ExternalLink className="ml-1 h-4 w-4" /></>} target="_blank">
+                        Customize & host your own Sodium bot
+                      </ListItem>
+                      <ListItem href="https://github.com/yewshanooi/sodium/blob/main/LICENSE" title={<>License <ExternalLink className="ml-1 h-4 w-4" /></>} target="_blank">
+                        Sodium is licensed under MIT License
+                      </ListItem>
+                    </ul>
+                  </NavigationMenuContent>
+                </NavigationMenuItem>
 
-            <NavigationMenuItem>
-              <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
-                <Link href="/credits">
-                  Credits
-                </Link>
-              </NavigationMenuLink>
-            </NavigationMenuItem>
+                <NavigationMenuItem>
+                  <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
+                    <Link href="/branding">
+                      Branding
+                    </Link>
+                  </NavigationMenuLink>
+                </NavigationMenuItem>
 
-            <NavigationMenuItem>
-              <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
-                <Link href="/cookie-policy">
-                  Cookie Policy
-                </Link>
-              </NavigationMenuLink>
-            </NavigationMenuItem>
+                <NavigationMenuItem>
+                  <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
+                    <Link href="/credits">
+                      Credits
+                    </Link>
+                  </NavigationMenuLink>
+                </NavigationMenuItem>
 
-            <NavigationMenuItem>
-              <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
-                <a href="https://github.com/yewshanooi/skyelements" target="_blank" className="flex-row items-center gap-2">
-                  GitHub <ExternalLink />
-                </a>
-              </NavigationMenuLink>
-            </NavigationMenuItem>
-            
-          </NavigationMenuList>
+                <NavigationMenuItem>
+                  <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
+                    <Link href="/cookie-policy">
+                      Cookie Policy
+                    </Link>
+                  </NavigationMenuLink>
+                </NavigationMenuItem>
+
+                <NavigationMenuItem>
+                  <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
+                    <a href="https://github.com/yewshanooi/skyelements" target="_blank" className="flex-row items-center gap-2">
+                      GitHub <ExternalLink />
+                    </a>
+                  </NavigationMenuLink>
+                </NavigationMenuItem>
+                
+              </NavigationMenuList>
             </NavigationMenu>
           </div>
 
           <div className="flex justify-end">
-            <SettingsToggle userEmail={userEmail} signout={signout} />
+            <ThemeToggle />
           </div>
         </div>
 
@@ -233,7 +236,7 @@ export function NavigationBar({ userEmail, signout }: NavigationBarProps = {}) {
         </DropdownMenu>
 
         {/* Mobile Settings Toggle */}
-        <SettingsToggle userEmail={userEmail} signout={signout} />
+        <ThemeToggle />
       </div>
       </div>
     </div>
