@@ -33,8 +33,8 @@ export function NavigationBar({ userEmail, signout }: NavigationBarProps = {}) {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false)
   const pathname = usePathname()
 
-  // Hide navigation bar on /chat and protected routes when not authenticated
-  if (pathname === "/chat" || (pathname === "/skye" && !userEmail)) {
+  // Hide navigation bar on /chat
+  if (pathname === "/skye") {
     return null
   }
 
