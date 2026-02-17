@@ -20,17 +20,17 @@ import {
 
 const defaultChats = [
   {
-    name: "Chat 1",
+    name: "Chat Title 1",
     url: "#",
     icon: MessagesSquare,
   },
   {
-    name: "Chat 2",
+    name: "Chat Title 2",
     url: "#",
     icon: MessagesSquare,
   },
   {
-    name: "Chat 3",
+    name: "Chat Title 3",
     url: "#",
     icon: MessagesSquare,
   },

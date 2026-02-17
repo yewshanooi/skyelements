@@ -69,7 +69,7 @@ export function NavChats({
                   <span>Optional Button 2</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator /> */}
-                <DropdownMenuItem>
+                <DropdownMenuItem variant="destructive">
                   <Trash2 className="text-muted-foreground" />
                   <span>Delete</span>
                 </DropdownMenuItem>
