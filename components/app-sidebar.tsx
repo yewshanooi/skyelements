@@ -36,27 +36,26 @@ const defaultChats = [
   },
 ]
 
-export function AppSidebar({ user, signout, ...props }: React.ComponentProps<typeof Sidebar> & {
+export function AppSidebar({ user, signout, onNewChat, ...props }: React.ComponentProps<typeof Sidebar> & {
   user: {
     email: string
   }
   signout?: () => Promise<void>
+  onNewChat?: () => void
 }) {
   return (
     <Sidebar variant="inset" {...props}>
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild>
-              <a href="#">
-                <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
-                  <Bot className="size-4" />
-                </div>
-                <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">Skye</span>
-                  <span className="truncate text-xs">by SkyElements</span>
-                </div>
-              </a>
+            <SidebarMenuButton size="lg" onClick={onNewChat}>
+              <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
+                <Bot className="size-4" />
+              </div>
+              <div className="grid flex-1 text-left text-sm leading-tight">
+                <span className="truncate font-medium">Skye</span>
+                <span className="truncate text-xs">by SkyElements</span>
+              </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
