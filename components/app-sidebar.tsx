@@ -1,12 +1,8 @@
 "use client"
 
 import * as React from "react"
-import Link from "next/link"
 import Image from "next/image"
-import {
-  Bot,
-  MessagesSquare,
-} from "lucide-react"
+import { MessagesSquare } from "lucide-react"
 
 import { NavChats } from "@/components/nav-chats"
 import { NavUser } from "@/components/nav-user"
@@ -19,7 +15,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import type { Chat } from "@/app/lithium/chat-actions"
+import type { Chat } from "@/app/lithium/actions"
 
 export function AppSidebar({ user, signout, onNewChat, chats, activeChatId, onSelectChat, onDeleteChat, ...props }: React.ComponentProps<typeof Sidebar> & {
   user: {

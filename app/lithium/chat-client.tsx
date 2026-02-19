@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from "react";
-import { ArrowUpIcon, ChevronDown, Plus } from "lucide-react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { ArrowUpIcon, ChevronDown } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {
@@ -19,10 +19,10 @@ import {
   InputGroupText,
   InputGroupTextarea,
 } from "@/components/ui/input-group";
+import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner"
-import { generateContent, type ChatMessage } from "./actions";
-import { createChat, saveMessage, getMessages, updateChatTitle, type Message } from "./chat-actions";
+import { generateContent, createChat, saveMessage, getMessages, updateChatTitle, type ChatMessage, type Message } from "./actions";
 import Image from 'next/image'
 
 
@@ -74,7 +74,7 @@ export function ChatClient({ chatId, onChatCreated }: {
   chatId?: string | null;
   onChatCreated?: (chatId: string, title: string) => void;
 }) {
-  const [welcomeMessage, setwelcomeMessage] = useState("");
+  const [welcomeMessage, setWelcomeMessage] = useState("");
   const [prompt, setPrompt] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
@@ -82,8 +82,14 @@ export function ChatClient({ chatId, onChatCreated }: {
   const [selectedModel, setSelectedModel] = useState("openrouter:arcee-ai/trinity-large-preview:free");
   const [currentChatId, setCurrentChatId] = useState<string | null>(chatId ?? null);
 
+  const selectedModelInfo = useMemo(
+    () => models.find(m => m.id === selectedModel) ?? models[0],
+    [selectedModel]
+  );
+  const isEmptyState = messages.length === 0 && !loading && !loadingHistory;
+
   useEffect(() => {
-    setwelcomeMessage(sampleQueries[Math.floor(Math.random() * sampleQueries.length)]);
+    setWelcomeMessage(sampleQueries[Math.floor(Math.random() * sampleQueries.length)]);
   }, []);
 
   // Load messages when chatId changes (switching chats)
@@ -102,43 +108,34 @@ export function ChatClient({ chatId, onChatCreated }: {
     }
   }, [chatId]);
 
-  const handleSend = async () => {
-    if (!prompt.trim()) return;
-    
-    const userMessage = prompt.trim();
+  const sendMessage = useCallback(async (userMessage: string) => {
+    if (!userMessage.trim()) return;
+
     setLoading(true);
     setPrompt("");
 
-    // Add user message to local state immediately
-    const updatedMessages = [...messages, { role: 'user' as const, content: userMessage }];
-    setMessages(updatedMessages);
+    const history = [...messages];
+    setMessages(prev => [...prev, { role: 'user' as const, content: userMessage }]);
 
     try {
-      // Create chat on first message if no chatId
       let activeChatId = currentChatId;
       if (!activeChatId) {
         const newChat = await createChat(selectedModel);
         activeChatId = newChat.id;
         setCurrentChatId(activeChatId);
 
-        // Auto-generate title from first message (first 50 chars)
         const title = userMessage.length > 50 ? userMessage.slice(0, 50) + '…' : userMessage;
         await updateChatTitle(activeChatId, title);
         onChatCreated?.(activeChatId, title);
       }
 
-      // Save user message to database
       await saveMessage(activeChatId, 'user', userMessage);
 
-      // Generate AI response with full history
-      const history = messages; // messages before the current user message
       const result = await generateContent(userMessage, selectedModel, history);
       const assistantContent = result ?? "Sorry, I couldn't generate a response.";
 
-      // Save assistant message to database
       await saveMessage(activeChatId, 'assistant', assistantContent);
 
-      // Add assistant message to local state
       setMessages(prev => [...prev, { role: 'assistant' as const, content: assistantContent }]);
     } catch (error) {
       console.error(error);
@@ -146,7 +143,9 @@ export function ChatClient({ chatId, onChatCreated }: {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentChatId, messages, selectedModel, onChatCreated]);
+
+  const handleSend = () => sendMessage(prompt.trim());
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -157,14 +156,18 @@ export function ChatClient({ chatId, onChatCreated }: {
 
   return (
     <div className="w-full max-w-3xl mx-auto">
+      {isEmptyState && (
+        <div className="flex flex-row gap-4 w-full max-w-3xl mb-6">
+          <h1 className="scroll-m-20 text-3xl font-semibold text-balance flex">
+            Greetings 👋
+          </h1>
+        </div>
+      )}
+
       <div className="mb-12 space-y-6">
         {loadingHistory ? (
           <p className="p-4 text-muted-foreground italic flex items-center gap-2">
             <Spinner /> Loading conversation...
-          </p>
-        ) : messages.length === 0 && !loading ? (
-          <p className="p-4 text-muted-foreground italic flex items-center gap-2">
-            {welcomeMessage ? <>"{welcomeMessage}"</> : ""}
           </p>
         ) : (
           <>
@@ -191,81 +194,90 @@ export function ChatClient({ chatId, onChatCreated }: {
           </>
         )}
       </div>
-  
-      <InputGroup>
-        <InputGroupTextarea 
-          placeholder="Ask anything..." 
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          onKeyDown={handleKeyDown}
-          disabled={loading}
-          // autoFocus
-        />
-        <InputGroupAddon align="block-end">
-          {/* <InputGroupButton
-            variant="outline"
-            className="rounded-full"
-            size="icon-xs"
-          >
-            <Plus />
-          </InputGroupButton> */}
-          <DropdownMenu>
-            
-            <DropdownMenuTrigger asChild>
-              <InputGroupButton variant="secondary" className="cursor-pointer">
-                <Image 
-                  src={models.find(m => m.id === selectedModel)?.icon ?? ''} 
-                  alt={models.find(m => m.id === selectedModel)?.label ?? 'Model icon'}
-                  width={16} 
-                  height={16}
-                  className="mr-1"
-                />
-                {models.find(m => m.id === selectedModel)?.label}
-                <ChevronDown />
-              </InputGroupButton>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent side="bottom" align="start">
-              <DropdownMenuLabel>Models</DropdownMenuLabel>
 
-              {models.map((model) => (
-                <DropdownMenuItem 
-                  key={model.id}
-                  onSelect={() => setSelectedModel(model.id)} 
-                  className="cursor-pointer flex items-center gap-2"
-                >
+      <InputGroup>
+          <InputGroupTextarea 
+            placeholder="Ask anything..." 
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            onKeyDown={handleKeyDown}
+            disabled={loading}
+          />
+          <InputGroupAddon align="block-end">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <InputGroupButton variant="secondary" className="cursor-pointer">
                   <Image 
-                    src={model.icon} 
-                    alt={model.label}
+                    src={selectedModelInfo.icon} 
+                    alt={selectedModelInfo.label}
                     width={16} 
                     height={16}
+                    className="mr-1"
                   />
-                  {model.label}
-                  <DropdownMenuShortcut>
-                    {model.shortcut}
-                  </DropdownMenuShortcut>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-            
-          </DropdownMenu>
-          <InputGroupText className="ml-auto">
-            {prompt.length > 0 && (
-              <span className="hidden lg:inline">{`${prompt.length} ${prompt.length === 1 ? 'character' : 'characters'}`}</span>
-            )}
-          </InputGroupText>
-          <Separator orientation="vertical" className="!h-4" />
-          <InputGroupButton
-            variant="default"
-            className="rounded-full cursor-pointer"
-            size="icon-xs"
-            onClick={handleSend}
-            disabled={loading || !prompt.trim()}
-          >
-            <ArrowUpIcon />
-            <span className="sr-only">Send</span>
-          </InputGroupButton>
-        </InputGroupAddon>
+                  {selectedModelInfo.label}
+                  <ChevronDown />
+                </InputGroupButton>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="bottom" align="start">
+                <DropdownMenuLabel>Models</DropdownMenuLabel>
+
+                {models.map((model) => (
+                  <DropdownMenuItem 
+                    key={model.id}
+                    onSelect={() => setSelectedModel(model.id)} 
+                    className="cursor-pointer flex items-center gap-2"
+                  >
+                    <Image 
+                      src={model.icon} 
+                      alt={model.label}
+                      width={16} 
+                      height={16}
+                    />
+                    {model.label}
+                    <DropdownMenuShortcut>
+                      {model.shortcut}
+                    </DropdownMenuShortcut>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+              
+            </DropdownMenu>
+            <InputGroupText className="ml-auto">
+              {prompt.length > 0 && (
+                <span className="hidden lg:inline">{`${prompt.length} ${prompt.length === 1 ? 'character' : 'characters'}`}</span>
+              )}
+            </InputGroupText>
+            <Separator orientation="vertical" className="!h-4" />
+            <InputGroupButton
+              variant="default"
+              className="rounded-full cursor-pointer"
+              size="icon-xs"
+              onClick={handleSend}
+              disabled={loading || !prompt.trim()}
+            >
+              <ArrowUpIcon />
+              <span className="sr-only">Send</span>
+            </InputGroupButton>
+          </InputGroupAddon>
       </InputGroup>
+
+      {isEmptyState && welcomeMessage && (
+        <div className="mt-12 flex justify-center px-4">
+          <Button
+            variant="outline"
+            className="cursor-pointer text-sm text-muted-foreground h-auto whitespace-normal text-center max-w-full"
+            onClick={() => sendMessage(welcomeMessage)}
+          >
+            &quot;{welcomeMessage}&quot;
+          </Button>
+        </div>
+      )}
+
+      {!isEmptyState && (
+        <div className="text-muted-foreground text-xs mt-4 max-w-3xl text-center w-full">
+          <p>Lithium is AI and can make mistakes.</p>
+        </div>
+      )}
 
     </div>
   );

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ChatClient } from "./chat-client";
-import { listChats, deleteChat, type Chat } from "./chat-actions";
+import { listChats, deleteChat, type Chat } from "./actions";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -95,24 +95,12 @@ export function PageClient({ user, signout }: PageClientProps) {
           </div>
         </header>
 
-        <main className="flex min-h-screen flex-col items-center justify-start p-8 pt-12 lg:pt-12">
-          {!activeChatId && (
-            <div className="flex flex-row items-center gap-4 w-full max-w-3xl mb-12">
-              <h1 className="scroll-m-20 text-3xl font-semibold text-balance flex items-center gap-2">
-                Greetings 👋
-              </h1>
-            </div>
-          )}
-          
+        <main className="flex min-h-screen flex-col items-center justify-start p-8 pt-12">
           <ChatClient
             key={chatKey}
             chatId={activeChatId}
             onChatCreated={handleChatCreated}
           />
-
-          <div className="text-muted-foreground text-xs mt-4 max-w-3xl">
-            <p>Lithium is AI and can make mistakes.</p>
-          </div>
         </main>
 
       </SidebarInset>
