@@ -18,6 +18,7 @@ export default function AuthButton({
             type="submit"
             disabled={pending}
             aria-busy={pending}
+            className="cursor-pointer"
         >
             {pending ? pendingText : children}
         </Button>

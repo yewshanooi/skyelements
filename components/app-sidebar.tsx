@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import Image from "next/image"
-import { MessagesSquare } from "lucide-react"
+import { Bot } from "lucide-react"
 
 import { NavChats } from "@/components/nav-chats"
 import { NavUser } from "@/components/nav-user"
@@ -31,7 +31,7 @@ export function AppSidebar({ user, signout, onNewChat, chats, activeChatId, onSe
   const chatItems = (chats ?? []).map(chat => ({
     id: chat.id,
     name: chat.title,
-    icon: MessagesSquare,
+    icon: Bot,
   }));
 
   return (

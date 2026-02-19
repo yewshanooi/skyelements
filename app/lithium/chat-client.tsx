@@ -202,8 +202,17 @@ export function ChatClient({ chatId, onChatCreated }: {
             onChange={(e) => setPrompt(e.target.value)}
             onKeyDown={handleKeyDown}
             disabled={loading}
+            // autoFocus
           />
           <InputGroupAddon align="block-end">
+            {/* <InputGroupButton
+              variant="outline"
+              className="rounded-full"
+              size="icon-xs"
+            >
+              <Plus />
+            </InputGroupButton> */}
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <InputGroupButton variant="secondary" className="cursor-pointer">
@@ -247,7 +256,7 @@ export function ChatClient({ chatId, onChatCreated }: {
                 <span className="hidden lg:inline">{`${prompt.length} ${prompt.length === 1 ? 'character' : 'characters'}`}</span>
               )}
             </InputGroupText>
-            <Separator orientation="vertical" className="!h-4" />
+            <Separator orientation="vertical" className="mx-2 data-[orientation=vertical]:h-4" />
             <InputGroupButton
               variant="default"
               className="rounded-full cursor-pointer"
