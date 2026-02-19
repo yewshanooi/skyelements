@@ -5,8 +5,8 @@ import { signout } from "../(auth)/actions"
 import { createClient } from "@/utils/supabase/server"
 
 export const metadata: Metadata = {
-  title: "Skye",
-  description: "An AI chatbot powered by Google Gemini models",
+  title: "Lithium",
+  description: "AI chatbot powered by OpenRouter and Google AI Studio models.",
 };
 
 export default async function Page() {

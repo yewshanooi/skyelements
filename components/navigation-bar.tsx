@@ -28,8 +28,8 @@ export function NavigationBar() {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false)
   const pathname = usePathname()
 
-  // Hide navigation bar on /chat
-  if (pathname === "/skye") {
+  // Hide navigation bar on /lithium
+  if (pathname === "/lithium") {
     return null
   }
 
@@ -43,9 +43,9 @@ export function NavigationBar() {
               <Image 
                 src="/logo/skyelements.png" 
                 alt="SkyElements Logo" 
-                width={160} 
+                width={239} 
                 height={55}
-                // className="hover:opacity-80 transition-opacity"
+                className="h-9 w-auto"
               />
             </Link>
           </div>
@@ -53,14 +53,6 @@ export function NavigationBar() {
           <div className="flex justify-center">
             <NavigationMenu viewport={false}>
               <NavigationMenuList>
-
-                <NavigationMenuItem>
-                  <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
-                    <Link href="/skye">
-                      Skye
-                    </Link>
-                  </NavigationMenuLink>
-                </NavigationMenuItem>
 
                 <NavigationMenuItem>
                   <NavigationMenuTrigger className="cursor-pointer">Sodium</NavigationMenuTrigger>
@@ -92,6 +84,14 @@ export function NavigationBar() {
                       </ListItem>
                     </ul>
                   </NavigationMenuContent>
+                </NavigationMenuItem>
+
+                <NavigationMenuItem>
+                  <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
+                    <Link href="/lithium">
+                      Lithium
+                    </Link>
+                  </NavigationMenuLink>
                 </NavigationMenuItem>
 
                 <NavigationMenuItem>
@@ -196,6 +196,14 @@ export function NavigationBar() {
                 </a>
               </DropdownMenuItem>
             </div>
+
+            <DropdownMenuSeparator />
+
+            <DropdownMenuItem asChild>
+              <Link href="/lithium" className="w-full cursor-pointer">
+                Lithium
+              </Link>
+            </DropdownMenuItem>
 
             <DropdownMenuSeparator />
 

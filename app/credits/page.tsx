@@ -32,7 +32,7 @@ export default function CreditsPage() {
           <CardHeader>
             <CardTitle>Cloudflare</CardTitle>
             <CardDescription>
-              Turnstile CAPTCHA — Skye
+              Turnstile CAPTCHA — Lithium
             </CardDescription>
             <CardAction>
               <Button asChild variant="secondary">
@@ -47,7 +47,7 @@ export default function CreditsPage() {
           <CardHeader>
             <CardTitle>Google AI Studio</CardTitle>
             <CardDescription>
-              Gemini API — Skye
+              Gemini API — Lithium
             </CardDescription>
             <CardAction>
               <Button asChild variant="secondary">
@@ -122,7 +122,7 @@ export default function CreditsPage() {
           <CardHeader>
             <CardTitle>OpenRouter</CardTitle>
             <CardDescription>
-             AI models API — Skye
+             AI models API — Lithium
             </CardDescription>
             <CardAction>
               <Button asChild variant="secondary">
@@ -152,7 +152,7 @@ export default function CreditsPage() {
           <CardHeader>
             <CardTitle>Supabase</CardTitle>
             <CardDescription>
-              Auth — Skye
+              Auth — Lithium
             </CardDescription>
             <CardAction>
               <Button asChild variant="secondary">

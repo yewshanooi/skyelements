@@ -111,7 +111,7 @@ export function PageClient({ user, signout }: PageClientProps) {
           />
 
           <div className="text-muted-foreground text-xs mt-4 max-w-3xl">
-            <p>Skye is AI and can make mistakes.</p>
+            <p>Lithium is AI and can make mistakes.</p>
           </div>
         </main>
 

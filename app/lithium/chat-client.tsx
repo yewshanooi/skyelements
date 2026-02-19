@@ -27,20 +27,19 @@ import Image from 'next/image'
 
 
 const models = [
-  { id: 'openrouter:arcee-ai/trinity-large-preview:free', label: 'Trinity Large', icon: '/skye/arcee.png', shortcut: 'Preview' },
-  { id: 'openrouter:stepfun/step-3.5-flash:free', label: 'Step 3.5 Flash', icon: '/skye/stepfun.png', shortcut: '' },
-  { id: 'openrouter:z-ai/glm-4.5-air:free', label: 'GLM 4.5 Air', icon: '/skye/zai.png', shortcut: '' },
-  { id: 'openrouter:deepseek/deepseek-r1-0528:free', label: 'R1', icon: '/skye/deepseek.png', shortcut: '0528' },
-  { id: 'openrouter:nvidia/nemotron-3-nano-30b-a3b:free', label: 'Nemotron 3 Nano', icon: '/skye/nvidia.png', shortcut: '30B' },
+  { id: 'openrouter:arcee-ai/trinity-large-preview:free', label: 'Trinity Large', icon: '/lithium/arcee.png', shortcut: 'Preview' },
+  { id: 'openrouter:stepfun/step-3.5-flash:free', label: 'Step 3.5 Flash', icon: '/lithium/stepfun.png', shortcut: '' },
+  { id: 'openrouter:z-ai/glm-4.5-air:free', label: 'GLM 4.5 Air', icon: '/lithium/zai.png', shortcut: '' },
+  { id: 'openrouter:deepseek/deepseek-r1-0528:free', label: 'R1', icon: '/lithium/deepseek.png', shortcut: '0528' },
+  { id: 'openrouter:nvidia/nemotron-3-nano-30b-a3b:free', label: 'Nemotron 3 Nano', icon: '/lithium/nvidia.png', shortcut: '30B' },
   
   // Unreliable sub-optimal models
-  { id: 'openrouter:openai/gpt-oss-120b:free', label: 'GPT OSS', icon: '/skye/openai.png', shortcut: '120B' },
-  { id: 'openrouter:meta-llama/llama-3.3-70b-instruct:free', label: 'Llama 3.3 Instruct', icon: '/skye/meta.png', shortcut: '70B' },
-  { id: 'openrouter:google/gemma-3-27b-it:free', label: 'Gemma 3', icon: '/skye/google.png', shortcut: '27B' },
+  { id: 'openrouter:openai/gpt-oss-120b:free', label: 'GPT OSS', icon: '/lithium/openai.png', shortcut: '120B' },
+  { id: 'openrouter:meta-llama/llama-3.3-70b-instruct:free', label: 'Llama 3.3 Instruct', icon: '/lithium/meta.png', shortcut: '70B' },
 
-  { id: 'gemini-3-flash-preview', label: 'Gemini 3 Flash', icon: '/skye/google.png', shortcut: 'Preview' },
-  { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', icon: '/skye/google.png', shortcut: '' },
-  { id: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash', icon: '/skye/google.png', shortcut: 'Lite' },
+  { id: 'gemini-3-flash-preview', label: 'Gemini 3 Flash', icon: '/lithium/google.png', shortcut: 'Preview' },
+  { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', icon: '/lithium/google.png', shortcut: '' },
+  { id: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash', icon: '/lithium/google.png', shortcut: 'Lite' },
 ];
 
 
@@ -172,7 +171,7 @@ export function ChatClient({ chatId, onChatCreated }: {
             {messages.map((msg, i) => (
               <div key={i} className={`p-4 rounded-lg ${msg.role === 'user' ? 'bg-muted' : ''}`}>
                 <p className="text-xs font-medium text-muted-foreground mb-2">
-                  {msg.role === 'user' ? 'You' : 'Skye'}
+                  {msg.role === 'user' ? 'You' : 'Lithium'}
                 </p>
                 <div className="overflow-x-auto">
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
@@ -183,7 +182,7 @@ export function ChatClient({ chatId, onChatCreated }: {
             ))}
             {loading && (
               <div className="p-4">
-                <p className="text-xs font-medium text-muted-foreground mb-2">Skye</p>
+                <p className="text-xs font-medium text-muted-foreground mb-2">Lithium</p>
                 <p className="text-muted-foreground italic flex items-center gap-2">
                   <Spinner /> Thinking...
                 </p>
@@ -195,7 +194,7 @@ export function ChatClient({ chatId, onChatCreated }: {
   
       <InputGroup>
         <InputGroupTextarea 
-          placeholder="Message Skye" 
+          placeholder="Ask anything..." 
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           onKeyDown={handleKeyDown}

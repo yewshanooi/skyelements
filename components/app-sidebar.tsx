@@ -1,6 +1,8 @@
 "use client"
 
 import * as React from "react"
+import Link from "next/link"
+import Image from "next/image"
 import {
   Bot,
   MessagesSquare,
@@ -17,7 +19,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import type { Chat } from "@/app/skye/chat-actions"
+import type { Chat } from "@/app/lithium/chat-actions"
 
 export function AppSidebar({ user, signout, onNewChat, chats, activeChatId, onSelectChat, onDeleteChat, ...props }: React.ComponentProps<typeof Sidebar> & {
   user: {
@@ -42,13 +44,13 @@ export function AppSidebar({ user, signout, onNewChat, chats, activeChatId, onSe
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" onClick={onNewChat} className="cursor-pointer">
-              <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
-                <Bot className="size-4" />
-              </div>
-              <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">Skye</span>
-                <span className="truncate text-xs">by SkyElements</span>
-              </div>
+              <Image 
+                src="/logo/lithium.png" 
+                alt="Lithium Logo" 
+                width={165} 
+                height={55}
+                className="h-9 w-auto"
+              />
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

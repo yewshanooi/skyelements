@@ -21,7 +21,7 @@ export async function login(prevState: ActionState | null, formData: FormData): 
         return { error: error.message };
     }
 
-    redirect('/skye')
+    redirect('/lithium')
 }
 
 export async function signup(prevState: ActionState | null, formData: FormData): Promise<ActionState> {
@@ -37,7 +37,7 @@ export async function signup(prevState: ActionState | null, formData: FormData):
         return { error: error.message };
     }
 
-    redirect('/skye')
+    redirect('/lithium')
 }
 
 export async function signout() {
