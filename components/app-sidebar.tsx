@@ -17,38 +17,31 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
+import type { Chat } from "@/app/skye/chat-actions"
 
-const defaultChats = [
-  {
-    name: "Chat Title 1",
-    url: "#",
-    icon: MessagesSquare,
-  },
-  {
-    name: "Chat Title 2",
-    url: "#",
-    icon: MessagesSquare,
-  },
-  {
-    name: "Chat Title 3",
-    url: "#",
-    icon: MessagesSquare,
-  },
-]
-
-export function AppSidebar({ user, signout, onNewChat, ...props }: React.ComponentProps<typeof Sidebar> & {
+export function AppSidebar({ user, signout, onNewChat, chats, activeChatId, onSelectChat, onDeleteChat, ...props }: React.ComponentProps<typeof Sidebar> & {
   user: {
     email: string
   }
   signout?: () => Promise<void>
   onNewChat?: () => void
+  chats?: Chat[]
+  activeChatId?: string | null
+  onSelectChat?: (chatId: string) => void
+  onDeleteChat?: (chatId: string) => void
 }) {
+  const chatItems = (chats ?? []).map(chat => ({
+    id: chat.id,
+    name: chat.title,
+    icon: MessagesSquare,
+  }));
+
   return (
     <Sidebar variant="inset" {...props}>
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" onClick={onNewChat}>
+            <SidebarMenuButton size="lg" onClick={onNewChat} className="cursor-pointer">
               <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
                 <Bot className="size-4" />
               </div>
@@ -61,7 +54,12 @@ export function AppSidebar({ user, signout, onNewChat, ...props }: React.Compone
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavChats chats={defaultChats} />
+        <NavChats
+          chats={chatItems}
+          activeChatId={activeChatId}
+          onSelectChat={onSelectChat}
+          onDeleteChat={onDeleteChat}
+        />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={user} signout={signout} />

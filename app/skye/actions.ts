@@ -1,9 +1,18 @@
 'use server';
 
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Content } from "@google/genai";
 import { OpenRouter } from "@openrouter/sdk";
 
-export async function generateContent(prompt: string, model: string = "gemini-2.5-flash") {
+export type ChatMessage = {
+  role: 'user' | 'assistant';
+  content: string;
+};
+
+export async function generateContent(
+  prompt: string,
+  model: string = "openrouter:arcee-ai/trinity-large-preview:free",
+  history: ChatMessage[] = []
+) {
   const isOpenRouter = model.startsWith("openrouter:");
   const actualModel = isOpenRouter ? model.replace("openrouter:", "") : model;
 
@@ -17,15 +26,18 @@ export async function generateContent(prompt: string, model: string = "gemini-2.
       apiKey: process.env.OPENROUTER_API_KEY
     });
 
+    const messages = [
+      ...history.map(msg => ({
+        role: msg.role as 'user' | 'assistant',
+        content: msg.content
+      })),
+      { role: 'user' as const, content: prompt }
+    ];
+
     try {
       const stream = await openrouter.chat.send({
         model: actualModel,
-        messages: [
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
+        messages,
         stream: true
       });
 
@@ -63,10 +75,18 @@ export async function generateContent(prompt: string, model: string = "gemini-2.
 
   const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY });
 
+  const contents: Content[] = [
+    ...history.map(msg => ({
+      role: msg.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: msg.content }]
+    } as Content)),
+    { role: 'user', parts: [{ text: prompt }] } as Content
+  ];
+
   try {
     const response = await ai.models.generateContent({
       model: actualModel,
-      contents: prompt,
+      contents,
     });
     return response.text;
   } catch (error: any) {

@@ -21,24 +21,26 @@ import {
 } from "@/components/ui/input-group";
 import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner"
-import { generateContent } from "./actions";
+import { generateContent, type ChatMessage } from "./actions";
+import { createChat, saveMessage, getMessages, updateChatTitle, type Message } from "./chat-actions";
 import Image from 'next/image'
 
 
 const models = [
+  { id: 'openrouter:arcee-ai/trinity-large-preview:free', label: 'Trinity Large', icon: '/skye/arcee.png', shortcut: 'Preview' },
+  { id: 'openrouter:stepfun/step-3.5-flash:free', label: 'Step 3.5 Flash', icon: '/skye/stepfun.png', shortcut: '' },
+  { id: 'openrouter:z-ai/glm-4.5-air:free', label: 'GLM 4.5 Air', icon: '/skye/zai.png', shortcut: '' },
+  { id: 'openrouter:deepseek/deepseek-r1-0528:free', label: 'R1', icon: '/skye/deepseek.png', shortcut: '0528' },
+  { id: 'openrouter:nvidia/nemotron-3-nano-30b-a3b:free', label: 'Nemotron 3 Nano', icon: '/skye/nvidia.png', shortcut: '30B' },
+  
+  // Unreliable sub-optimal models
+  { id: 'openrouter:openai/gpt-oss-120b:free', label: 'GPT OSS', icon: '/skye/openai.png', shortcut: '120B' },
+  { id: 'openrouter:meta-llama/llama-3.3-70b-instruct:free', label: 'Llama 3.3 Instruct', icon: '/skye/meta.png', shortcut: '70B' },
+  { id: 'openrouter:google/gemma-3-27b-it:free', label: 'Gemma 3', icon: '/skye/google.png', shortcut: '27B' },
+
   { id: 'gemini-3-flash-preview', label: 'Gemini 3 Flash', icon: '/skye/google.png', shortcut: 'Preview' },
   { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', icon: '/skye/google.png', shortcut: '' },
   { id: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash', icon: '/skye/google.png', shortcut: 'Lite' },
-  { id: 'openrouter:google/gemma-3-27b-it:free', label: 'Gemma 3', icon: '/skye/google.png', shortcut: '27B' },
-  { id: 'openrouter:tngtech/deepseek-r1t2-chimera:free', label: 'R1T2 Chimera', icon: '/skye/deepseek.png', shortcut: '' },
-  { id: 'openrouter:deepseek/deepseek-r1-0528:free', label: 'R1', icon: '/skye/deepseek.png', shortcut: '0528' },
-  { id: 'openrouter:z-ai/glm-4.5-air:free', label: 'GLM 4.5 Air', icon: '/skye/zai.png', shortcut: '' },
-  { id: 'openrouter:qwen/qwen3-coder:free', label: 'Qwen3 Coder', icon: '/skye/qwen.png', shortcut: '480B' },
-  { id: 'openrouter:qwen/qwen3-next-80b-a3b-instruct:free', label: 'Qwen3 Next Instruct', icon: '/skye/qwen.png', shortcut: '80B' },
-  { id: 'openrouter:meta-llama/llama-3.3-70b-instruct:free', label: 'Llama 3.3 Instruct', icon: '/skye/meta.png', shortcut: '70B' },
-  { id: 'openrouter:nvidia/nemotron-3-nano-30b-a3b:free', label: 'Nemotron 3 Nano', icon: '/skye/nvidia.png', shortcut: '30B' },
-  { id: 'openrouter:openai/gpt-oss-120b:free', label: 'GPT OSS', icon: '/skye/openai.png', shortcut: '120B' },
-  { id: 'openrouter:mistralai/mistral-small-3.1-24b-instruct:free', label: 'Mistral Small 3.1', icon: '/skye/mistral.png', shortcut: '24B' }
 ];
 
 
@@ -69,30 +71,79 @@ const sampleQueries = [
 ];
 
 
-export function ChatClient() {
+export function ChatClient({ chatId, onChatCreated }: {
+  chatId?: string | null;
+  onChatCreated?: (chatId: string, title: string) => void;
+}) {
   const [welcomeMessage, setwelcomeMessage] = useState("");
   const [prompt, setPrompt] = useState("");
-  const [response, setResponse] = useState<string | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
-  const [selectedModel, setSelectedModel] = useState("gemini-2.5-flash");
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [selectedModel, setSelectedModel] = useState("openrouter:arcee-ai/trinity-large-preview:free");
+  const [currentChatId, setCurrentChatId] = useState<string | null>(chatId ?? null);
 
   useEffect(() => {
     setwelcomeMessage(sampleQueries[Math.floor(Math.random() * sampleQueries.length)]);
   }, []);
 
+  // Load messages when chatId changes (switching chats)
+  useEffect(() => {
+    setCurrentChatId(chatId ?? null);
+    if (chatId) {
+      setLoadingHistory(true);
+      getMessages(chatId).then((msgs) => {
+        setMessages(msgs.map((m: Message) => ({ role: m.role, content: m.content })));
+        setLoadingHistory(false);
+      }).catch(() => {
+        setLoadingHistory(false);
+      });
+    } else {
+      setMessages([]);
+    }
+  }, [chatId]);
+
   const handleSend = async () => {
     if (!prompt.trim()) return;
     
+    const userMessage = prompt.trim();
     setLoading(true);
-    setResponse(null);
     setPrompt("");
 
+    // Add user message to local state immediately
+    const updatedMessages = [...messages, { role: 'user' as const, content: userMessage }];
+    setMessages(updatedMessages);
+
     try {
-      const result = await generateContent(prompt, selectedModel);
-      setResponse(result ?? null);
+      // Create chat on first message if no chatId
+      let activeChatId = currentChatId;
+      if (!activeChatId) {
+        const newChat = await createChat(selectedModel);
+        activeChatId = newChat.id;
+        setCurrentChatId(activeChatId);
+
+        // Auto-generate title from first message (first 50 chars)
+        const title = userMessage.length > 50 ? userMessage.slice(0, 50) + '…' : userMessage;
+        await updateChatTitle(activeChatId, title);
+        onChatCreated?.(activeChatId, title);
+      }
+
+      // Save user message to database
+      await saveMessage(activeChatId, 'user', userMessage);
+
+      // Generate AI response with full history
+      const history = messages; // messages before the current user message
+      const result = await generateContent(userMessage, selectedModel, history);
+      const assistantContent = result ?? "Sorry, I couldn't generate a response.";
+
+      // Save assistant message to database
+      await saveMessage(activeChatId, 'assistant', assistantContent);
+
+      // Add assistant message to local state
+      setMessages(prev => [...prev, { role: 'assistant' as const, content: assistantContent }]);
     } catch (error) {
       console.error(error);
-      setResponse("An error occurred while fetching the response.");
+      setMessages(prev => [...prev, { role: 'assistant' as const, content: "An error occurred while fetching the response." }]);
     } finally {
       setLoading(false);
     }
@@ -107,24 +158,44 @@ export function ChatClient() {
 
   return (
     <div className="w-full max-w-3xl mx-auto">
-      <div className="mt-12 mb-12">
-         {response ? (
-            // FIX: Temporary solution for text overflow by adding a horizontal scrollbar
-            <div className="p-4 overflow-x-auto">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {response}
-              </ReactMarkdown>
-            </div>
-         ) : (
-            <p className="p-4 text-muted-foreground italic flex items-center gap-2">
-              {loading ? <><Spinner /> Thinking...</> : welcomeMessage ? <>"{welcomeMessage}"</> : ""}
-            </p>
-         )}
+      <div className="mb-12 space-y-6">
+        {loadingHistory ? (
+          <p className="p-4 text-muted-foreground italic flex items-center gap-2">
+            <Spinner /> Loading conversation...
+          </p>
+        ) : messages.length === 0 && !loading ? (
+          <p className="p-4 text-muted-foreground italic flex items-center gap-2">
+            {welcomeMessage ? <>"{welcomeMessage}"</> : ""}
+          </p>
+        ) : (
+          <>
+            {messages.map((msg, i) => (
+              <div key={i} className={`p-4 rounded-lg ${msg.role === 'user' ? 'bg-muted' : ''}`}>
+                <p className="text-xs font-medium text-muted-foreground mb-2">
+                  {msg.role === 'user' ? 'You' : 'Skye'}
+                </p>
+                <div className="overflow-x-auto">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {msg.content}
+                  </ReactMarkdown>
+                </div>
+              </div>
+            ))}
+            {loading && (
+              <div className="p-4">
+                <p className="text-xs font-medium text-muted-foreground mb-2">Skye</p>
+                <p className="text-muted-foreground italic flex items-center gap-2">
+                  <Spinner /> Thinking...
+                </p>
+              </div>
+            )}
+          </>
+        )}
       </div>
   
       <InputGroup>
         <InputGroupTextarea 
-          placeholder="Ask Skye" 
+          placeholder="Message Skye" 
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           onKeyDown={handleKeyDown}

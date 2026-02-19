@@ -72,11 +72,11 @@ export default async function Page() {
             <CardHeader className="mt-5 mb-3">
               <CardTitle>Skye</CardTitle>
               <CardDescription>
-                An AI chatbot powered by Google AI Studio & OpenRouter. Try it out now.
+                An AI chatbot powered by OpenRouter & Google AI Studio. Try it out now.
               </CardDescription>
               <CardAction>
                 <CardDescription>
-                  <Badge variant="outline">Beta</Badge>
+                  <Badge variant="outline">New UI</Badge>
                 </CardDescription>
               </CardAction>
             </CardHeader>

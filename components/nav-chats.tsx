@@ -1,9 +1,7 @@
 "use client"
 
 import {
-  Folder,
   MoreHorizontal,
-  Share,
   Trash2,
   type LucideIcon,
 } from "lucide-react"
@@ -12,7 +10,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
@@ -27,26 +24,49 @@ import {
 
 export function NavChats({
   chats,
+  activeChatId,
+  onSelectChat,
+  onDeleteChat,
 }: {
   chats: {
+    id: string
     name: string
-    url: string
     icon: LucideIcon
   }[]
+  activeChatId?: string | null
+  onSelectChat?: (chatId: string) => void
+  onDeleteChat?: (chatId: string) => void
 }) {
   const { isMobile } = useSidebar()
+
+  if (chats.length === 0) {
+    return (
+      <SidebarGroup className="group-data-[collapsible=icon]:hidden">
+        <SidebarGroupLabel>Chats</SidebarGroupLabel>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton disabled>
+              <span className="text-muted-foreground text-xs">Your chat history is empty.</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarGroup>
+    )
+  }
 
   return (
     <SidebarGroup className="group-data-[collapsible=icon]:hidden">
       <SidebarGroupLabel>Chats</SidebarGroupLabel>
       <SidebarMenu>
         {chats.map((item) => (
-          <SidebarMenuItem key={item.name}>
-            <SidebarMenuButton asChild>
-              <a href={item.url}>
-                <item.icon />
-                <span>{item.name}</span>
-              </a>
+          <SidebarMenuItem key={item.id}>
+            <SidebarMenuButton
+              isActive={activeChatId === item.id}
+              onClick={() => onSelectChat?.(item.id)}
+              className="cursor-pointer"
+            >
+              <item.icon />
+              <span>{item.name}</span>
             </SidebarMenuButton>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -60,16 +80,10 @@ export function NavChats({
                 side={isMobile ? "bottom" : "right"}
                 align={isMobile ? "end" : "start"}
               >
-                {/* <DropdownMenuItem>
-                  <Folder className="text-muted-foreground" />
-                  <span>Optional Button 1</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Share className="text-muted-foreground" />
-                  <span>Optional Button 2</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator /> */}
-                <DropdownMenuItem variant="destructive">
+                <DropdownMenuItem
+                  variant="destructive"
+                  onClick={() => onDeleteChat?.(item.id)}
+                >
                   <Trash2 className="text-muted-foreground" />
                   <span>Delete</span>
                 </DropdownMenuItem>
@@ -77,12 +91,6 @@ export function NavChats({
             </DropdownMenu>
           </SidebarMenuItem>
         ))}
-        {/* <SidebarMenuItem>
-          <SidebarMenuButton>
-            <MoreHorizontal />
-            <span>More</span>
-          </SidebarMenuButton>
-        </SidebarMenuItem> */}
       </SidebarMenu>
     </SidebarGroup>
   )
