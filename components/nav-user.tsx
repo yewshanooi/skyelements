@@ -5,6 +5,7 @@ import {
   Sun,
   Moon,
   LogOut,
+  Trash2,
   User,
 } from "lucide-react"
 import { useTheme } from "next-themes"
@@ -37,11 +38,13 @@ import {
 export function NavUser({
   user,
   signout,
+  onDeleteAllChats,
 }: {
   user: {
     email: string
   }
   signout?: () => Promise<void>
+  onDeleteAllChats?: () => Promise<void>
 }) {
   const { isMobile } = useSidebar()
   const { theme, setTheme } = useTheme()
@@ -120,6 +123,15 @@ export function NavUser({
                   </DropdownMenuSubContent>
                 </DropdownMenuPortal>
               </DropdownMenuSub>
+              <DropdownMenuItem
+                variant="destructive"
+                onClick={() => onDeleteAllChats?.()}
+                className="cursor-pointer"
+              >
+                <Trash2 />
+                Clear chat history
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem 
                 variant="destructive" 
                 onClick={() => signout?.()} 

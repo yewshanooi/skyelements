@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/sidebar"
 import type { Chat } from "@/app/lithium/actions"
 
-export function AppSidebar({ user, signout, onNewChat, chats, activeChatId, onSelectChat, onDeleteChat, ...props }: React.ComponentProps<typeof Sidebar> & {
+export function AppSidebar({ user, signout, onNewChat, chats, activeChatId, onSelectChat, onDeleteChat, onDeleteAllChats, ...props }: React.ComponentProps<typeof Sidebar> & {
   user: {
     email: string
   }
@@ -27,6 +27,7 @@ export function AppSidebar({ user, signout, onNewChat, chats, activeChatId, onSe
   activeChatId?: string | null
   onSelectChat?: (chatId: string) => void
   onDeleteChat?: (chatId: string) => void
+  onDeleteAllChats?: () => Promise<void>
 }) {
   const chatItems = (chats ?? []).map(chat => ({
     id: chat.id,
@@ -61,7 +62,7 @@ export function AppSidebar({ user, signout, onNewChat, chats, activeChatId, onSe
         />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={user} signout={signout} />
+        <NavUser user={user} signout={signout} onDeleteAllChats={onDeleteAllChats} />
       </SidebarFooter>
     </Sidebar>
   )

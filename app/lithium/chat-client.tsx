@@ -70,9 +70,10 @@ const sampleQueries = [
 ];
 
 
-export function ChatClient({ chatId, onChatCreated }: {
+export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
   chatId?: string | null;
   onChatCreated?: (chatId: string, title: string) => void;
+  onChatActivity?: (chatId: string) => void;
 }) {
   const [welcomeMessage, setWelcomeMessage] = useState("");
   const [prompt, setPrompt] = useState("");
@@ -130,6 +131,7 @@ export function ChatClient({ chatId, onChatCreated }: {
       }
 
       await saveMessage(activeChatId, 'user', userMessage);
+      onChatActivity?.(activeChatId);
 
       const result = await generateContent(userMessage, selectedModel, history);
       const assistantContent = result ?? "Sorry, I couldn't generate a response.";
@@ -143,7 +145,7 @@ export function ChatClient({ chatId, onChatCreated }: {
     } finally {
       setLoading(false);
     }
-  }, [currentChatId, messages, selectedModel, onChatCreated]);
+  }, [currentChatId, messages, selectedModel, onChatCreated, onChatActivity]);
 
   const handleSend = () => sendMessage(prompt.trim());
 

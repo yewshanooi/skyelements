@@ -223,3 +223,15 @@ export async function deleteChat(chatId: string): Promise<void> {
 
   if (error) throw new Error(error.message);
 }
+
+/** Delete all chats for the current user */
+export async function deleteAllChats(): Promise<void> {
+  const { supabase, user } = await getAuthenticatedClient();
+
+  const { error } = await supabase
+    .from('chats')
+    .delete()
+    .eq('user_id', user.id);
+
+  if (error) throw new Error(error.message);
+}

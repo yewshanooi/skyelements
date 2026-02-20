@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ChatClient } from "./chat-client";
-import { listChats, deleteChat, type Chat } from "./actions";
+import { listChats, deleteChat, deleteAllChats, type Chat } from "./actions";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -50,8 +50,23 @@ export function PageClient({ user, signout }: PageClientProps) {
   const handleChatCreated = useCallback((chatId: string, title: string) => {
     setActiveChatId(chatId);
     setChatTitle(title);
-    // Refresh chat list
-    listChats().then(setChats).catch(console.error);
+    setChats(prev => {
+      if (prev.some(c => c.id === chatId)) return prev;
+      const now = new Date().toISOString();
+      return [
+        { id: chatId, title, model: '', user_id: '', created_at: now, updated_at: now } as Chat,
+        ...prev,
+      ];
+    });
+  }, []);
+
+  const handleChatActivity = useCallback((chatId: string) => {
+    setChats(prev => {
+      const idx = prev.findIndex(c => c.id === chatId);
+      if (idx <= 0) return prev;               // already at top or not found
+      const chat = { ...prev[idx], updated_at: new Date().toISOString() };
+      return [chat, ...prev.slice(0, idx), ...prev.slice(idx + 1)];
+    });
   }, []);
 
   const handleDeleteChat = async (chatId: string) => {
@@ -66,6 +81,16 @@ export function PageClient({ user, signout }: PageClientProps) {
     }
   };
 
+  const handleDeleteAllChats = async () => {
+    try {
+      await deleteAllChats();
+      setChats([]);
+      handleNewChat();
+    } catch (error) {
+      console.error('Failed to delete all chats:', error);
+    }
+  };
+
   return (
     <SidebarProvider>
       <AppSidebar
@@ -76,6 +101,7 @@ export function PageClient({ user, signout }: PageClientProps) {
         activeChatId={activeChatId}
         onSelectChat={handleSelectChat}
         onDeleteChat={handleDeleteChat}
+        onDeleteAllChats={handleDeleteAllChats}
       />
       <SidebarInset className="overflow-hidden">
         <header className="flex h-16 shrink-0 items-center gap-2 bg-background">
@@ -100,6 +126,7 @@ export function PageClient({ user, signout }: PageClientProps) {
             key={chatKey}
             chatId={activeChatId}
             onChatCreated={handleChatCreated}
+            onChatActivity={handleChatActivity}
           />
         </div>
 
