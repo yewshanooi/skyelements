@@ -154,140 +154,156 @@ export function ChatClient({ chatId, onChatCreated }: {
     }
   };
 
-  return (
-    <div className="w-full max-w-3xl mx-auto">
-      {isEmptyState && (
-        <div className="flex flex-row gap-4 w-full max-w-3xl mb-6">
-          <h1 className="scroll-m-20 text-3xl font-semibold text-balance flex">
-            Greetings 👋
-          </h1>
-        </div>
-      )}
+  const inputGroup = (
+    <InputGroup>
+        <InputGroupTextarea 
+          placeholder="Ask anything..." 
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          onKeyDown={handleKeyDown}
+          disabled={loading}
+          // autoFocus
+        />
+        <InputGroupAddon align="block-end">
+          {/* <InputGroupButton
+            variant="outline"
+            className="rounded-full"
+            size="icon-xs"
+          >
+            <Plus />
+          </InputGroupButton> */}
 
-      <div className="mb-12 space-y-6">
-        {loadingHistory ? (
-          <p className="p-4 text-muted-foreground italic flex items-center gap-2">
-            <Spinner /> Loading conversation...
-          </p>
-        ) : (
-          <>
-            {messages.map((msg, i) => (
-              <div key={i} className={`p-4 rounded-lg ${msg.role === 'user' ? 'bg-muted' : ''}`}>
-                <p className="text-xs font-medium text-muted-foreground mb-2">
-                  {msg.role === 'user' ? 'You' : 'Lithium'}
-                </p>
-                <div className="overflow-x-auto">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {msg.content}
-                  </ReactMarkdown>
-                </div>
-              </div>
-            ))}
-            {loading && (
-              <div className="p-4">
-                <p className="text-xs font-medium text-muted-foreground mb-2">Lithium</p>
-                <p className="text-muted-foreground italic flex items-center gap-2">
-                  <Spinner /> Thinking...
-                </p>
-              </div>
-            )}
-          </>
-        )}
-      </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <InputGroupButton variant="secondary" className="cursor-pointer">
+                <Image 
+                  src={selectedModelInfo.icon} 
+                  alt={selectedModelInfo.label}
+                  width={16} 
+                  height={16}
+                  className="mr-1"
+                />
+                {selectedModelInfo.label}
+                <ChevronDown />
+              </InputGroupButton>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent side="bottom" align="start">
+              <DropdownMenuLabel>Models</DropdownMenuLabel>
 
-      <InputGroup>
-          <InputGroupTextarea 
-            placeholder="Ask anything..." 
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            onKeyDown={handleKeyDown}
-            disabled={loading}
-            // autoFocus
-          />
-          <InputGroupAddon align="block-end">
-            {/* <InputGroupButton
-              variant="outline"
-              className="rounded-full"
-              size="icon-xs"
-            >
-              <Plus />
-            </InputGroupButton> */}
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <InputGroupButton variant="secondary" className="cursor-pointer">
+              {models.map((model) => (
+                <DropdownMenuItem 
+                  key={model.id}
+                  onSelect={() => setSelectedModel(model.id)} 
+                  className="cursor-pointer flex items-center gap-2"
+                >
                   <Image 
-                    src={selectedModelInfo.icon} 
-                    alt={selectedModelInfo.label}
+                    src={model.icon} 
+                    alt={model.label}
                     width={16} 
                     height={16}
-                    className="mr-1"
                   />
-                  {selectedModelInfo.label}
-                  <ChevronDown />
-                </InputGroupButton>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent side="bottom" align="start">
-                <DropdownMenuLabel>Models</DropdownMenuLabel>
-
-                {models.map((model) => (
-                  <DropdownMenuItem 
-                    key={model.id}
-                    onSelect={() => setSelectedModel(model.id)} 
-                    className="cursor-pointer flex items-center gap-2"
-                  >
-                    <Image 
-                      src={model.icon} 
-                      alt={model.label}
-                      width={16} 
-                      height={16}
-                    />
-                    {model.label}
-                    <DropdownMenuShortcut>
-                      {model.shortcut}
-                    </DropdownMenuShortcut>
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-              
-            </DropdownMenu>
-            <InputGroupText className="ml-auto">
-              {prompt.length > 0 && (
-                <span className="hidden lg:inline">{`${prompt.length} ${prompt.length === 1 ? 'character' : 'characters'}`}</span>
-              )}
-            </InputGroupText>
-            <Separator orientation="vertical" className="mx-2 data-[orientation=vertical]:h-4" />
-            <InputGroupButton
-              variant="default"
-              className="rounded-full cursor-pointer"
-              size="icon-xs"
-              onClick={handleSend}
-              disabled={loading || !prompt.trim()}
-            >
-              <ArrowUpIcon />
-              <span className="sr-only">Send</span>
-            </InputGroupButton>
-          </InputGroupAddon>
-      </InputGroup>
-
-      {isEmptyState && welcomeMessage && (
-        <div className="mt-12 flex justify-center px-4">
-          <Button
-            variant="outline"
-            className="cursor-pointer text-sm text-muted-foreground h-auto whitespace-normal text-center max-w-full"
-            onClick={() => sendMessage(welcomeMessage)}
+                  {model.label}
+                  <DropdownMenuShortcut>
+                    {model.shortcut}
+                  </DropdownMenuShortcut>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+            
+          </DropdownMenu>
+          <InputGroupText className="ml-auto">
+            {prompt.length > 0 && (
+              <span className="hidden lg:inline">{`${prompt.length} ${prompt.length === 1 ? 'character' : 'characters'}`}</span>
+            )}
+          </InputGroupText>
+          <Separator orientation="vertical" className="mx-2 data-[orientation=vertical]:h-4" />
+          <InputGroupButton
+            variant="default"
+            className="rounded-full cursor-pointer"
+            size="icon-xs"
+            onClick={handleSend}
+            disabled={loading || !prompt.trim()}
           >
-            &quot;{welcomeMessage}&quot;
-          </Button>
-        </div>
-      )}
+            <ArrowUpIcon />
+            <span className="sr-only">Send</span>
+          </InputGroupButton>
+        </InputGroupAddon>
+    </InputGroup>
+  );
 
-      {!isEmptyState && (
-        <div className="text-muted-foreground text-xs mt-4 max-w-3xl text-center w-full">
-          <p>Lithium is AI and can make mistakes.</p>
-        </div>
-      )}
+  // New Chat page
+  if (isEmptyState) {
+    return (
+      <div className="h-full overflow-y-auto flex items-center justify-center p-8 pb-[10%]">
+        <div className="w-full max-w-3xl mx-auto">
+          <div className="flex flex-row gap-4 w-full max-w-3xl mb-6">
+            <h1 className="scroll-m-20 text-3xl font-semibold text-balance flex">
+              Greetings 👋
+            </h1>
+          </div>
 
+          {inputGroup}
+
+          {welcomeMessage && (
+            <div className="mt-6 flex justify-center px-4">
+              <Button
+                variant="outline"
+                className="cursor-pointer text-sm text-muted-foreground h-auto whitespace-normal text-center max-w-full"
+                onClick={() => sendMessage(welcomeMessage)}
+              >
+                &quot;{welcomeMessage}&quot;
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Active chat
+  return (
+    <div className="flex flex-col h-full">
+      <div className="flex-1 overflow-y-auto p-8 pt-12">
+        <div className="w-full max-w-3xl mx-auto space-y-6">
+          {loadingHistory ? (
+            <p className="p-4 text-muted-foreground italic flex items-center gap-2">
+              <Spinner /> Loading conversation...
+            </p>
+          ) : (
+            <>
+              {messages.map((msg, i) => (
+                <div key={i} className={`p-4 rounded-lg ${msg.role === 'user' ? 'bg-muted' : ''}`}>
+                  <p className="text-xs font-medium text-muted-foreground mb-2">
+                    {msg.role === 'user' ? 'You' : 'Lithium'}
+                  </p>
+                  <div className="overflow-x-auto">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {msg.content}
+                    </ReactMarkdown>
+                  </div>
+                </div>
+              ))}
+              {loading && (
+                <div className="p-4">
+                  <p className="text-xs font-medium text-muted-foreground mb-2">Lithium</p>
+                  <p className="text-muted-foreground italic flex items-center gap-2">
+                    <Spinner /> Thinking...
+                  </p>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+
+      <div className="shrink-0 px-8 pb-6 pt-4 bg-background">
+        <div className="w-full max-w-3xl mx-auto">
+          {inputGroup}
+          <div className="text-muted-foreground text-xs mt-4 max-w-3xl text-center w-full">
+            <p>Lithium is AI and can make mistakes.</p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

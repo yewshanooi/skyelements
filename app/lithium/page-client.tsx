@@ -77,8 +77,8 @@ export function PageClient({ user, signout }: PageClientProps) {
         onSelectChat={handleSelectChat}
         onDeleteChat={handleDeleteChat}
       />
-      <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2">
+      <SidebarInset className="overflow-hidden">
+        <header className="flex h-16 shrink-0 items-center gap-2 bg-background">
           <div className="flex items-center gap-2 px-4">
             <SidebarTrigger className="-ml-1" />
             <Separator
@@ -95,13 +95,13 @@ export function PageClient({ user, signout }: PageClientProps) {
           </div>
         </header>
 
-        <main className="flex min-h-screen flex-col items-center justify-start p-8 pt-12">
+        <div className="flex-1 overflow-hidden">
           <ChatClient
             key={chatKey}
             chatId={activeChatId}
             onChatCreated={handleChatCreated}
           />
-        </main>
+        </div>
 
       </SidebarInset>
     </SidebarProvider>

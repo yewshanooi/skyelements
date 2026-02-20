@@ -43,6 +43,7 @@ export default async function Page() {
                       width={165}
                       height={55}
                       className="h-9 w-auto"
+                      priority
                     />
                   </div>
                 </CardTitle>
@@ -72,6 +73,7 @@ export default async function Page() {
                       width={165}
                       height={55}
                       className="h-9 w-auto"
+                      priority
                     />
                   </div>
                 </CardTitle>

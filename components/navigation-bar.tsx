@@ -46,6 +46,7 @@ export function NavigationBar() {
                 width={239} 
                 height={55}
                 className="h-9 w-auto"
+                priority
               />
             </Link>
           </div>
@@ -144,6 +145,7 @@ export function NavigationBar() {
             alt="SkyElements Logo" 
             width={160} 
             height={55}
+            priority
           />
         </Link>
         

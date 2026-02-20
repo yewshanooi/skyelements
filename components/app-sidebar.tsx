@@ -46,6 +46,7 @@ export function AppSidebar({ user, signout, onNewChat, chats, activeChatId, onSe
                 width={165} 
                 height={55}
                 className="h-9 w-auto"
+                priority
               />
             </SidebarMenuButton>
           </SidebarMenuItem>
