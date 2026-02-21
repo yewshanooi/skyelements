@@ -32,7 +32,7 @@ export default function CreditsPage() {
           <CardHeader>
             <CardTitle>Cloudflare</CardTitle>
             <CardDescription>
-              Turnstile CAPTCHA — Skye
+              Turnstile CAPTCHA
             </CardDescription>
             <CardAction>
               <Button asChild variant="secondary">
@@ -47,7 +47,7 @@ export default function CreditsPage() {
           <CardHeader>
             <CardTitle>Google AI Studio</CardTitle>
             <CardDescription>
-              Gemini API — Skye
+              Gemini models API
             </CardDescription>
             <CardAction>
               <Button asChild variant="secondary">
@@ -77,7 +77,7 @@ export default function CreditsPage() {
           <CardHeader>
             <CardTitle>Icons8</CardTitle>
             <CardDescription>
-              Icons — Sodium
+              Icons
             </CardDescription>
             <CardAction>
               <Button asChild variant="secondary">
@@ -92,7 +92,7 @@ export default function CreditsPage() {
           <CardHeader>
             <CardTitle>Lucide</CardTitle>
             <CardDescription>
-              Icons — SkyElements, Sodium
+              Icons
             </CardDescription>
             <CardAction>
               <Button asChild variant="secondary">
@@ -107,7 +107,7 @@ export default function CreditsPage() {
           <CardHeader>
             <CardTitle>Next.js</CardTitle>
             <CardDescription>
-              Web development framework
+              React framework
             </CardDescription>
             <CardAction>
               <Button asChild variant="secondary">
@@ -122,7 +122,7 @@ export default function CreditsPage() {
           <CardHeader>
             <CardTitle>OpenRouter</CardTitle>
             <CardDescription>
-             AI models API — Skye
+             AI models API
             </CardDescription>
             <CardAction>
               <Button asChild variant="secondary">
@@ -152,11 +152,11 @@ export default function CreditsPage() {
           <CardHeader>
             <CardTitle>Supabase</CardTitle>
             <CardDescription>
-              Auth — Skye
+              Authentication & Database
             </CardDescription>
             <CardAction>
               <Button asChild variant="secondary">
-                <a href="https://supabase.com/auth" target="_blank">
+                <a href="https://supabase.com/" target="_blank">
                   <ExternalLink />
                 </a>
               </Button>

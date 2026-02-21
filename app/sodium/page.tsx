@@ -28,7 +28,7 @@ export default function SodiumPage() {
             alt="Sodium Logo"
             width={165}
             height={55}
-            className="h-16 w-auto"
+            className="h-14 w-auto"
           />
         </div>
         <p className="text-muted-foreground text-center text-l max-w-3xl">

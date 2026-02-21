@@ -37,7 +37,7 @@ export default function CopyClient() {
         <Button 
           onClick={handleCopy}
           variant="secondary"
-          className="cursor-pointer disabled:cursor-not-allowed"
+          className="cursor-pointer"
         >
           {!copied && <Copy />}
           {copied ? 'Copied!' : 'Copy'}

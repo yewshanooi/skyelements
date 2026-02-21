@@ -4,8 +4,6 @@ import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { ThemeProvider } from "@/components/theme-provider";
 import { NavigationBar } from "@/components/navigation-bar";
-import { createClient } from "@/utils/supabase/server";
-import { signout } from "./(auth)/actions";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -22,9 +20,6 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getUser();
-  const userEmail = data.user?.email ?? null;
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -37,7 +32,7 @@ export default async function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            <NavigationBar userEmail={userEmail} signout={signout} />
+            <NavigationBar />
             {children}
         </ThemeProvider>
         <SpeedInsights />
