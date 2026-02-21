@@ -91,6 +91,7 @@ export function NavUser({
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
+              <DropdownMenuLabel className="text-xs text-muted-foreground">Settings</DropdownMenuLabel>
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger className="cursor-pointer">
                   <Sun className="h-[1.2rem] w-[1.2rem] scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90" />

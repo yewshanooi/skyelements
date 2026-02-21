@@ -10,7 +10,9 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 import {
   SidebarGroup,
@@ -32,6 +34,7 @@ export function NavChats({
     id: string
     name: string
     icon: LucideIcon
+    updatedAt: string
   }[]
   activeChatId?: string | null
   onSelectChat?: (chatId: string) => void
@@ -87,6 +90,8 @@ export function NavChats({
                   <Trash2 className="text-muted-foreground" />
                   <span>Delete</span>
                 </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">{new Date(item.updatedAt).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}</DropdownMenuLabel>
               </DropdownMenuContent>
             </DropdownMenu>
           </SidebarMenuItem>

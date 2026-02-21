@@ -33,6 +33,7 @@ export function AppSidebar({ user, signout, onNewChat, chats, activeChatId, onSe
     id: chat.id,
     name: chat.title,
     icon: Bot,
+    updatedAt: chat.updated_at,
   }));
 
   return (

@@ -278,7 +278,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                   <p className="text-xs font-medium text-muted-foreground mb-2">
                     {msg.role === 'user' ? 'You' : 'Lithium'}
                   </p>
-                  <div className="overflow-x-auto">
+                  <div className="prose prose-md dark:prose-invert max-w-none overflow-x-auto">
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>
                       {msg.content}
                     </ReactMarkdown>

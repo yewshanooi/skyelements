@@ -1,6 +1,8 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+@plugin "@tailwindcss/typography";
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
@@ -133,4 +135,56 @@
     background-color: #ededed;
     color: #171717;
   }
+}
+
+/* Markdown prose for Lithium chat */
+.prose {
+  --tw-prose-body: var(--foreground);
+  --tw-prose-headings: var(--foreground);
+  --tw-prose-bold: var(--foreground);
+  --tw-prose-counters: var(--muted-foreground);
+  --tw-prose-bullets: var(--muted-foreground);
+  --tw-prose-quotes: var(--foreground);
+  --tw-prose-code: var(--foreground);             /* Inline code, can also use --muted-foreground */
+  --tw-prose-pre-code: var(--foreground);         /* Fenced code block, can also use --muted-foreground */
+  --tw-prose-pre-bg: var(--muted);
+  --tw-prose-th-borders: var(--border);
+  --tw-prose-td-borders: var(--border);
+}
+
+.prose :where(table):not(:where([class~="not-prose"],[class~="not-prose"] *)) {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.prose :where(thead th):not(:where([class~="not-prose"],[class~="not-prose"] *)) {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 2px solid var(--border);
+  font-weight: 600;
+  background-color: var(--muted);
+}
+
+.prose :where(tbody td):not(:where([class~="not-prose"],[class~="not-prose"] *)) {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.prose :where(tbody tr):not(:where([class~="not-prose"],[class~="not-prose"] *)):last-child td {
+  border-bottom: none;
+}
+
+.prose :where(pre):not(:where([class~="not-prose"],[class~="not-prose"] *)) {
+  background-color: var(--muted);
+  border-radius: var(--radius);
+}
+
+.prose :where(code):not(:where([class~="not-prose"],[class~="not-prose"] *)) {
+  font-size: 0.875em;
+}
+
+.prose :where(code):not(:where(pre code, [class~="not-prose"],[class~="not-prose"] *)) {
+  padding: 0.2em 0.4em;
+  background-color: var(--muted);
+  border-radius: var(--radius-sm);
 }
