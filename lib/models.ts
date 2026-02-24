@@ -10,7 +10,6 @@ export const MODELS: ModelDefinition[] = [
   { id: 'openrouter:arcee-ai/trinity-large-preview:free', label: 'Trinity Large', icon: '/lithium/arcee.png', shortcut: 'Preview' },
   { id: 'openrouter:stepfun/step-3.5-flash:free', label: 'Step 3.5 Flash', icon: '/lithium/stepfun.png', shortcut: '' },
   { id: 'openrouter:z-ai/glm-4.5-air:free', label: 'GLM 4.5 Air', icon: '/lithium/zai.png', shortcut: '' },
-  { id: 'openrouter:deepseek/deepseek-r1-0528:free', label: 'R1', icon: '/lithium/deepseek.png', shortcut: '0528' },
   { id: 'openrouter:nvidia/nemotron-3-nano-30b-a3b:free', label: 'Nemotron 3 Nano', icon: '/lithium/nvidia.png', shortcut: '30B' },
 
   // Google AI Studio models
