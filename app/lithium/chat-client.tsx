@@ -23,24 +23,8 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner"
 import { generateContent, createChat, saveMessage, getMessages, updateChatTitle, type ChatMessage, type Message } from "./actions";
+import { MODELS } from "@/lib/models";
 import Image from 'next/image'
-
-
-const models = [
-  { id: 'openrouter:arcee-ai/trinity-large-preview:free', label: 'Trinity Large', icon: '/lithium/arcee.png', shortcut: 'Preview' },
-  { id: 'openrouter:stepfun/step-3.5-flash:free', label: 'Step 3.5 Flash', icon: '/lithium/stepfun.png', shortcut: '' },
-  { id: 'openrouter:z-ai/glm-4.5-air:free', label: 'GLM 4.5 Air', icon: '/lithium/zai.png', shortcut: '' },
-  { id: 'openrouter:deepseek/deepseek-r1-0528:free', label: 'R1', icon: '/lithium/deepseek.png', shortcut: '0528' },
-  { id: 'openrouter:nvidia/nemotron-3-nano-30b-a3b:free', label: 'Nemotron 3 Nano', icon: '/lithium/nvidia.png', shortcut: '30B' },
-  
-  // Unreliable sub-optimal models
-  { id: 'openrouter:openai/gpt-oss-120b:free', label: 'GPT OSS', icon: '/lithium/openai.png', shortcut: '120B' },
-  { id: 'openrouter:meta-llama/llama-3.3-70b-instruct:free', label: 'Llama 3.3 Instruct', icon: '/lithium/meta.png', shortcut: '70B' },
-
-  { id: 'gemini-3-flash-preview', label: 'Gemini 3 Flash', icon: '/lithium/google.png', shortcut: 'Preview' },
-  { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', icon: '/lithium/google.png', shortcut: '' },
-  { id: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash', icon: '/lithium/google.png', shortcut: 'Lite' },
-];
 
 
 const sampleQueries = [
@@ -84,7 +68,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
   const [currentChatId, setCurrentChatId] = useState<string | null>(chatId ?? null);
 
   const selectedModelInfo = useMemo(
-    () => models.find(m => m.id === selectedModel) ?? models[0],
+    () => MODELS.find(m => m.id === selectedModel) ?? MODELS[0],
     [selectedModel]
   );
   const isEmptyState = messages.length === 0 && !loading && !loadingHistory;
@@ -192,7 +176,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
             <DropdownMenuContent side="bottom" align="start">
               <DropdownMenuLabel>Models</DropdownMenuLabel>
 
-              {models.map((model) => (
+              {MODELS.map((model) => (
                 <DropdownMenuItem 
                   key={model.id}
                   onSelect={() => setSelectedModel(model.id)} 

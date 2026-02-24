@@ -38,7 +38,8 @@ CREATE POLICY "Users can create their own chats"
 
 CREATE POLICY "Users can update their own chats"
   ON chats FOR UPDATE
-  USING (auth.uid() = user_id);
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
 
 CREATE POLICY "Users can delete their own chats"
   ON chats FOR DELETE
@@ -49,7 +50,10 @@ CREATE POLICY "Users can view messages in their chats"
   ON messages FOR SELECT
   USING (
     EXISTS (
-      SELECT 1 FROM chats WHERE chats.id = messages.chat_id AND chats.user_id = auth.uid()
+      SELECT 1 
+      FROM chats 
+      WHERE chats.id = messages.chat_id 
+      AND chats.user_id = auth.uid()
     )
   );
 
@@ -57,6 +61,9 @@ CREATE POLICY "Users can insert messages in their chats"
   ON messages FOR INSERT
   WITH CHECK (
     EXISTS (
-      SELECT 1 FROM chats WHERE chats.id = messages.chat_id AND chats.user_id = auth.uid()
+      SELECT 1 
+      FROM chats 
+      WHERE chats.id = messages.chat_id 
+      AND chats.user_id = auth.uid()
     )
   );

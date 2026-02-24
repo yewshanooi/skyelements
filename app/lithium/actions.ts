@@ -3,6 +3,7 @@
 import { GoogleGenAI, Content } from "@google/genai";
 import { OpenRouter } from "@openrouter/sdk";
 import { createActionClient } from "@/utils/supabase/actions";
+import { ALLOWED_MODEL_IDS } from "@/lib/models";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -39,12 +40,20 @@ export async function generateContent(
   model: string = "openrouter:arcee-ai/trinity-large-preview:free",
   history: ChatMessage[] = []
 ) {
+  await getAuthenticatedClient();
+
+  if (!ALLOWED_MODEL_IDS.has(model)) {
+    return "Sorry, the requested model is not available.";
+  }
+
   const isOpenRouter = model.startsWith("openrouter:");
   const actualModel = isOpenRouter ? model.replace("openrouter:", "") : model;
 
   if (isOpenRouter) {
     if (!process.env.OPENROUTER_API_KEY) {
-      throw new Error("OPENROUTER_API_KEY is not set.");
+      console.error("OPENROUTER_API_KEY environment variable is not set.");
+
+      return "Sorry, I couldn't generate a response at this time.";
     }
 
     const openrouter = new OpenRouter({
@@ -93,7 +102,9 @@ export async function generateContent(
 
   // Google AI Studio models
   if (!process.env.GOOGLE_API_KEY) {
-    throw new Error("GOOGLE_API_KEY is not set.");
+    console.error("GOOGLE_API_KEY environment variable is not set.");
+
+    return "Sorry, I couldn't generate a response at this time.";
   }
 
   const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY });
@@ -140,6 +151,10 @@ async function getAuthenticatedClient() {
 
 /** Create a new chat and return it */
 export async function createChat(model: string = 'openrouter:arcee-ai/trinity-large-preview:free'): Promise<Chat> {
+  if (!ALLOWED_MODEL_IDS.has(model)) {
+    throw new Error('Invalid model specified.');
+  }
+
   const { supabase, user } = await getAuthenticatedClient();
 
   const { data, error } = await supabase
@@ -168,7 +183,16 @@ export async function listChats(): Promise<Chat[]> {
 
 /** Get messages for a chat */
 export async function getMessages(chatId: string): Promise<Message[]> {
-  const supabase = await createActionClient();
+  const { supabase, user } = await getAuthenticatedClient();
+
+  const { data: chat } = await supabase
+    .from('chats')
+    .select('id')
+    .eq('id', chatId)
+    .eq('user_id', user.id)
+    .single();
+
+  if (!chat) throw new Error('Chat not found or access denied');
 
   const { data, error } = await supabase
     .from('messages')
@@ -182,7 +206,16 @@ export async function getMessages(chatId: string): Promise<Message[]> {
 
 /** Save a message to a chat and bump the chat's updated_at timestamp */
 export async function saveMessage(chatId: string, role: 'user' | 'assistant', content: string): Promise<Message> {
-  const supabase = await createActionClient();
+  const { supabase, user } = await getAuthenticatedClient();
+
+  const { data: chat } = await supabase
+    .from('chats')
+    .select('id')
+    .eq('id', chatId)
+    .eq('user_id', user.id)
+    .single();
+
+  if (!chat) throw new Error('Chat not found or access denied');
 
   const { data, error } = await supabase
     .from('messages')
@@ -202,24 +235,26 @@ export async function saveMessage(chatId: string, role: 'user' | 'assistant', co
 
 /** Update chat title */
 export async function updateChatTitle(chatId: string, title: string): Promise<void> {
-  const supabase = await createActionClient();
+  const { supabase, user } = await getAuthenticatedClient();
 
   const { error } = await supabase
     .from('chats')
     .update({ title })
-    .eq('id', chatId);
+    .eq('id', chatId)
+    .eq('user_id', user.id);
 
   if (error) throw new Error(error.message);
 }
 
 /** Delete a chat */
 export async function deleteChat(chatId: string): Promise<void> {
-  const supabase = await createActionClient();
+  const { supabase, user } = await getAuthenticatedClient();
 
   const { error } = await supabase
     .from('chats')
     .delete()
-    .eq('id', chatId);
+    .eq('id', chatId)
+    .eq('user_id', user.id);
 
   if (error) throw new Error(error.message);
 }
