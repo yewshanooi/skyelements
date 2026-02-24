@@ -13,10 +13,6 @@ export const MODELS: ModelDefinition[] = [
   { id: 'openrouter:deepseek/deepseek-r1-0528:free', label: 'R1', icon: '/lithium/deepseek.png', shortcut: '0528' },
   { id: 'openrouter:nvidia/nemotron-3-nano-30b-a3b:free', label: 'Nemotron 3 Nano', icon: '/lithium/nvidia.png', shortcut: '30B' },
 
-  // Unreliable sub-optimal models
-  { id: 'openrouter:openai/gpt-oss-120b:free', label: 'GPT OSS', icon: '/lithium/openai.png', shortcut: '120B' },
-  { id: 'openrouter:meta-llama/llama-3.3-70b-instruct:free', label: 'Llama 3.3 Instruct', icon: '/lithium/meta.png', shortcut: '70B' },
-
   // Google AI Studio models
   { id: 'gemini-3-flash-preview', label: 'Gemini 3 Flash', icon: '/lithium/google.png', shortcut: 'Preview' },
   { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', icon: '/lithium/google.png', shortcut: '' },
