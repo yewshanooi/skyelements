@@ -168,6 +168,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                   width={16} 
                   height={16}
                   className="mr-1"
+                  priority
                 />
                 {selectedModelInfo.label}
                 <ChevronDown />
@@ -187,6 +188,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                     alt={model.label}
                     width={16} 
                     height={16}
+                    priority
                   />
                   {model.label}
                   <DropdownMenuShortcut>
