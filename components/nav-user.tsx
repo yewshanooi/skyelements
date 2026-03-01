@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import {
   ChevronsUpDown,
   Sun,
@@ -34,6 +35,17 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { buttonVariants } from "@/components/ui/button"
 
 export function NavUser({
   user,
@@ -48,8 +60,10 @@ export function NavUser({
 }) {
   const { isMobile } = useSidebar()
   const { theme, setTheme } = useTheme()
+  const [deleteAllOpen, setDeleteAllOpen] = useState(false)
 
   return (
+    <>
     <SidebarMenu>
       <SidebarMenuItem>
         <DropdownMenu>
@@ -126,7 +140,7 @@ export function NavUser({
               </DropdownMenuSub>
               <DropdownMenuItem
                 variant="destructive"
-                onClick={() => onDeleteAllChats?.()}
+                onClick={() => setDeleteAllOpen(true)}
                 className="cursor-pointer"
               >
                 <Trash2 />
@@ -146,5 +160,29 @@ export function NavUser({
         </DropdownMenu>
       </SidebarMenuItem>
     </SidebarMenu>
+
+    <AlertDialog open={deleteAllOpen} onOpenChange={setDeleteAllOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Clear your chat history?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This will delete prompts, responses, and feedback from your Lithium chat history. This action cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel className="cursor-pointer">Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            className={buttonVariants({ variant: "outline", className: "text-destructive cursor-pointer hover:text-destructive" })}
+            onClick={() => {
+              onDeleteAllChats?.()
+              setDeleteAllOpen(false)
+            }}
+          >
+            Delete All
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   )
 }
