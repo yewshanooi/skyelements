@@ -55,12 +55,12 @@ export default function LoginForm() {
                                 <Field>
                                     <div className="flex items-center">
                                         <FieldLabel htmlFor="password">Password</FieldLabel>
-                                        {/* <Link
-                                            href="/reset-password"
+                                        <Link
+                                            href="/forgot-password"
                                             className="ml-auto inline-block text-sm text-muted-foreground underline-offset-4 hover:underline"
                                         >
                                             Forgot your password?
-                                        </Link> */}
+                                        </Link>
                                     </div>
                                     <Input id="password" name="password" type="password" required />
                                     {state?.error && (
