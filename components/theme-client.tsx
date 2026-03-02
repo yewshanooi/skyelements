@@ -23,6 +23,13 @@ export function ThemeToggle() {
       </DropdownMenuTrigger>
       <DropdownMenuContent side="bottom" align="end">
         <DropdownMenuCheckboxItem
+          checked={theme === "system"}
+          onCheckedChange={() => setTheme("system")}
+          className="cursor-pointer"
+        >
+          System
+        </DropdownMenuCheckboxItem>
+        <DropdownMenuCheckboxItem
           checked={theme === "light"}
           onCheckedChange={() => setTheme("light")}
           className="cursor-pointer"
@@ -35,13 +42,6 @@ export function ThemeToggle() {
           className="cursor-pointer"
         >
           Dark
-        </DropdownMenuCheckboxItem>
-        <DropdownMenuCheckboxItem
-          checked={theme === "system"}
-          onCheckedChange={() => setTheme("system")}
-          className="cursor-pointer"
-        >
-          System
         </DropdownMenuCheckboxItem>
       </DropdownMenuContent>
     </DropdownMenu>

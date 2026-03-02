@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import {
   MoreHorizontal,
   Trash2,
@@ -23,6 +24,17 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { buttonVariants } from "@/components/ui/button"
 
 export function NavChats({
   chats,
@@ -41,6 +53,7 @@ export function NavChats({
   onDeleteChat?: (chatId: string) => void
 }) {
   const { isMobile } = useSidebar()
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
 
   if (chats.length === 0) {
     return (
@@ -58,6 +71,7 @@ export function NavChats({
   }
 
   return (
+    <>
     <SidebarGroup className="group-data-[collapsible=icon]:hidden">
       <SidebarGroupLabel>Chats</SidebarGroupLabel>
       <SidebarMenu>
@@ -85,7 +99,7 @@ export function NavChats({
               >
                 <DropdownMenuItem
                   variant="destructive"
-                  onClick={() => onDeleteChat?.(item.id)}
+                  onClick={() => setPendingDeleteId(item.id)}
                 >
                   <Trash2 className="text-muted-foreground" />
                   <span>Delete</span>
@@ -98,5 +112,34 @@ export function NavChats({
         ))}
       </SidebarMenu>
     </SidebarGroup>
+
+    <AlertDialog
+      open={pendingDeleteId !== null}
+      onOpenChange={(open) => { if (!open) setPendingDeleteId(null) }}
+    >
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete chat?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Once you delete a chat, the messages are gone forever on every device.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel className="cursor-pointer">Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            className={buttonVariants({ variant: "outline", className: "text-destructive cursor-pointer hover:text-destructive" })}
+            onClick={() => {
+              if (pendingDeleteId) {
+                onDeleteChat?.(pendingDeleteId)
+                setPendingDeleteId(null)
+              }
+            }}
+          >
+            Delete
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  </>
   )
 }

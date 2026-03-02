@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import {
   ChevronsUpDown,
   Sun,
@@ -34,6 +35,17 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { buttonVariants } from "@/components/ui/button"
 
 export function NavUser({
   user,
@@ -48,8 +60,10 @@ export function NavUser({
 }) {
   const { isMobile } = useSidebar()
   const { theme, setTheme } = useTheme()
+  const [deleteAllOpen, setDeleteAllOpen] = useState(false)
 
   return (
+    <>
     <SidebarMenu>
       <SidebarMenuItem>
         <DropdownMenu>
@@ -89,9 +103,11 @@ export function NavUser({
                 </div>
               </div>
             </DropdownMenuLabel>
+
             <DropdownMenuSeparator />
+
             <DropdownMenuGroup>
-              <DropdownMenuLabel className="text-xs text-muted-foreground">Settings</DropdownMenuLabel>
+              <DropdownMenuLabel className="text-xs text-muted-foreground">Appearance</DropdownMenuLabel>
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger className="cursor-pointer">
                   <Sun className="h-[1.2rem] w-[1.2rem] scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90" />
@@ -100,6 +116,13 @@ export function NavUser({
                 </DropdownMenuSubTrigger>
                 <DropdownMenuPortal>
                   <DropdownMenuSubContent>
+                    <DropdownMenuCheckboxItem
+                      checked={theme === "system"}
+                      onCheckedChange={() => setTheme("system")}
+                      className="cursor-pointer"
+                    >
+                      System
+                    </DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem
                       checked={theme === "light"}
                       onCheckedChange={() => setTheme("light")}
@@ -114,37 +137,60 @@ export function NavUser({
                     >
                       Dark
                     </DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem
-                      checked={theme === "system"}
-                      onCheckedChange={() => setTheme("system")}
-                      className="cursor-pointer"
-                    >
-                      System
-                    </DropdownMenuCheckboxItem>
                   </DropdownMenuSubContent>
                 </DropdownMenuPortal>
               </DropdownMenuSub>
+              
+              <DropdownMenuSeparator />
+
+              <DropdownMenuLabel className="text-xs text-muted-foreground">Danger zone</DropdownMenuLabel>
               <DropdownMenuItem
                 variant="destructive"
-                onClick={() => onDeleteAllChats?.()}
+                onClick={() => setDeleteAllOpen(true)}
                 className="cursor-pointer"
               >
                 <Trash2 />
                 Clear chat history
               </DropdownMenuItem>
+
               <DropdownMenuSeparator />
+
               <DropdownMenuItem 
                 variant="destructive" 
                 onClick={() => signout?.()} 
                 className="cursor-pointer"
               >
                 <LogOut />
-                Logout
+                Sign out
               </DropdownMenuItem>
             </DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>
     </SidebarMenu>
+
+    <AlertDialog open={deleteAllOpen} onOpenChange={setDeleteAllOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Clear your chat history?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This will delete prompts, responses, and feedback from your Lithium chat history. This action cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel className="cursor-pointer">Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            className={buttonVariants({ variant: "outline", className: "text-destructive cursor-pointer hover:text-destructive" })}
+            onClick={() => {
+              onDeleteAllChats?.()
+              setDeleteAllOpen(false)
+            }}
+          >
+            Delete All
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   )
 }

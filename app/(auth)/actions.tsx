@@ -40,6 +40,43 @@ export async function signup(prevState: ActionState | null, formData: FormData):
     redirect('/lithium')
 }
 
+export async function forgotPassword(prevState: ActionState | null, formData: FormData): Promise<ActionState> {
+    const supabase = await createActionClient();
+
+    const email = String(formData.get('email') || '');
+    const captchaToken = String(formData.get('captchaToken') || '');
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback?next=/reset-password`,
+        captchaToken,
+    });
+
+    if (error) {
+        return { error: error.message };
+    }
+
+    return { success: true };
+}
+
+export async function resetPassword(prevState: ActionState | null, formData: FormData): Promise<ActionState> {
+    const supabase = await createActionClient();
+
+    const password = String(formData.get('password') || '');
+    const confirmPassword = String(formData.get('confirmPassword') || '');
+
+    if (password !== confirmPassword) {
+        return { error: 'Passwords do not match.' };
+    }
+
+    const { error } = await supabase.auth.updateUser({ password });
+
+    if (error) {
+        return { error: error.message };
+    }
+
+    return { success: true };
+}
+
 export async function signout() {
     const supabase = await createActionClient();
 
