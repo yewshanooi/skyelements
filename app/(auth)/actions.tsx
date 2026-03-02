@@ -8,6 +8,13 @@ type ActionState = {
     success?: boolean;
 }
 
+function validatePassword(password: string): string | null {
+    if (password.length < 8 || !/[a-zA-Z]/.test(password) || !/[0-9]/.test(password)) {
+        return 'Password should be at least 8 characters and contain both letters and numbers.';
+    }
+    return null;
+}
+
 export async function login(prevState: ActionState | null, formData: FormData): Promise<ActionState> {
     const supabase = await createActionClient();
 
@@ -30,6 +37,11 @@ export async function signup(prevState: ActionState | null, formData: FormData):
     const email = String(formData.get('email') || '')
     const password = String(formData.get('password') || '')
     const captchaToken = String(formData.get('captchaToken') || '')
+
+    const passwordError = validatePassword(password);
+    if (passwordError) {
+        return { error: passwordError };
+    }
 
     const {error} = await supabase.auth.signUp({email, password, options: { captchaToken }});
 
@@ -66,6 +78,11 @@ export async function resetPassword(prevState: ActionState | null, formData: For
 
     if (password !== confirmPassword) {
         return { error: 'Passwords do not match.' };
+    }
+
+    const passwordError = validatePassword(password);
+    if (passwordError) {
+        return { error: passwordError };
     }
 
     const { error } = await supabase.auth.updateUser({ password });
