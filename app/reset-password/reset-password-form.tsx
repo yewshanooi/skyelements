@@ -38,7 +38,7 @@ export default function ResetPasswordForm() {
                         <CardDescription>
                             {state?.success
                                 ? "Your password has been updated successfully."
-                                : "Enter your new password below."}
+                                : "Use a password at least 8 characters long with both letters and numbers."}
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -54,7 +54,7 @@ export default function ResetPasswordForm() {
                             <form action={formAction}>
                                 <FieldGroup>
                                     <Field>
-                                        <FieldLabel htmlFor="password">Password</FieldLabel>
+                                        <FieldLabel htmlFor="password">New password</FieldLabel>
                                         <Input 
                                             id="password" 
                                             name="password" 
@@ -63,7 +63,7 @@ export default function ResetPasswordForm() {
                                         />
                                     </Field>
                                     <Field>
-                                        <FieldLabel htmlFor="confirmPassword">Confirm Password</FieldLabel>
+                                        <FieldLabel htmlFor="confirmPassword">Confirm password</FieldLabel>
                                         <Input 
                                             id="confirmPassword" 
                                             name="confirmPassword" 

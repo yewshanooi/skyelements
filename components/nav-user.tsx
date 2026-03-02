@@ -1,8 +1,10 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import {
   ChevronsUpDown,
+  KeyRound,
   Sun,
   Moon,
   LogOut,
@@ -59,6 +61,7 @@ export function NavUser({
   onDeleteAllChats?: () => Promise<void>
 }) {
   const { isMobile } = useSidebar()
+  const router = useRouter()
   const { theme, setTheme } = useTheme()
   const [deleteAllOpen, setDeleteAllOpen] = useState(false)
 
@@ -107,6 +110,17 @@ export function NavUser({
             <DropdownMenuSeparator />
 
             <DropdownMenuGroup>
+              <DropdownMenuLabel className="text-xs text-muted-foreground">Account security</DropdownMenuLabel>
+              <DropdownMenuItem
+                onClick={() => router.push("/reset-password")}
+                className="cursor-pointer"
+              >
+                <KeyRound />
+                Reset password
+              </DropdownMenuItem>
+
+              <DropdownMenuSeparator />
+
               <DropdownMenuLabel className="text-xs text-muted-foreground">Appearance</DropdownMenuLabel>
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger className="cursor-pointer">
@@ -140,7 +154,7 @@ export function NavUser({
                   </DropdownMenuSubContent>
                 </DropdownMenuPortal>
               </DropdownMenuSub>
-              
+
               <DropdownMenuSeparator />
 
               <DropdownMenuLabel className="text-xs text-muted-foreground">Danger zone</DropdownMenuLabel>
@@ -164,6 +178,7 @@ export function NavUser({
                 Sign out
               </DropdownMenuItem>
             </DropdownMenuGroup>
+
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>
@@ -181,10 +196,7 @@ export function NavUser({
           <AlertDialogCancel className="cursor-pointer">Cancel</AlertDialogCancel>
           <AlertDialogAction
             className={buttonVariants({ variant: "outline", className: "text-destructive cursor-pointer hover:text-destructive" })}
-            onClick={() => {
-              onDeleteAllChats?.()
-              setDeleteAllOpen(false)
-            }}
+            onClick={() => onDeleteAllChats?.()}
           >
             Delete All
           </AlertDialogAction>

@@ -129,10 +129,8 @@ export function NavChats({
           <AlertDialogAction
             className={buttonVariants({ variant: "outline", className: "text-destructive cursor-pointer hover:text-destructive" })}
             onClick={() => {
-              if (pendingDeleteId) {
-                onDeleteChat?.(pendingDeleteId)
-                setPendingDeleteId(null)
-              }
+              onDeleteChat?.(pendingDeleteId!)
+              setPendingDeleteId(null)
             }}
           >
             Delete

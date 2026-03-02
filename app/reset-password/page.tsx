@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirectIfNotAuthenticated } from "@/utils/redirectIfNotAuthenticated";
 import ResetPasswordForm from "./reset-password-form";
 
 export const metadata: Metadata = {
@@ -6,6 +7,8 @@ export const metadata: Metadata = {
   description: "Enter your new password",
 };
 
-export default function ResetPasswordPage() {
+export default async function ResetPasswordPage() {
+    await redirectIfNotAuthenticated();
+
     return <ResetPasswordForm />;
 }
