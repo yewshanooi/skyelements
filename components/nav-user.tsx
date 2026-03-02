@@ -103,9 +103,11 @@ export function NavUser({
                 </div>
               </div>
             </DropdownMenuLabel>
+
             <DropdownMenuSeparator />
+
             <DropdownMenuGroup>
-              <DropdownMenuLabel className="text-xs text-muted-foreground">Settings</DropdownMenuLabel>
+              <DropdownMenuLabel className="text-xs text-muted-foreground">Appearance</DropdownMenuLabel>
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger className="cursor-pointer">
                   <Sun className="h-[1.2rem] w-[1.2rem] scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90" />
@@ -114,6 +116,13 @@ export function NavUser({
                 </DropdownMenuSubTrigger>
                 <DropdownMenuPortal>
                   <DropdownMenuSubContent>
+                    <DropdownMenuCheckboxItem
+                      checked={theme === "system"}
+                      onCheckedChange={() => setTheme("system")}
+                      className="cursor-pointer"
+                    >
+                      System
+                    </DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem
                       checked={theme === "light"}
                       onCheckedChange={() => setTheme("light")}
@@ -128,16 +137,13 @@ export function NavUser({
                     >
                       Dark
                     </DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem
-                      checked={theme === "system"}
-                      onCheckedChange={() => setTheme("system")}
-                      className="cursor-pointer"
-                    >
-                      System
-                    </DropdownMenuCheckboxItem>
                   </DropdownMenuSubContent>
                 </DropdownMenuPortal>
               </DropdownMenuSub>
+              
+              <DropdownMenuSeparator />
+
+              <DropdownMenuLabel className="text-xs text-muted-foreground">Danger zone</DropdownMenuLabel>
               <DropdownMenuItem
                 variant="destructive"
                 onClick={() => setDeleteAllOpen(true)}
@@ -146,14 +152,16 @@ export function NavUser({
                 <Trash2 />
                 Clear chat history
               </DropdownMenuItem>
+
               <DropdownMenuSeparator />
+
               <DropdownMenuItem 
                 variant="destructive" 
                 onClick={() => signout?.()} 
                 className="cursor-pointer"
               >
                 <LogOut />
-                Logout
+                Sign out
               </DropdownMenuItem>
             </DropdownMenuGroup>
           </DropdownMenuContent>
