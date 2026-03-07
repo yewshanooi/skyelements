@@ -225,7 +225,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
       <div className="h-full overflow-y-auto flex items-center justify-center p-8 pb-[10%]">
         <div className="w-full max-w-3xl mx-auto">
           <div className="flex flex-row gap-4 w-full max-w-3xl mb-6">
-            <h1 className="scroll-m-20 text-3xl font-semibold text-balance flex">
+            <h1 className="ml-4 scroll-m-20 text-3xl font-semibold text-balance flex">
               Greetings 👋
             </h1>
           </div>

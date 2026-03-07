@@ -103,7 +103,7 @@ export function NoteClient({ noteId, onNoteActivity }: NoteClientProps) {
             placeholder="New note"
             value={title}
             onChange={handleTitleChange}
-            className="w-full bg-transparent text-3xl font-bold outline-none placeholder:text-muted-foreground/50"
+            className="ml-4 w-full bg-transparent text-3xl font-semibold outline-none placeholder:text-muted-foreground/50"
           />
           <Editor
             key={editorKey}

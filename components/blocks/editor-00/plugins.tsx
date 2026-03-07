@@ -3,6 +3,7 @@ import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary"
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin"
 
 import { ContentEditable } from "@/components/editor/editor-ui/content-editable"
+import { DraggableBlockPlugin } from "@/components/editor/plugins/draggable-block-plugin"
 
 export function Plugins() {
   const [floatingAnchorElem, setFloatingAnchorElem] =
@@ -29,6 +30,7 @@ export function Plugins() {
           ErrorBoundary={LexicalErrorBoundary}
         />
         {/* editor plugins */}
+        <DraggableBlockPlugin anchorElem={floatingAnchorElem} />
       </div>
       {/* actions plugins */}
     </div>
