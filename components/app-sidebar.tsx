@@ -5,6 +5,7 @@ import Image from "next/image"
 import { Bot } from "lucide-react"
 
 import { NavChats } from "@/components/nav-chats"
+import { NavNotes } from "@/components/nav-notes"
 import { NavUser } from "@/components/nav-user"
 import {
   Sidebar,
@@ -16,8 +17,9 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 import type { Chat } from "@/app/lithium/actions"
+import type { Note } from "@/app/lithium/note-actions"
 
-export function AppSidebar({ user, signout, onNewChat, chats, activeChatId, onSelectChat, onDeleteChat, onDeleteAllChats, ...props }: React.ComponentProps<typeof Sidebar> & {
+export function AppSidebar({ user, signout, onNewChat, chats, activeChatId, onSelectChat, onDeleteChat, onDeleteAllChats, onDeleteAllNotes, notes, activeNoteId, onSelectNote, onDeleteNote, onNewNote, ...props }: React.ComponentProps<typeof Sidebar> & {
   user: {
     email: string
   }
@@ -28,12 +30,24 @@ export function AppSidebar({ user, signout, onNewChat, chats, activeChatId, onSe
   onSelectChat?: (chatId: string) => void
   onDeleteChat?: (chatId: string) => void
   onDeleteAllChats?: () => Promise<void>
+  onDeleteAllNotes?: () => Promise<void>
+  notes?: Note[]
+  activeNoteId?: string | null
+  onSelectNote?: (noteId: string) => void
+  onDeleteNote?: (noteId: string) => void
+  onNewNote?: () => void
 }) {
   const chatItems = (chats ?? []).map(chat => ({
     id: chat.id,
     name: chat.title,
     icon: Bot,
     updatedAt: chat.updated_at,
+  }));
+
+  const noteItems = (notes ?? []).map(note => ({
+    id: note.id,
+    name: note.title || 'New note',
+    updatedAt: note.updated_at,
   }));
 
   return (
@@ -55,6 +69,13 @@ export function AppSidebar({ user, signout, onNewChat, chats, activeChatId, onSe
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
+        <NavNotes
+          notes={noteItems}
+          activeNoteId={activeNoteId}
+          onSelectNote={onSelectNote}
+          onDeleteNote={onDeleteNote}
+          onNewNote={onNewNote}
+        />
         <NavChats
           chats={chatItems}
           activeChatId={activeChatId}
@@ -63,7 +84,7 @@ export function AppSidebar({ user, signout, onNewChat, chats, activeChatId, onSe
         />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={user} signout={signout} onDeleteAllChats={onDeleteAllChats} />
+        <NavUser user={user} signout={signout} onDeleteAllChats={onDeleteAllChats} onDeleteAllNotes={onDeleteAllNotes} />
       </SidebarFooter>
     </Sidebar>
   )

@@ -159,7 +159,7 @@ export async function createChat(model: string = 'openrouter:arcee-ai/trinity-la
 
   const { data, error } = await supabase
     .from('chats')
-    .insert({ user_id: user.id, model, title: 'New Chat' })
+    .insert({ user_id: user.id, model, title: 'New chat' })
     .select()
     .single();
 

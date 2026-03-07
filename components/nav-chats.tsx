@@ -121,7 +121,7 @@ export function NavChats({
         <AlertDialogHeader>
           <AlertDialogTitle>Delete chat?</AlertDialogTitle>
           <AlertDialogDescription>
-            Once you delete a chat, the messages are gone forever on every device.
+            Once you delete a chat, it&apos;s gone forever on every device.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
