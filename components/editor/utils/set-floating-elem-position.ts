@@ -29,7 +29,7 @@ export function setFloatingElemPosition(
     top +=
       floatingElemRect.height +
       targetRect.height +
-      verticalGap * (isLink ? 9 : 2)
+      verticalGap * (isLink ? 8 : 2)
   }
 
   if (left + floatingElemRect.width > editorScrollerRect.right) {
