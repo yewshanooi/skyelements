@@ -1,3 +1,4 @@
+import { AutoLinkNode, LinkNode } from "@lexical/link"
 import { HeadingNode, QuoteNode } from "@lexical/rich-text"
 import {
   Klass,
@@ -8,4 +9,4 @@ import {
 } from "lexical"
 
 export const nodes: ReadonlyArray<Klass<LexicalNode> | LexicalNodeReplacement> =
-  [HeadingNode, ParagraphNode, TextNode, QuoteNode]
+  [HeadingNode, ParagraphNode, TextNode, QuoteNode, LinkNode, AutoLinkNode]

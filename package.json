@@ -10,8 +10,12 @@
   },
   "dependencies": {
     "@google/genai": "^1.37.0",
+    "@lexical/code": "^0.41.0",
+    "@lexical/link": "^0.41.0",
     "@lexical/react": "^0.41.0",
     "@lexical/rich-text": "^0.41.0",
+    "@lexical/selection": "^0.41.0",
+    "@lexical/utils": "^0.41.0",
     "@marsidev/react-turnstile": "^1.4.1",
     "@openrouter/sdk": "^0.4.0",
     "@radix-ui/react-accordion": "^1.2.12",
