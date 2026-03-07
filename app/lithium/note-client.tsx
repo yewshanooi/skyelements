@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { SerializedEditorState } from "lexical";
 import {
   getNote,
   updateNoteTitle,
@@ -8,6 +9,7 @@ import {
   type Note,
 } from "./note-actions";
 import { Spinner } from "@/components/ui/spinner";
+import { Editor } from "@/components/blocks/editor-00/editor";
 
 interface NoteClientProps {
   noteId?: string | null;
@@ -18,11 +20,11 @@ interface NoteClientProps {
 export function NoteClient({ noteId, onNoteActivity }: NoteClientProps) {
   const [currentNoteId, setCurrentNoteId] = useState<string | null>(noteId ?? null);
   const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
+  const [editorState, setEditorState] = useState<SerializedEditorState | undefined>(undefined);
   const [loading, setLoading] = useState(false);
+  const [editorKey, setEditorKey] = useState(0);
 
   const titleRef = useRef<HTMLInputElement>(null);
-  const contentRef = useRef<HTMLTextAreaElement>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Load note when noteId changes
@@ -33,7 +35,12 @@ export function NoteClient({ noteId, onNoteActivity }: NoteClientProps) {
       getNote(noteId)
         .then((note: Note) => {
           setTitle(note.title);
-          setContent(note.content);
+          try {
+            setEditorState(note.content ? JSON.parse(note.content) : undefined);
+          } catch {
+            setEditorState(undefined);
+          }
+          setEditorKey(prev => prev + 1);
           setLoading(false);
         })
         .catch(() => {
@@ -41,7 +48,8 @@ export function NoteClient({ noteId, onNoteActivity }: NoteClientProps) {
         });
     } else {
       setTitle("");
-      setContent("");
+      setEditorState(undefined);
+      setEditorKey(prev => prev + 1);
     }
   }, [noteId]);
 
@@ -66,20 +74,10 @@ export function NoteClient({ noteId, onNoteActivity }: NoteClientProps) {
     if (currentNoteId) debouncedSave("title", newTitle, currentNoteId);
   };
 
-  const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newContent = e.target.value;
-    setContent(newContent);
-    if (currentNoteId) debouncedSave("content", newContent, currentNoteId);
-  };
-
-  // Auto-resize textarea
-  useEffect(() => {
-    const textarea = contentRef.current;
-    if (textarea) {
-      textarea.style.height = "auto";
-      textarea.style.height = textarea.scrollHeight + "px";
-    }
-  }, [content]);
+  const handleSerializedChange = useCallback((serialized: SerializedEditorState) => {
+    const json = JSON.stringify(serialized);
+    if (currentNoteId) debouncedSave("content", json, currentNoteId);
+  }, [currentNoteId, debouncedSave]);
 
   if (loading) {
     return (
@@ -107,12 +105,11 @@ export function NoteClient({ noteId, onNoteActivity }: NoteClientProps) {
             onChange={handleTitleChange}
             className="w-full bg-transparent text-3xl font-bold outline-none placeholder:text-muted-foreground/50"
           />
-          <textarea
-            ref={contentRef}
-            placeholder="Start writing..."
-            value={content}
-            onChange={handleContentChange}
-            className="w-full min-h-[60vh] resize-none bg-transparent text-base leading-relaxed outline-none placeholder:text-muted-foreground/50"
+          <Editor
+            key={editorKey}
+            editorSerializedState={editorState}
+            onSerializedChange={handleSerializedChange}
+            className="bg-transparent"
           />
         </div>
       </div>
