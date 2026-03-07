@@ -6,7 +6,6 @@ import {
   Trash2,
   StickyNote,
   Plus,
-  type LucideIcon,
 } from "lucide-react"
 
 import {

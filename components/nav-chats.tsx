@@ -2,9 +2,9 @@
 
 import { useState } from "react"
 import {
+  Bot,
   MoreHorizontal,
   Trash2,
-  type LucideIcon,
 } from "lucide-react"
 
 import {
@@ -45,7 +45,6 @@ export function NavChats({
   chats: {
     id: string
     name: string
-    icon: LucideIcon
     updatedAt: string
   }[]
   activeChatId?: string | null
@@ -82,7 +81,7 @@ export function NavChats({
               onClick={() => onSelectChat?.(item.id)}
               className="cursor-pointer"
             >
-              <item.icon />
+              <Bot />
               <span>{item.name}</span>
             </SidebarMenuButton>
             <DropdownMenu>
