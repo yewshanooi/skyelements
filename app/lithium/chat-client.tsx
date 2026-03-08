@@ -64,7 +64,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false);
-  const [selectedModel, setSelectedModel] = useState("openrouter:arcee-ai/trinity-large-preview:free");
+  const [selectedModel, setSelectedModel] = useState("gemini-3.1-flash-lite-preview");
   const [currentChatId, setCurrentChatId] = useState<string | null>(chatId ?? null);
 
   const selectedModelInfo = useMemo(

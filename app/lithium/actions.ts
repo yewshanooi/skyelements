@@ -37,7 +37,7 @@ export type Message = {
 
 export async function generateContent(
   prompt: string,
-  model: string = "openrouter:arcee-ai/trinity-large-preview:free",
+  model: string = "gemini-3.1-flash-lite-preview",
   history: ChatMessage[] = []
 ) {
   await getAuthenticatedClient();
@@ -150,7 +150,7 @@ async function getAuthenticatedClient() {
 // ---------------------------------------------------------------------------
 
 /** Create a new chat and return it */
-export async function createChat(model: string = 'openrouter:arcee-ai/trinity-large-preview:free'): Promise<Chat> {
+export async function createChat(model: string = 'gemini-3.1-flash-lite-preview'): Promise<Chat> {
   if (!ALLOWED_MODEL_IDS.has(model)) {
     throw new Error('Invalid model specified.');
   }
