@@ -1,18 +1,12 @@
 import * as React from "react"
 import { JSX, Suspense, useCallback, useEffect, useRef, useState } from "react"
-import { AutoFocusPlugin } from "@lexical/react/LexicalAutoFocusPlugin"
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext"
-import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary"
-import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin"
-import { LexicalNestedComposer } from "@lexical/react/LexicalNestedComposer"
-import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin"
 import { useLexicalEditable } from "@lexical/react/useLexicalEditable"
 import { useLexicalNodeSelection } from "@lexical/react/useLexicalNodeSelection"
 import { mergeRegister } from "@lexical/utils"
 import type {
   BaseSelection,
   LexicalCommand,
-  LexicalEditor,
   NodeKey,
 } from "lexical"
 import {
@@ -20,7 +14,6 @@ import {
   $getSelection,
   $isNodeSelection,
   $isRangeSelection,
-  $setSelection,
   CLICK_COMMAND,
   COMMAND_PRIORITY_LOW,
   createCommand,
@@ -29,14 +22,10 @@ import {
   KEY_DELETE_COMMAND,
   KEY_ENTER_COMMAND,
   KEY_ESCAPE_COMMAND,
-  ParagraphNode,
-  RootNode,
   SELECTION_CHANGE_COMMAND,
-  TextNode,
 } from "lexical"
 
 // import brokenImage from '@/registry/new-york-v4/editor/images/image-broken.svg';
-import { ContentEditable } from "@/components/editor/editor-ui/content-editable"
 import { ImageResizer } from "@/components/editor/editor-ui/image-resizer"
 import { $isImageNode } from "@/components/editor/nodes/image-node"
 
@@ -120,29 +109,21 @@ export default function ImageComponent({
   height,
   maxWidth,
   resizable,
-  showCaption,
-  caption,
-  captionsEnabled,
 }: {
   altText: string
-  caption: LexicalEditor
   height: "inherit" | number
   maxWidth: number
   nodeKey: NodeKey
   resizable: boolean
-  showCaption: boolean
   src: string
   width: "inherit" | number
-  captionsEnabled: boolean
 }): JSX.Element {
   const imageRef = useRef<null | HTMLImageElement>(null)
-  const buttonRef = useRef<HTMLButtonElement | null>(null)
   const [isSelected, setSelected, clearSelection] =
     useLexicalNodeSelection(nodeKey)
   const [isResizing, setIsResizing] = useState<boolean>(false)
   const [editor] = useLexicalComposerContext()
   const [selection, setSelection] = useState<BaseSelection | null>(null)
-  const activeEditorRef = useRef<LexicalEditor | null>(null)
   const [isLoadError, setIsLoadError] = useState<boolean>(false)
   const isEditable = useLexicalEditable()
 
@@ -168,51 +149,24 @@ export default function ImageComponent({
   const $onEnter = useCallback(
     (event: KeyboardEvent) => {
       const latestSelection = $getSelection()
-      const buttonElem = buttonRef.current
       if (
         isSelected &&
         $isNodeSelection(latestSelection) &&
         latestSelection.getNodes().length === 1
       ) {
-        if (showCaption) {
-          // Move focus into nested editor
-          $setSelection(null)
-          event.preventDefault()
-          caption.focus()
-          return true
-        } else if (
-          buttonElem !== null &&
-          buttonElem !== document.activeElement
-        ) {
-          event.preventDefault()
-          buttonElem.focus()
-          return true
-        }
-      }
-      return false
-    },
-    [caption, isSelected, showCaption]
-  )
-
-  const $onEscape = useCallback(
-    (event: KeyboardEvent) => {
-      if (
-        activeEditorRef.current === caption ||
-        buttonRef.current === event.target
-      ) {
-        $setSelection(null)
-        editor.update(() => {
-          setSelected(true)
-          const parentRootElement = editor.getRootElement()
-          if (parentRootElement !== null) {
-            parentRootElement.focus()
-          }
-        })
+        event.preventDefault()
         return true
       }
       return false
     },
-    [caption, editor, setSelected]
+    [isSelected]
+  )
+
+  const $onEscape = useCallback(
+    () => {
+      return false
+    },
+    []
   )
 
   const onClick = useCallback(
@@ -265,8 +219,7 @@ export default function ImageComponent({
       }),
       editor.registerCommand(
         SELECTION_CHANGE_COMMAND,
-        (_, activeEditor) => {
-          activeEditorRef.current = activeEditor
+        () => {
           return false
         },
         COMMAND_PRIORITY_LOW
@@ -333,15 +286,6 @@ export default function ImageComponent({
     setSelected,
   ])
 
-  const setShowCaption = () => {
-    editor.update(() => {
-      const node = $getNodeByKey(nodeKey)
-      if ($isImageNode(node)) {
-        node.setShowCaption(true)
-      }
-    })
-  }
-
   const onResizeEnd = (
     nextWidth: "inherit" | number,
     nextHeight: "inherit" | number
@@ -389,38 +333,13 @@ export default function ImageComponent({
           )}
         </div>
 
-        {showCaption && (
-          <div className="image-caption-container absolute right-0 bottom-1 left-0 m-0 block min-w-[100px] overflow-hidden border-t bg-white/90 p-0">
-            <LexicalNestedComposer
-              initialEditor={caption}
-              initialNodes={[RootNode, TextNode, ParagraphNode]}
-            >
-              <AutoFocusPlugin />
-              <HistoryPlugin />
-              <RichTextPlugin
-                contentEditable={
-                  <ContentEditable
-                    className="ImageNode__contentEditable user-select-text word-break-break-word caret-primary relative block min-h-5 w-[calc(100%-20px)] cursor-text resize-none border-0 p-2.5 text-sm whitespace-pre-wrap outline-none"
-                    placeholderClassName="ImageNode__placeholder text-sm text-muted-foreground overflow-hidden absolute top-2.5 left-2.5 pointer-events-none text-ellipsis user-select-none whitespace-nowrap inline-block"
-                    placeholder="Enter a caption..."
-                  />
-                }
-                ErrorBoundary={LexicalErrorBoundary}
-              />
-            </LexicalNestedComposer>
-          </div>
-        )}
         {resizable && $isNodeSelection(selection) && isFocused && (
           <ImageResizer
-            showCaption={showCaption}
-            setShowCaption={setShowCaption}
             editor={editor}
-            buttonRef={buttonRef}
             imageRef={imageRef}
             maxWidth={maxWidth}
             onResizeStart={onResizeStart}
             onResizeEnd={onResizeEnd}
-            captionsEnabled={!isLoadError && captionsEnabled}
           />
         )}
       </>

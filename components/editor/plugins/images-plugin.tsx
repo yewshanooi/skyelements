@@ -209,11 +209,7 @@ export function InsertImageDialog({
   )
 }
 
-export function ImagesPlugin({
-  captionsEnabled,
-}: {
-  captionsEnabled?: boolean
-}): JSX.Element | null {
+export function ImagesPlugin(): JSX.Element | null {
   const [editor] = useLexicalComposerContext()
 
   useEffect(() => {
@@ -257,7 +253,7 @@ export function ImagesPlugin({
         COMMAND_PRIORITY_HIGH
       )
     )
-  }, [captionsEnabled, editor])
+  }, [editor])
 
   return null
 }
@@ -282,11 +278,9 @@ function $onDragStart(event: DragEvent): boolean {
     JSON.stringify({
       data: {
         altText: node.__altText,
-        caption: node.__caption,
         height: node.__height,
         key: node.getKey(),
         maxWidth: node.__maxWidth,
-        showCaption: node.__showCaption,
         src: node.__src,
         width: node.__width,
       },
