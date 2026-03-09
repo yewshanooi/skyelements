@@ -57,7 +57,7 @@ export interface CustomEmbedConfig extends EmbedConfig {
 export const YoutubeEmbedConfig: CustomEmbedConfig = {
   contentName: "YouTube Video",
 
-  exampleUrl: "https://www.youtube.com/watch?v=jNQXAC9IVRw",
+  exampleUrl: "https://www.youtube.com/watch?v=lIxQe1R5hs0",
 
   // Icon for display.
   icon: <Youtube className="size-4" />,
@@ -156,7 +156,7 @@ export function AutoEmbedDialog({
             data-test-id={`${embedConfig.type}-embed-modal-submit-btn`}
             className="cursor-pointer"
           >
-            Embed
+            Confirm
           </Button>
         </DialogFooter>
       </div>

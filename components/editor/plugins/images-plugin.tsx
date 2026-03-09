@@ -136,6 +136,7 @@ export function InsertImageUploadedDialogBody({
           onChange={(e) => loadImage(e.target.files)}
           accept="image/*"
           data-test-id="image-modal-file-upload"
+          className="cursor-pointer"
         />
       </div>
       <div className="grid gap-2">
@@ -148,15 +149,17 @@ export function InsertImageUploadedDialogBody({
           data-test-id="image-modal-alt-text-input"
         />
       </div>
-      <Button
-        type="submit"
-        disabled={isDisabled}
-        onClick={() => onClick({ altText, src })}
-        data-test-id="image-modal-file-upload-btn"
-        className="cursor-pointer"
-      >
-        Confirm
-      </Button>
+      <DialogFooter>
+        <Button
+          type="submit"
+          disabled={isDisabled}
+          onClick={() => onClick({ altText, src })}
+          data-test-id="image-modal-file-upload-btn"
+          className="cursor-pointer"
+        >
+          Confirm
+        </Button>
+      </DialogFooter>
     </div>
   )
 }

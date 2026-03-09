@@ -49,6 +49,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { DialogFooter } from "@/components/ui/dialog"
 
 const LAYOUTS = [
   { label: "2 columns (equal width)", value: "1fr 1fr" },
@@ -87,7 +88,9 @@ export function InsertLayoutDialog({
           ))}
         </SelectContent>
       </Select>
-      <Button onClick={onClick} className="cursor-pointer">Insert</Button>
+      <DialogFooter>
+        <Button onClick={onClick} className="cursor-pointer">Confirm</Button>
+      </DialogFooter>
     </>
   )
 }

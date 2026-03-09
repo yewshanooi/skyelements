@@ -49,7 +49,7 @@ function ComponentPickerMenu({
   }, [selectedIndex])
 
   return (
-    <div className="absolute z-10 h-min w-[250px] rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
+    <div className="absolute z-10 h-min w-[300px] rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
       <div className="max-h-[300px] overflow-y-auto">
         {options.map((option, index) => (
           <div
