@@ -30,6 +30,21 @@ export default function CreditsPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-16 w-full max-w-3xl">
         <Card className="w-full">
           <CardHeader>
+            <CardTitle>Bun</CardTitle>
+            <CardDescription>
+              Package Manager
+            </CardDescription>
+            <CardAction>
+              <Button asChild variant="secondary">
+                <a href="https://bun.com/docs/pm/cli/install" target="_blank">
+                  <ExternalLink />
+                </a>
+              </Button>
+            </CardAction>
+          </CardHeader>
+        </Card>
+        <Card className="w-full">
+          <CardHeader>
             <CardTitle>Cloudflare</CardTitle>
             <CardDescription>
               Turnstile CAPTCHA
