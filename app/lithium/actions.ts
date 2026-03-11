@@ -70,9 +70,11 @@ export async function generateContent(
 
     try {
       const stream = await openrouter.chat.send({
-        model: actualModel,
-        messages,
-        stream: true
+        chatGenerationParams: {
+          model: actualModel,
+          messages: messages,
+          stream: true
+        }
       });
 
       let fullResponse = "";
