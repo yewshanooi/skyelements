@@ -41,7 +41,7 @@ export function DynamicTablePickerPlugin({
             icon: <i className="icon table" />,
             keywords: ["table"],
             onSelect: (_, editor) =>
-              editor.dispatchCommand(INSERT_TABLE_COMMAND, { columns, rows }),
+              editor.dispatchCommand(INSERT_TABLE_COMMAND, { columns, rows, includeHeaders: false }),
           })
       )
     )

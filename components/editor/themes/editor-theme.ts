@@ -101,7 +101,7 @@ export const editorTheme: EditorThemeClasses = {
     "EditorTheme__tableCellActionButtonContainer block right-1 top-1.5 absolute z-10 w-5 h-5",
   tableCellEditing: "EditorTheme__tableCellEditing rounded-sm shadow-sm",
   tableCellHeader:
-    "EditorTheme__tableCellHeader bg-muted border px-4 py-2 text-left font-bold [&[align=center]]:text-center [&[align=right]]:text-right",
+    "EditorTheme__tableCellHeader bg-muted border px-4 py-2 text-left font-normal [&[align=center]]:text-center [&[align=right]]:text-right",
   tableCellPrimarySelected:
     "EditorTheme__tableCellPrimarySelected border border-primary border-solid block h-[calc(100%-2px)] w-[calc(100%-2px)] absolute -left-[1px] -top-[1px] z-10 ",
   tableCellResizer:

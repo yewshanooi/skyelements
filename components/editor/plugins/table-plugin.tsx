@@ -124,6 +124,7 @@ export function InsertTableDialog({
     activeEditor.dispatchCommand(INSERT_TABLE_COMMAND, {
       columns,
       rows,
+      includeHeaders: false,
     })
 
     onClose()

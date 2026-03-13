@@ -1,23 +1,23 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { ArrowUpIcon, ChevronDown } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuShortcut,
-  DropdownMenuLabel,
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+    DropdownMenuShortcut,
+    DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupButton,
-  InputGroupText,
-  InputGroupTextarea,
+    InputGroup,
+    InputGroupAddon,
+    InputGroupButton,
+    InputGroupText,
+    InputGroupTextarea,
 } from "@/components/ui/input-group";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -55,240 +55,295 @@ const sampleQueries = [
 
 
 export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
-  chatId?: string | null;
-  onChatCreated?: (chatId: string, title: string) => void;
-  onChatActivity?: (chatId: string) => void;
+    chatId?: string | null;
+    onChatCreated?: (chatId: string, title: string) => void;
+    onChatActivity?: (chatId: string) => void;
 }) {
-  const [welcomeMessage, setWelcomeMessage] = useState("");
-  const [prompt, setPrompt] = useState("");
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [loadingHistory, setLoadingHistory] = useState(false);
-  const [selectedModel, setSelectedModel] = useState("gemini-3.1-flash-lite-preview");
-  const [currentChatId, setCurrentChatId] = useState<string | null>(chatId ?? null);
+    const [welcomeMessage, setWelcomeMessage] = useState("");
+    const [greeting, setGreeting] = useState("");
+    const [prompt, setPrompt] = useState("");
+    const [messages, setMessages] = useState<ChatMessage[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [loadingHistory, setLoadingHistory] = useState(false);
+    const [selectedModel, setSelectedModel] = useState("gemini-3.1-flash-lite-preview");
+    const [currentChatId, setCurrentChatId] = useState<string | null>(chatId ?? null);
+    const generationIdRef = useRef(0);
+    const pendingNewChatIdRef = useRef<string | null>(null);
 
-  const selectedModelInfo = useMemo(
-    () => MODELS.find(m => m.id === selectedModel) ?? MODELS[0],
-    [selectedModel]
-  );
-  const isEmptyState = messages.length === 0 && !loading && !loadingHistory;
-
-  useEffect(() => {
-    setWelcomeMessage(sampleQueries[Math.floor(Math.random() * sampleQueries.length)]);
-  }, []);
-
-  // Load messages when chatId changes (switching chats)
-  useEffect(() => {
-    setCurrentChatId(chatId ?? null);
-    if (chatId) {
-      setLoadingHistory(true);
-      getMessages(chatId).then((msgs) => {
-        setMessages(msgs.map((m: Message) => ({ role: m.role, content: m.content })));
-        setLoadingHistory(false);
-      }).catch(() => {
-        setLoadingHistory(false);
-      });
-    } else {
-      setMessages([]);
-    }
-  }, [chatId]);
-
-  const sendMessage = useCallback(async (userMessage: string) => {
-    if (!userMessage.trim()) return;
-
-    setLoading(true);
-    setPrompt("");
-
-    const history = [...messages];
-    setMessages(prev => [...prev, { role: 'user' as const, content: userMessage }]);
-
-    try {
-      let activeChatId = currentChatId;
-      if (!activeChatId) {
-        const newChat = await createChat(selectedModel);
-        activeChatId = newChat.id;
-        setCurrentChatId(activeChatId);
-
-        const title = userMessage.length > 50 ? userMessage.slice(0, 50) + '…' : userMessage;
-        await updateChatTitle(activeChatId, title);
-        onChatCreated?.(activeChatId, title);
-      }
-
-      await saveMessage(activeChatId, 'user', userMessage);
-      onChatActivity?.(activeChatId);
-
-      const result = await generateContent(userMessage, selectedModel, history);
-      const assistantContent = result ?? "Sorry, I couldn't generate a response.";
-
-      await saveMessage(activeChatId, 'assistant', assistantContent);
-
-      setMessages(prev => [...prev, { role: 'assistant' as const, content: assistantContent }]);
-    } catch (error) {
-      console.error(error);
-      setMessages(prev => [...prev, { role: 'assistant' as const, content: "An error occurred while fetching the response." }]);
-    } finally {
-      setLoading(false);
-    }
-  }, [currentChatId, messages, selectedModel, onChatCreated, onChatActivity]);
-
-  const handleSend = () => sendMessage(prompt.trim());
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  };
-
-  const inputGroup = (
-    <InputGroup>
-        <InputGroupTextarea 
-          placeholder="Ask anything..." 
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          onKeyDown={handleKeyDown}
-          disabled={loading}
-          // autoFocus
-        />
-        <InputGroupAddon align="block-end">
-          {/* <InputGroupButton
-            variant="outline"
-            className="rounded-full"
-            size="icon-xs"
-          >
-            <Plus />
-          </InputGroupButton> */}
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <InputGroupButton variant="secondary" className="cursor-pointer">
-                <Image 
-                  src={selectedModelInfo.icon} 
-                  alt={selectedModelInfo.label}
-                  width={16} 
-                  height={16}
-                  className="mr-1"
-                  priority
-                />
-                {selectedModelInfo.label}
-                <ChevronDown />
-              </InputGroupButton>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent side="bottom" align="start">
-              <DropdownMenuLabel>Models</DropdownMenuLabel>
-
-              {MODELS.map((model) => (
-                <DropdownMenuItem 
-                  key={model.id}
-                  onSelect={() => setSelectedModel(model.id)} 
-                  className="cursor-pointer flex items-center gap-2"
-                >
-                  <Image 
-                    src={model.icon} 
-                    alt={model.label}
-                    width={16} 
-                    height={16}
-                    priority
-                  />
-                  {model.label}
-                  <DropdownMenuShortcut>
-                    {model.shortcut}
-                  </DropdownMenuShortcut>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-            
-          </DropdownMenu>
-          <InputGroupText className="ml-auto">
-            {prompt.length > 0 && (
-              <span className="hidden lg:inline">{`${prompt.length} ${prompt.length === 1 ? 'character' : 'characters'}`}</span>
-            )}
-          </InputGroupText>
-          <Separator orientation="vertical" className="mx-2 data-[orientation=vertical]:h-4" />
-          <InputGroupButton
-            variant="default"
-            className="rounded-full cursor-pointer"
-            size="icon-xs"
-            onClick={handleSend}
-            disabled={loading || !prompt.trim()}
-          >
-            <ArrowUpIcon />
-            <span className="sr-only">Send</span>
-          </InputGroupButton>
-        </InputGroupAddon>
-    </InputGroup>
-  );
-
-  // New Chat page
-  if (isEmptyState) {
-    return (
-      <div className="h-full overflow-y-auto flex items-center justify-center p-8 pb-[10%]">
-        <div className="w-full max-w-3xl mx-auto">
-          <div className="flex flex-row gap-4 w-full max-w-3xl mb-6">
-            <h1 className="ml-4 scroll-m-20 text-3xl font-semibold text-balance flex">
-              Greetings 👋
-            </h1>
-          </div>
-
-          {inputGroup}
-
-          {welcomeMessage && (
-            <div className="mt-6 flex justify-center px-4">
-              <Button
-                variant="outline"
-                className="cursor-pointer text-sm text-muted-foreground h-auto whitespace-normal text-center max-w-full"
-                onClick={() => sendMessage(welcomeMessage)}
-              >
-                &quot;{welcomeMessage}&quot;
-              </Button>
-            </div>
-          )}
-        </div>
-      </div>
+    const selectedModelInfo = useMemo(
+        () => MODELS.find(m => m.id === selectedModel) ?? MODELS[0],
+        [selectedModel]
     );
-  }
+    const isEmptyState = messages.length === 0 && !loading && !loadingHistory;
 
-  // Active chat
-  return (
-    <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-y-auto p-8 pt-12">
-        <div className="w-full max-w-3xl mx-auto space-y-6">
-          {loadingHistory ? (
-            <p className="p-4 text-muted-foreground italic flex items-center gap-2">
-              <Spinner /> Loading conversation...
-            </p>
-          ) : (
-            <>
-              {messages.map((msg, i) => (
-                <div key={i} className={`p-4 rounded-lg ${msg.role === 'user' ? 'bg-muted' : ''}`}>
-                  <p className="text-xs font-medium text-muted-foreground mb-2">
-                    {msg.role === 'user' ? 'You' : 'Lithium'}
-                  </p>
-                  <div className="prose prose-md dark:prose-invert max-w-none overflow-x-auto">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {msg.content}
-                    </ReactMarkdown>
-                  </div>
-                </div>
-              ))}
-              {loading && (
-                <div className="p-4">
-                  <p className="text-xs font-medium text-muted-foreground mb-2">Lithium</p>
-                  <p className="text-muted-foreground italic flex items-center gap-2">
-                    <Spinner /> Thinking...
-                  </p>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      </div>
+    useEffect(() => {
+        setWelcomeMessage(sampleQueries[Math.floor(Math.random() * sampleQueries.length)]);
 
-      <div className="shrink-0 px-8 pb-6 pt-4 bg-background">
-        <div className="w-full max-w-3xl mx-auto">
-          {inputGroup}
+        const hour = new Date().getHours();
+        const pick = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
+
+        if (hour >= 5 && hour < 12) {
+            setGreeting(pick([
+                "Rise and shine",
+                "Good morning! Ready to explore?",
+                "Morning! What's on your mind?",
+                "Top of the morning to you!",
+            ]));
+        } else if (hour >= 12 && hour < 17) {
+            setGreeting(pick([
+                "Good afternoon! How can I help?",
+                "Hey there! What are we working on?",
+                "Afternoon! Let's get things done",
+                "Hope your day's going great!",
+            ]));
+        } else if (hour >= 17 && hour < 21) {
+            setGreeting(pick([
+                "Good evening! What's on your mind?",
+                "Evening! Let's wrap up strong",
+                "Hey! Winding down or just getting started?",
+                "Good evening! I'm here to help",
+            ]));
+        } else {
+            setGreeting(pick([
+                "Burning the midnight oil?",
+                "Late night thoughts? I'm all ears",
+                "Can't sleep? Let's chat",
+                "Night owl mode activated",
+            ]));
+        }
+    }, []);
+
+    // Load messages when chatId changes (switching chats)
+    useEffect(() => {
+        // If the parent is just syncing to a chat we created internally via sendMessage,
+        // skip invalidation and refetch to avoid disrupting the in-flight generation.
+        if (chatId && chatId === pendingNewChatIdRef.current) {
+            pendingNewChatIdRef.current = null;
+            setCurrentChatId(chatId);
+            return;
+        }
+        pendingNewChatIdRef.current = null;
+
+        // Invalidate any in-flight generation so its UI update is skipped
+        generationIdRef.current++;
+        setLoading(false);
+        setCurrentChatId(chatId ?? null);
+        if (chatId) {
+            setLoadingHistory(true);
+            getMessages(chatId).then((msgs) => {
+                setMessages(msgs.map((m: Message) => ({ role: m.role, content: m.content })));
+                setLoadingHistory(false);
+            }).catch(() => {
+                setLoadingHistory(false);
+            });
+        } else {
+            setMessages([]);
+        }
+    }, [chatId]);
+
+    const sendMessage = useCallback(async (userMessage: string) => {
+        if (!userMessage.trim()) return;
+
+        const myGenId = ++generationIdRef.current;
+        setLoading(true);
+        setPrompt("");
+
+        const history = [...messages];
+        setMessages(prev => [...prev, { role: 'user' as const, content: userMessage }]);
+
+        try {
+            let activeChatId = currentChatId;
+            if (!activeChatId) {
+                const newChat = await createChat(selectedModel);
+                activeChatId = newChat.id;
+                pendingNewChatIdRef.current = activeChatId;
+                setCurrentChatId(activeChatId);
+
+                const title = userMessage.length > 50 ? userMessage.slice(0, 50) + '…' : userMessage;
+                await updateChatTitle(activeChatId, title);
+                onChatCreated?.(activeChatId, title);
+            }
+
+            await saveMessage(activeChatId, 'user', userMessage);
+            onChatActivity?.(activeChatId);
+
+            const result = await generateContent(userMessage, selectedModel, history);
+            const assistantContent = result ?? "Sorry, I couldn't generate a response.";
+
+            await saveMessage(activeChatId, 'assistant', assistantContent);
+
+            // Only update UI if user hasn't switched to a different chat
+            if (generationIdRef.current !== myGenId) return;
+            setMessages(prev => [...prev, { role: 'assistant' as const, content: assistantContent }]);
+        } catch (error) {
+            console.error(error);
+            if (generationIdRef.current !== myGenId) return;
+            setMessages(prev => [...prev, { role: 'assistant' as const, content: "An error occurred while fetching the response." }]);
+        } finally {
+            if (generationIdRef.current === myGenId) {
+                setLoading(false);
+            }
+        }
+    }, [currentChatId, messages, selectedModel, onChatCreated, onChatActivity]);
+
+    const handleSend = () => sendMessage(prompt.trim());
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSend();
+        }
+    };
+
+    const inputGroup = (
+        <InputGroup>
+            <InputGroupTextarea
+                placeholder="Ask anything..."
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                onKeyDown={handleKeyDown}
+                disabled={loading}
+            // autoFocus
+            />
+            <InputGroupAddon align="block-end">
+                {/* <InputGroupButton
+                    variant="outline"
+                    className="rounded-full"
+                    size="icon-xs"
+                >
+                    <Plus />
+                </InputGroupButton> */}
+
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <InputGroupButton variant="secondary" className="cursor-pointer">
+                            <Image
+                                src={selectedModelInfo.icon}
+                                alt={selectedModelInfo.label}
+                                width={16}
+                                height={16}
+                                className="mr-1"
+                                priority
+                            />
+                            {selectedModelInfo.label}
+                            <ChevronDown />
+                        </InputGroupButton>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent side="bottom" align="start">
+                        <DropdownMenuLabel>Models</DropdownMenuLabel>
+
+                        {MODELS.map((model) => (
+                            <DropdownMenuItem
+                                key={model.id}
+                                onSelect={() => setSelectedModel(model.id)}
+                                className="cursor-pointer flex items-center gap-2"
+                            >
+                                <Image
+                                    src={model.icon}
+                                    alt={model.label}
+                                    width={16}
+                                    height={16}
+                                    priority
+                                />
+                                {model.label}
+                                <DropdownMenuShortcut>
+                                    {model.shortcut}
+                                </DropdownMenuShortcut>
+                            </DropdownMenuItem>
+                        ))}
+                    </DropdownMenuContent>
+
+                </DropdownMenu>
+                <InputGroupText className="ml-auto">
+                    {prompt.length > 0 && (
+                        <span className="hidden lg:inline">{`${prompt.length} ${prompt.length === 1 ? 'character' : 'characters'}`}</span>
+                    )}
+                </InputGroupText>
+                <Separator orientation="vertical" className="mx-2 data-[orientation=vertical]:h-4" />
+                <InputGroupButton
+                    variant="default"
+                    className="rounded-full cursor-pointer"
+                    size="icon-xs"
+                    onClick={handleSend}
+                    disabled={loading || !prompt.trim()}
+                >
+                    <ArrowUpIcon />
+                    <span className="sr-only">Send</span>
+                </InputGroupButton>
+            </InputGroupAddon>
+        </InputGroup>
+    );
+
+    // New Chat page
+    if (isEmptyState) {
+        return (
+            <div className="h-full overflow-y-auto flex items-center justify-center p-8 pb-[10%]">
+                <div className="w-full max-w-3xl mx-auto">
+                    <div className="flex flex-row gap-4 w-full max-w-3xl mb-6">
+                        <h1 className="ml-4 scroll-m-20 text-3xl font-semibold text-balance flex">
+                            {greeting}
+                        </h1>
+                    </div>
+
+                    {inputGroup}
+
+                    {welcomeMessage && (
+                        <div className="mt-6 flex justify-center px-4">
+                            <Button
+                                variant="outline"
+                                className="cursor-pointer text-sm text-muted-foreground h-auto whitespace-normal text-center max-w-full"
+                                onClick={() => sendMessage(welcomeMessage)}
+                            >
+                                &quot;{welcomeMessage}&quot;
+                            </Button>
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
+    }
+
+    // Active chat
+    return (
+        <div className="flex flex-col h-full">
+            <div className="flex-1 overflow-y-auto p-8 pt-12">
+                <div className="w-full max-w-3xl mx-auto space-y-6">
+                    {loadingHistory ? (
+                        <p className="p-4 text-muted-foreground italic flex items-center gap-2">
+                            <Spinner /> Loading conversation...
+                        </p>
+                    ) : (
+                        <>
+                            {messages.map((msg, i) => (
+                                <div key={i} className={`p-4 rounded-lg ${msg.role === 'user' ? 'bg-muted' : ''}`}>
+                                    <p className="text-xs font-medium text-muted-foreground mb-2">
+                                        {msg.role === 'user' ? 'You' : 'Lithium'}
+                                    </p>
+                                    <div className="prose prose-md dark:prose-invert max-w-none overflow-x-auto">
+                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                            {msg.content}
+                                        </ReactMarkdown>
+                                    </div>
+                                </div>
+                            ))}
+                            {loading && (
+                                <div className="p-4">
+                                    <p className="text-xs font-medium text-muted-foreground mb-2">Lithium</p>
+                                    <p className="text-muted-foreground italic flex items-center gap-2">
+                                        <Spinner /> Thinking...
+                                    </p>
+                                </div>
+                            )}
+                        </>
+                    )}
+                </div>
+            </div>
+
+            <div className="shrink-0 px-8 pb-6 pt-4 bg-background">
+                <div className="w-full max-w-3xl mx-auto">
+                    {inputGroup}
+                </div>
+            </div>
         </div>
-      </div>
-    </div>
-  );
+    );
 }

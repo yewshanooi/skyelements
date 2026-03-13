@@ -54,7 +54,6 @@ export function PageClient({ user, signout }: PageClientProps) {
     const chat = chats.find(c => c.id === chatId);
     setActiveView({ type: 'chat', id: chatId });
     setChatTitle(chat?.title ?? "Chat");
-    setChatKey(prev => prev + 1);
   };
 
   const handleChatCreated = useCallback((chatId: string, title: string) => {
