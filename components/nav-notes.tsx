@@ -128,7 +128,7 @@ export function NavNotes({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete note?</AlertDialogTitle>
             <AlertDialogDescription>
-              Once you delete a note, it&apos;s gone forever on every device.
+              Once you delete a note, it&apos;s gone forever.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

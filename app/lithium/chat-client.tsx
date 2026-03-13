@@ -287,9 +287,6 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
       <div className="shrink-0 px-8 pb-6 pt-4 bg-background">
         <div className="w-full max-w-3xl mx-auto">
           {inputGroup}
-          <div className="text-muted-foreground text-xs mt-4 max-w-3xl text-center w-full">
-            <p>Lithium is AI and can make mistakes.</p>
-          </div>
         </div>
       </div>
     </div>
