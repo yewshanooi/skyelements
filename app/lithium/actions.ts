@@ -14,6 +14,11 @@ export type ChatMessage = {
   content: string;
 };
 
+export type ImageAttachment = {
+  base64: string;
+  mimeType: string;
+};
+
 export type Chat = {
   id: string;
   user_id: string;
@@ -130,6 +135,61 @@ export async function generateContent(
 
     if (error?.status === 429) {
       return `⚠️ **Free quota exceeded**\n\nWe've hit the daily free quota for the ${actualModel} model. Please change to another model or try again tomorrow.`;
+    }
+
+    return "Sorry, I couldn't generate a response at this time.";
+  }
+}
+
+export async function generateContentWithImage(
+  prompt: string,
+  model: string = "gemini-3.1-flash-lite-preview",
+  history: ChatMessage[] = [],
+  image: ImageAttachment
+) {
+  await getAuthenticatedClient();
+
+  if (!ALLOWED_MODEL_IDS.has(model)) {
+    return "Sorry, the requested model is not available.";
+  }
+
+  if (model.startsWith("openrouter:")) {
+    return "Sorry, image upload is not supported for this model.";
+  }
+
+  // Google AI Studio models
+  if (!process.env.GOOGLE_API_KEY) {
+    console.error("GOOGLE_API_KEY environment variable is not set.");
+    return "Sorry, I couldn't generate a response at this time.";
+  }
+
+  const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY });
+
+  const contents: Content[] = [
+    ...history.map(msg => ({
+      role: msg.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: msg.content }]
+    } as Content)),
+    {
+      role: 'user',
+      parts: [
+        { inlineData: { data: image.base64, mimeType: image.mimeType } },
+        { text: prompt || 'What is in this image?' }
+      ]
+    } as Content
+  ];
+
+  try {
+    const response = await ai.models.generateContent({
+      model,
+      contents,
+    });
+    return response.text;
+  } catch (error: any) {
+    console.error("Error generating content with image:", error);
+
+    if (error?.status === 429) {
+      return `⚠️ **Free quota exceeded**\n\nWe've hit the daily free quota for the ${model} model. Please change to another model or try again tomorrow.`;
     }
 
     return "Sorry, I couldn't generate a response at this time.";

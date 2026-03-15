@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { ArrowUpIcon, ChevronDown } from "lucide-react";
+import { ArrowUpIcon, ChevronDown, ImagePlus, X } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {
@@ -22,7 +22,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner"
-import { generateContent, createChat, saveMessage, getMessages, updateChatTitle, type ChatMessage, type Message } from "./actions";
+import { generateContent, generateContentWithImage, createChat, saveMessage, getMessages, updateChatTitle, type ChatMessage, type Message, type ImageAttachment } from "./actions";
 import { MODELS } from "@/lib/models";
 import Image from 'next/image'
 
@@ -92,14 +92,59 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
     const [loadingHistory, setLoadingHistory] = useState(false);
     const [selectedModel, setSelectedModel] = useState("gemini-3.1-flash-lite-preview");
     const [currentChatId, setCurrentChatId] = useState<string | null>(chatId ?? null);
+    const [pendingImage, setPendingImage] = useState<{ base64: string; mimeType: string; previewUrl: string } | null>(null);
+    const [imageError, setImageError] = useState<string | null>(null);
     const generationIdRef = useRef(0);
     const pendingNewChatIdRef = useRef<string | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const selectedModelInfo = useMemo(
         () => MODELS.find(m => m.id === selectedModel) ?? MODELS[0],
         [selectedModel]
     );
     const isEmptyState = messages.length === 0 && !loading && !loadingHistory;
+    const supportsVision = !selectedModel.startsWith('openrouter:');
+    const MAX_IMAGE_SIZE = 4 * 1024 * 1024; // 4 MB
+
+    // Clear pending image when switching to a model that doesn't support vision
+    useEffect(() => {
+        if (!supportsVision) {
+            setPendingImage(null);
+            setImageError(null);
+        }
+    }, [supportsVision]);
+
+    const handleImageSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        setImageError(null);
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            setImageError('Please select an image file.');
+            e.target.value = '';
+            return;
+        }
+
+        if (file.size > MAX_IMAGE_SIZE) {
+            setImageError('Image must be under 4 MB.');
+            e.target.value = '';
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = () => {
+            const dataUrl = reader.result as string;
+            const base64 = dataUrl.split(',')[1];
+            setPendingImage({ base64, mimeType: file.type, previewUrl: dataUrl });
+        };
+        reader.readAsDataURL(file);
+        e.target.value = '';
+    }, []);
+
+    const clearPendingImage = useCallback(() => {
+        setPendingImage(null);
+        setImageError(null);
+    }, []);
 
     useEffect(() => {
         setGreeting(greetings[Math.floor(Math.random() * greetings.length)]);
@@ -135,14 +180,20 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
     }, [chatId]);
 
     const sendMessage = useCallback(async (userMessage: string) => {
-        if (!userMessage.trim()) return;
+        if (!userMessage.trim() && !pendingImage) return;
 
         const myGenId = ++generationIdRef.current;
         setLoading(true);
         setPrompt("");
+        const imageToSend = pendingImage;
+        setPendingImage(null);
+        setImageError(null);
 
         const history = [...messages];
-        setMessages(prev => [...prev, { role: 'user' as const, content: userMessage }]);
+        const displayContent = imageToSend
+            ? `📷 *Image attached*${userMessage ? '\n\n' + userMessage : ''}`
+            : userMessage;
+        setMessages(prev => [...prev, { role: 'user' as const, content: displayContent }]);
 
         try {
             let activeChatId = currentChatId;
@@ -152,15 +203,22 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                 pendingNewChatIdRef.current = activeChatId;
                 setCurrentChatId(activeChatId);
 
-                const title = userMessage.length > 50 ? userMessage.slice(0, 50) + '…' : userMessage;
+                const titleSource = userMessage || 'Image analysis';
+                const title = titleSource.length > 50 ? titleSource.slice(0, 50) + '…' : titleSource;
                 await updateChatTitle(activeChatId, title);
                 onChatCreated?.(activeChatId, title);
             }
 
-            await saveMessage(activeChatId, 'user', userMessage);
+            await saveMessage(activeChatId, 'user', displayContent);
             onChatActivity?.(activeChatId);
 
-            const result = await generateContent(userMessage, selectedModel, history);
+            let result: string | undefined;
+            if (imageToSend) {
+                const image: ImageAttachment = { base64: imageToSend.base64, mimeType: imageToSend.mimeType };
+                result = await generateContentWithImage(userMessage, selectedModel, history, image);
+            } else {
+                result = await generateContent(userMessage, selectedModel, history);
+            }
             const assistantContent = result ?? "Sorry, I couldn't generate a response.";
 
             await saveMessage(activeChatId, 'assistant', assistantContent);
@@ -177,7 +235,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                 setLoading(false);
             }
         }
-    }, [currentChatId, messages, selectedModel, onChatCreated, onChatActivity]);
+    }, [currentChatId, messages, selectedModel, pendingImage, onChatCreated, onChatActivity]);
 
     const handleSend = () => sendMessage(prompt.trim());
 
@@ -189,82 +247,121 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
     };
 
     const inputGroup = (
-        <InputGroup>
-            <InputGroupTextarea
-                placeholder="Ask anything..."
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                onKeyDown={handleKeyDown}
-                disabled={loading}
-            // autoFocus
+        <div>
+            <input
+                type="file"
+                accept="image/*"
+                ref={fileInputRef}
+                onChange={handleImageSelect}
+                className="hidden"
             />
-            <InputGroupAddon align="block-end">
-                {/* <InputGroupButton
-                    variant="outline"
-                    className="rounded-full"
-                    size="icon-xs"
-                >
-                    <Plus />
-                </InputGroupButton> */}
 
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <InputGroupButton variant="secondary" className="cursor-pointer">
-                            <Image
-                                src={selectedModelInfo.icon}
-                                alt={selectedModelInfo.label}
-                                width={16}
-                                height={16}
-                                className="mr-1"
-                                priority
-                            />
-                            {selectedModelInfo.label}
-                            <ChevronDown />
+            {pendingImage && (
+                <div className="mb-4 ml-4 flex items-start gap-2">
+                    <div className="relative group">
+                        <img
+                            src={pendingImage.previewUrl}
+                            alt="Upload preview"
+                            className="h-20 w-20 rounded-lg object-cover border"
+                        />
+                        <button
+                            onClick={clearPendingImage}
+                            className="absolute -top-2 -right-2 bg-primary text-secondary rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                        >
+                            <X className="size-3" />
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {imageError && (
+                <p className="mb-4 ml-4 text-sm text-destructive">{imageError}</p>
+            )}
+
+            <InputGroup>
+                <InputGroupTextarea
+                    placeholder={pendingImage ? "Ask anything about this image..." : "Ask anything..."}
+                    value={prompt}
+                    onChange={(e) => setPrompt(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    disabled={loading}
+                // autoFocus
+                />
+                <InputGroupAddon align="block-end">
+                    {supportsVision && (
+                        <InputGroupButton
+                            variant="secondary"
+                            className="rounded-sm cursor-pointer"
+                            size="icon-xs"
+                            onClick={() => fileInputRef.current?.click()}
+                            title="Upload an image"
+                            disabled={loading}
+                        >
+                            <ImagePlus className="size-4" />
+                            <span className="sr-only">Upload an image</span>
                         </InputGroupButton>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent side="bottom" align="start">
-                        <DropdownMenuLabel>Models</DropdownMenuLabel>
+                    )}
 
-                        {MODELS.map((model) => (
-                            <DropdownMenuItem
-                                key={model.id}
-                                onSelect={() => setSelectedModel(model.id)}
-                                className="cursor-pointer flex items-center gap-2"
-                            >
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <InputGroupButton variant="secondary" className="cursor-pointer" disabled={loading}>
                                 <Image
-                                    src={model.icon}
-                                    alt={model.label}
+                                    src={selectedModelInfo.icon}
+                                    alt={selectedModelInfo.label}
                                     width={16}
                                     height={16}
+                                    className="mr-1"
                                     priority
                                 />
-                                {model.label}
-                                <DropdownMenuShortcut>
-                                    {model.shortcut}
-                                </DropdownMenuShortcut>
-                            </DropdownMenuItem>
-                        ))}
-                    </DropdownMenuContent>
+                                {selectedModelInfo.label}
+                                <ChevronDown />
+                            </InputGroupButton>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent side="bottom" align="start">
+                            <DropdownMenuLabel>Models</DropdownMenuLabel>
 
-                </DropdownMenu>
-                <InputGroupText className="ml-auto">
-                    {prompt.length > 0 && (
-                        <span className="hidden lg:inline">{`${prompt.length} ${prompt.length === 1 ? 'character' : 'characters'}`}</span>
-                    )}
-                </InputGroupText>
-                <Separator orientation="vertical" className="mx-2 data-[orientation=vertical]:h-4" />
-                <InputGroupButton
-                    variant="default"
-                    className="rounded-full cursor-pointer"
-                    size="icon-xs"
-                    onClick={handleSend}
-                    disabled={loading || !prompt.trim()}
-                >
-                    <ArrowUpIcon />
-                    <span className="sr-only">Send</span>
-                </InputGroupButton>
-            </InputGroupAddon>
-        </InputGroup>
+                            {MODELS.map((model) => (
+                                <DropdownMenuItem
+                                    key={model.id}
+                                    onSelect={() => setSelectedModel(model.id)}
+                                    className="cursor-pointer flex items-center gap-2"
+                                >
+                                    <Image
+                                        src={model.icon}
+                                        alt={model.label}
+                                        width={16}
+                                        height={16}
+                                        priority
+                                    />
+                                    {model.label}
+                                    <DropdownMenuShortcut>
+                                        {model.shortcut}
+                                    </DropdownMenuShortcut>
+                                </DropdownMenuItem>
+                            ))}
+                        </DropdownMenuContent>
+
+                    </DropdownMenu>
+                    <InputGroupText className="ml-auto">
+                        {prompt.length > 0 && (
+                            <span className="hidden lg:inline">{`${prompt.length} ${prompt.length === 1 ? 'character' : 'characters'}`}</span>
+                        )}
+                    </InputGroupText>
+                    <Separator orientation="vertical" className="mx-2 data-[orientation=vertical]:h-4" />
+                    <InputGroupButton
+                        variant="default"
+                        className="rounded-full cursor-pointer"
+                        size="icon-xs"
+                        onClick={handleSend}
+                        title="Send"
+                        disabled={loading || (!prompt.trim() && !pendingImage)}
+                    >
+                        <ArrowUpIcon />
+                        <span className="sr-only">Send</span>
+                    </InputGroupButton>
+                </InputGroupAddon>
+            </InputGroup>
+        </div>
     );
 
     // New Chat page
@@ -280,7 +377,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
 
                     {inputGroup}
 
-                    {sampleQuery && (
+                    {sampleQuery && !pendingImage && (
                         <div className="mt-6 flex justify-center px-4">
                             <Button
                                 variant="outline"
