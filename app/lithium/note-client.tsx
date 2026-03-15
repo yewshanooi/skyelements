@@ -4,8 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { SerializedEditorState } from "lexical";
 import {
   getNote,
-  updateNoteTitle,
-  updateNoteContent,
+  updateNote,
   type Note,
 } from "./note-actions";
 import { Spinner } from "@/components/ui/spinner";
@@ -58,10 +57,10 @@ export function NoteClient({ noteId, onNoteActivity }: NoteClientProps) {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
       saveTimerRef.current = setTimeout(async () => {
         if (field === "title") {
-          await updateNoteTitle(nId, value);
+          await updateNote(nId, { title: value });
           onNoteActivity?.(nId, value);
         } else {
-          await updateNoteContent(nId, value);
+          await updateNote(nId, { content: value });
         }
       }, 500);
     },

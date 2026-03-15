@@ -43,7 +43,8 @@ export type Message = {
 export async function generateContent(
   prompt: string,
   model: string = "gemini-3.1-flash-lite-preview",
-  history: ChatMessage[] = []
+  history: ChatMessage[] = [],
+  image?: ImageAttachment
 ) {
   await getAuthenticatedClient();
 
@@ -53,6 +54,10 @@ export async function generateContent(
 
   const isOpenRouter = model.startsWith("openrouter:");
   const actualModel = isOpenRouter ? model.replace("openrouter:", "") : model;
+
+  if (image && isOpenRouter) {
+    return "Sorry, image upload is not supported for this model.";
+  }
 
   if (isOpenRouter) {
     if (!process.env.OPENROUTER_API_KEY) {
@@ -121,7 +126,15 @@ export async function generateContent(
       role: msg.role === 'assistant' ? 'model' : 'user',
       parts: [{ text: msg.content }]
     } as Content)),
-    { role: 'user', parts: [{ text: prompt }] } as Content
+    image
+      ? {
+        role: 'user',
+        parts: [
+          { inlineData: { data: image.base64, mimeType: image.mimeType } },
+          { text: prompt || 'What is in this image?' }
+        ]
+      } as Content
+      : { role: 'user', parts: [{ text: prompt }] } as Content
   ];
 
   try {
@@ -135,61 +148,6 @@ export async function generateContent(
 
     if (error?.status === 429) {
       return `⚠️ **Free quota exceeded**\n\nWe've hit the daily free quota for the ${actualModel} model. Please change to another model or try again tomorrow.`;
-    }
-
-    return "Sorry, I couldn't generate a response at this time.";
-  }
-}
-
-export async function generateContentWithImage(
-  prompt: string,
-  model: string = "gemini-3.1-flash-lite-preview",
-  history: ChatMessage[] = [],
-  image: ImageAttachment
-) {
-  await getAuthenticatedClient();
-
-  if (!ALLOWED_MODEL_IDS.has(model)) {
-    return "Sorry, the requested model is not available.";
-  }
-
-  if (model.startsWith("openrouter:")) {
-    return "Sorry, image upload is not supported for this model.";
-  }
-
-  // Google AI Studio models
-  if (!process.env.GOOGLE_API_KEY) {
-    console.error("GOOGLE_API_KEY environment variable is not set.");
-    return "Sorry, I couldn't generate a response at this time.";
-  }
-
-  const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY });
-
-  const contents: Content[] = [
-    ...history.map(msg => ({
-      role: msg.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: msg.content }]
-    } as Content)),
-    {
-      role: 'user',
-      parts: [
-        { inlineData: { data: image.base64, mimeType: image.mimeType } },
-        { text: prompt || 'What is in this image?' }
-      ]
-    } as Content
-  ];
-
-  try {
-    const response = await ai.models.generateContent({
-      model,
-      contents,
-    });
-    return response.text;
-  } catch (error: any) {
-    console.error("Error generating content with image:", error);
-
-    if (error?.status === 429) {
-      return `⚠️ **Free quota exceeded**\n\nWe've hit the daily free quota for the ${model} model. Please change to another model or try again tomorrow.`;
     }
 
     return "Sorry, I couldn't generate a response at this time.";
@@ -312,17 +270,6 @@ export async function updateChatTitle(chatId: string, title: string): Promise<vo
 export async function deleteChat(chatId: string): Promise<void> {
   const { supabase, user } = await getAuthenticatedClient();
 
-  // Remove images from storage
-  const folder = `${user.id}/${chatId}`;
-  const { data: files } = await supabase.storage
-    .from('chat-images')
-    .list(folder);
-  if (files && files.length > 0) {
-    await supabase.storage
-      .from('chat-images')
-      .remove(files.map(f => `${folder}/${f.name}`));
-  }
-
   const { error } = await supabase
     .from('chats')
     .delete()
@@ -335,25 +282,6 @@ export async function deleteChat(chatId: string): Promise<void> {
 /** Delete all chats for the current user */
 export async function deleteAllChats(): Promise<void> {
   const { supabase, user } = await getAuthenticatedClient();
-
-  // Remove all images from storage for this user
-  const userFolder = user.id;
-  const { data: chatFolders } = await supabase.storage
-    .from('chat-images')
-    .list(userFolder);
-  if (chatFolders && chatFolders.length > 0) {
-    for (const folder of chatFolders) {
-      const subPath = `${userFolder}/${folder.name}`;
-      const { data: files } = await supabase.storage
-        .from('chat-images')
-        .list(subPath);
-      if (files && files.length > 0) {
-        await supabase.storage
-          .from('chat-images')
-          .remove(files.map(f => `${subPath}/${f.name}`));
-      }
-    }
-  }
 
   const { error } = await supabase
     .from('chats')

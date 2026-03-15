@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ChatClient } from "./chat-client";
 import { NoteClient } from "./note-client";
-import { listChats, deleteChat, deleteAllChats, type Chat } from "./actions";
+import { listChats, deleteChat, deleteAllChats, type Chat } from "./chat-actions";
 import { listNotes, deleteNote, deleteAllNotes, createNote, type Note } from "./note-actions";
 import {
   Breadcrumb,

@@ -73,26 +73,13 @@ export async function getNote(noteId: string): Promise<Note> {
   return data as Note;
 }
 
-/** Update note title */
-export async function updateNoteTitle(noteId: string, title: string): Promise<void> {
+/** Update note */
+export async function updateNote(noteId: string, updates: { title?: string, content?: string }): Promise<void> {
   const { supabase, user } = await getAuthenticatedClient();
 
   const { error } = await supabase
     .from('notes')
-    .update({ title, updated_at: new Date().toISOString() })
-    .eq('id', noteId)
-    .eq('user_id', user.id);
-
-  if (error) throw new Error(error.message);
-}
-
-/** Update note content */
-export async function updateNoteContent(noteId: string, content: string): Promise<void> {
-  const { supabase, user } = await getAuthenticatedClient();
-
-  const { error } = await supabase
-    .from('notes')
-    .update({ content, updated_at: new Date().toISOString() })
+    .update({ ...updates, updated_at: new Date().toISOString() })
     .eq('id', noteId)
     .eq('user_id', user.id);
 

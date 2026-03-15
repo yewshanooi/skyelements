@@ -22,7 +22,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner"
-import { generateContent, generateContentWithImage, createChat, saveMessage, getMessages, updateChatTitle, type ChatMessage, type Message, type ImageAttachment } from "./actions";
+import { generateContent, createChat, saveMessage, getMessages, updateChatTitle, type ChatMessage, type Message, type ImageAttachment } from "./chat-actions";
 import { MODELS } from "@/lib/models";
 import Image from 'next/image'
 
@@ -215,7 +215,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
             let result: string | undefined;
             if (imageToSend) {
                 const image: ImageAttachment = { base64: imageToSend.base64, mimeType: imageToSend.mimeType };
-                result = await generateContentWithImage(userMessage, selectedModel, history, image);
+                result = await generateContent(userMessage, selectedModel, history, image);
             } else {
                 result = await generateContent(userMessage, selectedModel, history);
             }

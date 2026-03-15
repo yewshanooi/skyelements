@@ -15,7 +15,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import type { Chat } from "@/app/lithium/actions"
+import type { Chat } from "@/app/lithium/chat-actions"
 import type { Note } from "@/app/lithium/note-actions"
 
 export function AppSidebar({ user, signout, onNewChat, chats, activeChatId, onSelectChat, onDeleteChat, onDeleteAllChats, onDeleteAllNotes, notes, activeNoteId, onSelectNote, onDeleteNote, onNewNote, ...props }: React.ComponentProps<typeof Sidebar> & {
