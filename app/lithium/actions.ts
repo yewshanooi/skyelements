@@ -33,8 +33,6 @@ export type Message = {
   chat_id: string;
   role: 'user' | 'assistant';
   content: string;
-  image_path?: string | null;
-  image_url?: string | null;
   created_at: string;
 };
 
@@ -45,8 +43,7 @@ export type Message = {
 export async function generateContent(
   prompt: string,
   model: string = "gemini-3.1-flash-lite-preview",
-  history: ChatMessage[] = [],
-  image?: ImageAttachment
+  history: ChatMessage[] = []
 ) {
   await getAuthenticatedClient();
 
@@ -58,10 +55,6 @@ export async function generateContent(
   const actualModel = isOpenRouter ? model.replace("openrouter:", "") : model;
 
   if (isOpenRouter) {
-    if (image) {
-      return "Sorry, image upload is not supported for this model.";
-    }
-
     if (!process.env.OPENROUTER_API_KEY) {
       console.error("OPENROUTER_API_KEY environment variable is not set.");
 
@@ -122,22 +115,13 @@ export async function generateContent(
   }
 
   const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY });
-  
-  const aiParts: any[] = [];
-  if (image) {
-    aiParts.push({ inlineData: { data: image.base64, mimeType: image.mimeType } });
-  }
-  const promptText = prompt || (image ? 'What is in this image?' : '');
-  if (promptText) {
-    aiParts.push({ text: promptText });
-  }
 
   const contents: Content[] = [
     ...history.map(msg => ({
       role: msg.role === 'assistant' ? 'model' : 'user',
       parts: [{ text: msg.content }]
     } as Content)),
-    { role: 'user', parts: aiParts } as Content
+    { role: 'user', parts: [{ text: prompt }] } as Content
   ];
 
   try {
@@ -157,6 +141,61 @@ export async function generateContent(
   }
 }
 
+export async function generateContentWithImage(
+  prompt: string,
+  model: string = "gemini-3.1-flash-lite-preview",
+  history: ChatMessage[] = [],
+  image: ImageAttachment
+) {
+  await getAuthenticatedClient();
+
+  if (!ALLOWED_MODEL_IDS.has(model)) {
+    return "Sorry, the requested model is not available.";
+  }
+
+  if (model.startsWith("openrouter:")) {
+    return "Sorry, image upload is not supported for this model.";
+  }
+
+  // Google AI Studio models
+  if (!process.env.GOOGLE_API_KEY) {
+    console.error("GOOGLE_API_KEY environment variable is not set.");
+    return "Sorry, I couldn't generate a response at this time.";
+  }
+
+  const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY });
+
+  const contents: Content[] = [
+    ...history.map(msg => ({
+      role: msg.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: msg.content }]
+    } as Content)),
+    {
+      role: 'user',
+      parts: [
+        { inlineData: { data: image.base64, mimeType: image.mimeType } },
+        { text: prompt || 'What is in this image?' }
+      ]
+    } as Content
+  ];
+
+  try {
+    const response = await ai.models.generateContent({
+      model,
+      contents,
+    });
+    return response.text;
+  } catch (error: any) {
+    console.error("Error generating content with image:", error);
+
+    if (error?.status === 429) {
+      return `⚠️ **Free quota exceeded**\n\nWe've hit the daily free quota for the ${model} model. Please change to another model or try again tomorrow.`;
+    }
+
+    return "Sorry, I couldn't generate a response at this time.";
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -166,40 +205,6 @@ async function getAuthenticatedClient() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
   return { supabase, user };
-}
-
-const MIME_TO_EXT: Record<string, string> = {
-  'image/jpeg': 'jpg',
-  'image/png': 'png',
-  'image/gif': 'gif',
-  'image/webp': 'webp',
-  'image/svg+xml': 'svg',
-};
-
-/** Upload an image to Supabase Storage and return the storage path */
-export async function uploadChatImage(
-  chatId: string,
-  base64: string,
-  mimeType: string
-): Promise<string> {
-  const { supabase, user } = await getAuthenticatedClient();
-
-  const ext = MIME_TO_EXT[mimeType] || 'jpg';
-  const fileName = `${crypto.randomUUID()}.${ext}`;
-  const storagePath = `${user.id}/${chatId}/${fileName}`;
-
-  const buffer = Buffer.from(base64, 'base64');
-
-  const { error } = await supabase.storage
-    .from('chat-images')
-    .upload(storagePath, buffer, {
-      contentType: mimeType,
-      upsert: false,
-    });
-
-  if (error) throw new Error(`Image upload failed: ${error.message}`);
-
-  return storagePath;
 }
 
 // ---------------------------------------------------------------------------
@@ -258,32 +263,11 @@ export async function getMessages(chatId: string): Promise<Message[]> {
     .order('created_at', { ascending: true });
 
   if (error) throw new Error(error.message);
-
-  const messages = (data ?? []) as Message[];
-
-  // Generate signed URLs for messages with images
-  const messagesWithImages = messages.filter(m => m.image_path);
-  if (messagesWithImages.length > 0) {
-    const paths = messagesWithImages.map(m => m.image_path!);
-    const { data: signedUrls, error: signedUrlsError } = await supabase.storage
-      .from('chat-images')
-      .createSignedUrls(paths, 3600); // 1 hour
-      
-    if (!signedUrlsError && signedUrls) {
-      for (const msg of messagesWithImages) {
-        const signedUrlData = signedUrls.find(s => s.path === msg.image_path);
-        if (signedUrlData && !signedUrlData.error) {
-          msg.image_url = signedUrlData.signedUrl;
-        }
-      }
-    }
-  }
-
-  return messages;
+  return (data ?? []) as Message[];
 }
 
 /** Save a message to a chat and bump the chat's updated_at timestamp */
-export async function saveMessage(chatId: string, role: 'user' | 'assistant', content: string, imagePath?: string): Promise<Message> {
+export async function saveMessage(chatId: string, role: 'user' | 'assistant', content: string): Promise<Message> {
   const { supabase, user } = await getAuthenticatedClient();
 
   const { data: chat } = await supabase
@@ -295,12 +279,9 @@ export async function saveMessage(chatId: string, role: 'user' | 'assistant', co
 
   if (!chat) throw new Error('Chat not found or access denied');
 
-  const insertData: Record<string, string> = { chat_id: chatId, role, content };
-  if (imagePath) insertData.image_path = imagePath;
-
   const { data, error } = await supabase
     .from('messages')
-    .insert(insertData)
+    .insert({ chat_id: chatId, role, content })
     .select()
     .single();
 
@@ -361,22 +342,16 @@ export async function deleteAllChats(): Promise<void> {
     .from('chat-images')
     .list(userFolder);
   if (chatFolders && chatFolders.length > 0) {
-    const allPaths: string[] = [];
-    
-    await Promise.all(chatFolders.map(async (folder) => {
+    for (const folder of chatFolders) {
       const subPath = `${userFolder}/${folder.name}`;
       const { data: files } = await supabase.storage
         .from('chat-images')
         .list(subPath);
       if (files && files.length > 0) {
-        allPaths.push(...files.map(f => `${subPath}/${f.name}`));
+        await supabase.storage
+          .from('chat-images')
+          .remove(files.map(f => `${subPath}/${f.name}`));
       }
-    }));
-    
-    if (allPaths.length > 0) {
-      await supabase.storage
-        .from('chat-images')
-        .remove(allPaths);
     }
   }
 

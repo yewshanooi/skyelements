@@ -22,7 +22,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner"
-import { generateContent, uploadChatImage, createChat, saveMessage, getMessages, updateChatTitle, type ChatMessage, type Message, type ImageAttachment } from "./actions";
+import { generateContent, generateContentWithImage, createChat, saveMessage, getMessages, updateChatTitle, type ChatMessage, type Message, type ImageAttachment } from "./actions";
 import { MODELS } from "@/lib/models";
 import Image from 'next/image'
 
@@ -87,7 +87,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
     const [greeting, setGreeting] = useState("");
     const [sampleQuery, setSampleQuery] = useState("");
     const [prompt, setPrompt] = useState("");
-    const [messages, setMessages] = useState<(ChatMessage & { image_url?: string | null })[]>([]);
+    const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [loading, setLoading] = useState(false);
     const [loadingHistory, setLoadingHistory] = useState(false);
     const [selectedModel, setSelectedModel] = useState("gemini-3.1-flash-lite-preview");
@@ -169,7 +169,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
         if (chatId) {
             setLoadingHistory(true);
             getMessages(chatId).then((msgs) => {
-                setMessages(msgs.map((m: Message) => ({ role: m.role, content: m.content, image_url: m.image_url })));
+                setMessages(msgs.map((m: Message) => ({ role: m.role, content: m.content })));
                 setLoadingHistory(false);
             }).catch(() => {
                 setLoadingHistory(false);
@@ -190,8 +190,10 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
         setImageError(null);
 
         const history = [...messages];
-        const displayContent = userMessage;
-        setMessages(prev => [...prev, { role: 'user' as const, content: displayContent, image_url: imageToSend?.previewUrl ?? null }]);
+        const displayContent = imageToSend
+            ? `📷 *Image attached*${userMessage ? '\n\n' + userMessage : ''}`
+            : userMessage;
+        setMessages(prev => [...prev, { role: 'user' as const, content: displayContent }]);
 
         try {
             let activeChatId = currentChatId;
@@ -207,18 +209,13 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                 onChatCreated?.(activeChatId, title);
             }
 
-            let imagePath: string | undefined;
-            if (imageToSend) {
-                imagePath = await uploadChatImage(activeChatId, imageToSend.base64, imageToSend.mimeType);
-            }
-
-            await saveMessage(activeChatId, 'user', displayContent, imagePath);
+            await saveMessage(activeChatId, 'user', displayContent);
             onChatActivity?.(activeChatId);
 
             let result: string | undefined;
             if (imageToSend) {
                 const image: ImageAttachment = { base64: imageToSend.base64, mimeType: imageToSend.mimeType };
-                result = await generateContent(userMessage, selectedModel, history, image);
+                result = await generateContentWithImage(userMessage, selectedModel, history, image);
             } else {
                 result = await generateContent(userMessage, selectedModel, history);
             }
@@ -412,13 +409,6 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                                     <p className="text-xs font-medium text-muted-foreground mb-2">
                                         {msg.role === 'user' ? 'You' : 'Lithium'}
                                     </p>
-                                    {msg.image_url && (
-                                        <img
-                                            src={msg.image_url}
-                                            alt="Uploaded image"
-                                            className="mb-3 max-h-64 rounded-lg border object-contain"
-                                        />
-                                    )}
                                     <div className="prose prose-md dark:prose-invert max-w-none overflow-x-auto">
                                         <ReactMarkdown remarkPlugins={[remarkGfm]}>
                                             {msg.content}
