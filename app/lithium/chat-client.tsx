@@ -27,6 +27,31 @@ import { MODELS } from "@/lib/models";
 import Image from 'next/image'
 
 
+const greetings = [
+    "Let's get started.",
+
+    "Ready when you are.",
+    "Ready to get started?",
+    "Ready to create something?",
+
+    "Where to begin?",
+    "Where should we begin?",
+    "Where do you want to start?",
+
+    "What can I do for you?",
+    "What are you working on?",
+    "What do you want to know?",
+    "What would you like to explore?",
+    "What can I help you with today?",
+
+    "What's your focus today?",
+    "What's on your mind today?",
+    "What's on the agenda today?",
+
+    "How can I help?",
+    "How can I help you right now?",
+];
+
 const sampleQueries = [
     // What..? questions
     'What is the meaning of life?',
@@ -59,8 +84,8 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
     onChatCreated?: (chatId: string, title: string) => void;
     onChatActivity?: (chatId: string) => void;
 }) {
-    const [welcomeMessage, setWelcomeMessage] = useState("");
     const [greeting, setGreeting] = useState("");
+    const [sampleQuery, setSampleQuery] = useState("");
     const [prompt, setPrompt] = useState("");
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [loading, setLoading] = useState(false);
@@ -77,40 +102,8 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
     const isEmptyState = messages.length === 0 && !loading && !loadingHistory;
 
     useEffect(() => {
-        setWelcomeMessage(sampleQueries[Math.floor(Math.random() * sampleQueries.length)]);
-
-        const hour = new Date().getHours();
-        const pick = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
-
-        if (hour >= 5 && hour < 12) {
-            setGreeting(pick([
-                "Rise and shine",
-                "Good morning! Ready to explore?",
-                "Morning! What's on your mind?",
-                "Top of the morning to you!",
-            ]));
-        } else if (hour >= 12 && hour < 17) {
-            setGreeting(pick([
-                "Good afternoon! How can I help?",
-                "Hey there! What are we working on?",
-                "Afternoon! Let's get things done",
-                "Hope your day's going great!",
-            ]));
-        } else if (hour >= 17 && hour < 21) {
-            setGreeting(pick([
-                "Good evening! What's on your mind?",
-                "Evening! Let's wrap up strong",
-                "Hey! Winding down or just getting started?",
-                "Good evening! I'm here to help",
-            ]));
-        } else {
-            setGreeting(pick([
-                "Burning the midnight oil?",
-                "Late night thoughts? I'm all ears",
-                "Can't sleep? Let's chat",
-                "Night owl mode activated",
-            ]));
-        }
+        setGreeting(greetings[Math.floor(Math.random() * greetings.length)]);
+        setSampleQuery(sampleQueries[Math.floor(Math.random() * sampleQueries.length)]);
     }, []);
 
     // Load messages when chatId changes (switching chats)
@@ -287,14 +280,14 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
 
                     {inputGroup}
 
-                    {welcomeMessage && (
+                    {sampleQuery && (
                         <div className="mt-6 flex justify-center px-4">
                             <Button
                                 variant="outline"
                                 className="cursor-pointer text-sm text-muted-foreground h-auto whitespace-normal text-center max-w-full"
-                                onClick={() => sendMessage(welcomeMessage)}
+                                onClick={() => sendMessage(sampleQuery)}
                             >
-                                &quot;{welcomeMessage}&quot;
+                                &quot;{sampleQuery}&quot;
                             </Button>
                         </div>
                     )}
