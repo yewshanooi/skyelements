@@ -45,7 +45,8 @@ export type Message = {
 export async function generateContent(
   prompt: string,
   model: string = "gemini-3.1-flash-lite-preview",
-  history: ChatMessage[] = []
+  history: ChatMessage[] = [],
+  image?: ImageAttachment
 ) {
   await getAuthenticatedClient();
 
@@ -57,6 +58,10 @@ export async function generateContent(
   const actualModel = isOpenRouter ? model.replace("openrouter:", "") : model;
 
   if (isOpenRouter) {
+    if (image) {
+      return "Sorry, image upload is not supported for this model.";
+    }
+
     if (!process.env.OPENROUTER_API_KEY) {
       console.error("OPENROUTER_API_KEY environment variable is not set.");
 
@@ -117,13 +122,22 @@ export async function generateContent(
   }
 
   const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY });
+  
+  const aiParts: any[] = [];
+  if (image) {
+    aiParts.push({ inlineData: { data: image.base64, mimeType: image.mimeType } });
+  }
+  const promptText = prompt || (image ? 'What is in this image?' : '');
+  if (promptText) {
+    aiParts.push({ text: promptText });
+  }
 
   const contents: Content[] = [
     ...history.map(msg => ({
       role: msg.role === 'assistant' ? 'model' : 'user',
       parts: [{ text: msg.content }]
     } as Content)),
-    { role: 'user', parts: [{ text: prompt }] } as Content
+    { role: 'user', parts: aiParts } as Content
   ];
 
   try {
@@ -137,61 +151,6 @@ export async function generateContent(
 
     if (error?.status === 429) {
       return `⚠️ **Free quota exceeded**\n\nWe've hit the daily free quota for the ${actualModel} model. Please change to another model or try again tomorrow.`;
-    }
-
-    return "Sorry, I couldn't generate a response at this time.";
-  }
-}
-
-export async function generateContentWithImage(
-  prompt: string,
-  model: string = "gemini-3.1-flash-lite-preview",
-  history: ChatMessage[] = [],
-  image: ImageAttachment
-) {
-  await getAuthenticatedClient();
-
-  if (!ALLOWED_MODEL_IDS.has(model)) {
-    return "Sorry, the requested model is not available.";
-  }
-
-  if (model.startsWith("openrouter:")) {
-    return "Sorry, image upload is not supported for this model.";
-  }
-
-  // Google AI Studio models
-  if (!process.env.GOOGLE_API_KEY) {
-    console.error("GOOGLE_API_KEY environment variable is not set.");
-    return "Sorry, I couldn't generate a response at this time.";
-  }
-
-  const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY });
-
-  const contents: Content[] = [
-    ...history.map(msg => ({
-      role: msg.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: msg.content }]
-    } as Content)),
-    {
-      role: 'user',
-      parts: [
-        { inlineData: { data: image.base64, mimeType: image.mimeType } },
-        { text: prompt || 'What is in this image?' }
-      ]
-    } as Content
-  ];
-
-  try {
-    const response = await ai.models.generateContent({
-      model,
-      contents,
-    });
-    return response.text;
-  } catch (error: any) {
-    console.error("Error generating content with image:", error);
-
-    if (error?.status === 429) {
-      return `⚠️ **Free quota exceeded**\n\nWe've hit the daily free quota for the ${model} model. Please change to another model or try again tomorrow.`;
     }
 
     return "Sorry, I couldn't generate a response at this time.";
@@ -305,12 +264,17 @@ export async function getMessages(chatId: string): Promise<Message[]> {
   // Generate signed URLs for messages with images
   const messagesWithImages = messages.filter(m => m.image_path);
   if (messagesWithImages.length > 0) {
-    for (const msg of messagesWithImages) {
-      const { data: signedData } = await supabase.storage
-        .from('chat-images')
-        .createSignedUrl(msg.image_path!, 3600); // 1 hour
-      if (signedData?.signedUrl) {
-        msg.image_url = signedData.signedUrl;
+    const paths = messagesWithImages.map(m => m.image_path!);
+    const { data: signedUrls, error: signedUrlsError } = await supabase.storage
+      .from('chat-images')
+      .createSignedUrls(paths, 3600); // 1 hour
+      
+    if (!signedUrlsError && signedUrls) {
+      for (const msg of messagesWithImages) {
+        const signedUrlData = signedUrls.find(s => s.path === msg.image_path);
+        if (signedUrlData && !signedUrlData.error) {
+          msg.image_url = signedUrlData.signedUrl;
+        }
       }
     }
   }
@@ -397,16 +361,22 @@ export async function deleteAllChats(): Promise<void> {
     .from('chat-images')
     .list(userFolder);
   if (chatFolders && chatFolders.length > 0) {
-    for (const folder of chatFolders) {
+    const allPaths: string[] = [];
+    
+    await Promise.all(chatFolders.map(async (folder) => {
       const subPath = `${userFolder}/${folder.name}`;
       const { data: files } = await supabase.storage
         .from('chat-images')
         .list(subPath);
       if (files && files.length > 0) {
-        await supabase.storage
-          .from('chat-images')
-          .remove(files.map(f => `${subPath}/${f.name}`));
+        allPaths.push(...files.map(f => `${subPath}/${f.name}`));
       }
+    }));
+    
+    if (allPaths.length > 0) {
+      await supabase.storage
+        .from('chat-images')
+        .remove(allPaths);
     }
   }
 
