@@ -33,6 +33,8 @@ export type Message = {
   chat_id: string;
   role: 'user' | 'assistant';
   content: string;
+  image_path?: string | null;
+  image_url?: string | null;
   created_at: string;
 };
 
@@ -207,6 +209,40 @@ async function getAuthenticatedClient() {
   return { supabase, user };
 }
 
+const MIME_TO_EXT: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/gif': 'gif',
+  'image/webp': 'webp',
+  'image/svg+xml': 'svg',
+};
+
+/** Upload an image to Supabase Storage and return the storage path */
+export async function uploadChatImage(
+  chatId: string,
+  base64: string,
+  mimeType: string
+): Promise<string> {
+  const { supabase, user } = await getAuthenticatedClient();
+
+  const ext = MIME_TO_EXT[mimeType] || 'jpg';
+  const fileName = `${crypto.randomUUID()}.${ext}`;
+  const storagePath = `${user.id}/${chatId}/${fileName}`;
+
+  const buffer = Buffer.from(base64, 'base64');
+
+  const { error } = await supabase.storage
+    .from('chat-images')
+    .upload(storagePath, buffer, {
+      contentType: mimeType,
+      upsert: false,
+    });
+
+  if (error) throw new Error(`Image upload failed: ${error.message}`);
+
+  return storagePath;
+}
+
 // ---------------------------------------------------------------------------
 // Chat CRUD
 // ---------------------------------------------------------------------------
@@ -263,11 +299,27 @@ export async function getMessages(chatId: string): Promise<Message[]> {
     .order('created_at', { ascending: true });
 
   if (error) throw new Error(error.message);
-  return (data ?? []) as Message[];
+
+  const messages = (data ?? []) as Message[];
+
+  // Generate signed URLs for messages with images
+  const messagesWithImages = messages.filter(m => m.image_path);
+  if (messagesWithImages.length > 0) {
+    for (const msg of messagesWithImages) {
+      const { data: signedData } = await supabase.storage
+        .from('chat-images')
+        .createSignedUrl(msg.image_path!, 3600); // 1 hour
+      if (signedData?.signedUrl) {
+        msg.image_url = signedData.signedUrl;
+      }
+    }
+  }
+
+  return messages;
 }
 
 /** Save a message to a chat and bump the chat's updated_at timestamp */
-export async function saveMessage(chatId: string, role: 'user' | 'assistant', content: string): Promise<Message> {
+export async function saveMessage(chatId: string, role: 'user' | 'assistant', content: string, imagePath?: string): Promise<Message> {
   const { supabase, user } = await getAuthenticatedClient();
 
   const { data: chat } = await supabase
@@ -279,9 +331,12 @@ export async function saveMessage(chatId: string, role: 'user' | 'assistant', co
 
   if (!chat) throw new Error('Chat not found or access denied');
 
+  const insertData: Record<string, string> = { chat_id: chatId, role, content };
+  if (imagePath) insertData.image_path = imagePath;
+
   const { data, error } = await supabase
     .from('messages')
-    .insert({ chat_id: chatId, role, content })
+    .insert(insertData)
     .select()
     .single();
 
@@ -312,6 +367,17 @@ export async function updateChatTitle(chatId: string, title: string): Promise<vo
 export async function deleteChat(chatId: string): Promise<void> {
   const { supabase, user } = await getAuthenticatedClient();
 
+  // Remove images from storage
+  const folder = `${user.id}/${chatId}`;
+  const { data: files } = await supabase.storage
+    .from('chat-images')
+    .list(folder);
+  if (files && files.length > 0) {
+    await supabase.storage
+      .from('chat-images')
+      .remove(files.map(f => `${folder}/${f.name}`));
+  }
+
   const { error } = await supabase
     .from('chats')
     .delete()
@@ -324,6 +390,25 @@ export async function deleteChat(chatId: string): Promise<void> {
 /** Delete all chats for the current user */
 export async function deleteAllChats(): Promise<void> {
   const { supabase, user } = await getAuthenticatedClient();
+
+  // Remove all images from storage for this user
+  const userFolder = user.id;
+  const { data: chatFolders } = await supabase.storage
+    .from('chat-images')
+    .list(userFolder);
+  if (chatFolders && chatFolders.length > 0) {
+    for (const folder of chatFolders) {
+      const subPath = `${userFolder}/${folder.name}`;
+      const { data: files } = await supabase.storage
+        .from('chat-images')
+        .list(subPath);
+      if (files && files.length > 0) {
+        await supabase.storage
+          .from('chat-images')
+          .remove(files.map(f => `${subPath}/${f.name}`));
+      }
+    }
+  }
 
   const { error } = await supabase
     .from('chats')
