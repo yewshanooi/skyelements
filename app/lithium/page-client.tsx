@@ -44,17 +44,17 @@ export function PageClient({ user, signout }: PageClientProps) {
 
   // --- Chat handlers ---
 
-  const handleNewChat = () => {
+  const handleNewChat = useCallback(() => {
     setActiveView({ type: 'chat', id: null });
     setChatTitle("New chat");
     setChatKey(prev => prev + 1);
-  };
+  }, []);
 
-  const handleSelectChat = (chatId: string) => {
+  const handleSelectChat = useCallback((chatId: string) => {
     const chat = chats.find(c => c.id === chatId);
     setActiveView({ type: 'chat', id: chatId });
     setChatTitle(chat?.title ?? "Chat");
-  };
+  }, [chats]);
 
   const handleChatCreated = useCallback((chatId: string, title: string) => {
     setActiveView({ type: 'chat', id: chatId });
@@ -78,31 +78,38 @@ export function PageClient({ user, signout }: PageClientProps) {
     });
   }, []);
 
-  const handleDeleteChat = async (chatId: string) => {
+  const handleDeleteChat = useCallback(async (chatId: string) => {
     try {
       await deleteChat(chatId);
       setChats(prev => prev.filter(c => c.id !== chatId));
-      if (activeView.type === 'chat' && activeView.id === chatId) {
-        handleNewChat();
-      }
+      setActiveView(prev => {
+        if (prev.type === 'chat' && prev.id === chatId) {
+          setChatTitle("New chat");
+          setChatKey(k => k + 1);
+          return { type: 'chat', id: null };
+        }
+        return prev;
+      });
     } catch (error) {
       console.error('Failed to delete chat:', error);
     }
-  };
+  }, []);
 
-  const handleDeleteAllChats = async () => {
+  const handleDeleteAllChats = useCallback(async () => {
     try {
       await deleteAllChats();
       setChats([]);
-      handleNewChat();
+      setActiveView({ type: 'chat', id: null });
+      setChatTitle("New chat");
+      setChatKey(prev => prev + 1);
     } catch (error) {
       console.error('Failed to delete all chats:', error);
     }
-  };
+  }, []);
 
   // --- Note handlers ---
 
-  const handleNewNote = async () => {
+  const handleNewNote = useCallback(async () => {
     try {
       const note = await createNote();
       const now = new Date().toISOString();
@@ -116,15 +123,20 @@ export function PageClient({ user, signout }: PageClientProps) {
     } catch (error) {
       console.error('Failed to create note:', error);
     }
-  };
+  }, []);
 
-  const handleSelectNote = (noteId: string) => {
-    if (activeView.type === 'note' && activeView.id === noteId) return;
-    const note = notes.find(n => n.id === noteId);
-    setActiveView({ type: 'note', id: noteId });
-    setNoteTitle(note?.title || "New note");
-    setNoteKey(prev => prev + 1);
-  };
+  const handleSelectNote = useCallback((noteId: string) => {
+    setActiveView(prev => {
+      if (prev.type === 'note' && prev.id === noteId) return prev;
+      setNoteKey(k => k + 1);
+      return { type: 'note', id: noteId };
+    });
+    setNotes(prev => {
+      const note = prev.find(n => n.id === noteId);
+      setNoteTitle(note?.title || "New note");
+      return prev;
+    });
+  }, []);
 
   const handleNoteCreated = useCallback((noteId: string, title: string) => {
     setActiveView({ type: 'note', id: noteId });
@@ -149,29 +161,39 @@ export function PageClient({ user, signout }: PageClientProps) {
     setNoteTitle(title || 'New note');
   }, []);
 
-  const handleDeleteNote = async (noteId: string) => {
+  const handleDeleteNote = useCallback(async (noteId: string) => {
     try {
       await deleteNote(noteId);
       setNotes(prev => prev.filter(n => n.id !== noteId));
-      if (activeView.type === 'note' && activeView.id === noteId) {
-        handleNewChat();
-      }
+      setActiveView(prev => {
+        if (prev.type === 'note' && prev.id === noteId) {
+          setChatTitle("New chat");
+          setChatKey(k => k + 1);
+          return { type: 'chat', id: null };
+        }
+        return prev;
+      });
     } catch (error) {
       console.error('Failed to delete note:', error);
     }
-  };
+  }, []);
 
-  const handleDeleteAllNotes = async () => {
+  const handleDeleteAllNotes = useCallback(async () => {
     try {
       await deleteAllNotes();
       setNotes([]);
-      if (activeView.type === 'note') {
-        handleNewChat();
-      }
+      setActiveView(prev => {
+        if (prev.type === 'note') {
+          setChatTitle("New chat");
+          setChatKey(k => k + 1);
+          return { type: 'chat', id: null };
+        }
+        return prev;
+      });
     } catch (error) {
       console.error('Failed to delete all notes:', error);
     }
-  };
+  }, []);
 
   // --- Render ---
 

@@ -246,7 +246,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
         }
     };
 
-    const inputGroup = (
+    const inputGroup = useMemo(() => (
         <div>
             <input
                 type="file"
@@ -362,7 +362,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                 </InputGroupAddon>
             </InputGroup>
         </div>
-    );
+    ), [prompt, loading, pendingImage, imageError, supportsVision, selectedModelInfo, selectedModel, handleKeyDown, handleSend, handleImageSelect, clearPendingImage]);
 
     // New Chat page
     if (isEmptyState) {

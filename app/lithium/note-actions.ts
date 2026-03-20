@@ -50,7 +50,7 @@ export async function listNotes(): Promise<Note[]> {
 
   const { data, error } = await supabase
     .from('notes')
-    .select('*')
+    .select('id, title, updated_at')
     .eq('user_id', user.id)
     .order('updated_at', { ascending: false });
 

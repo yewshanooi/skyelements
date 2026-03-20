@@ -24,7 +24,8 @@ export function NoteClient({ noteId, onNoteActivity }: NoteClientProps) {
   const [editorKey, setEditorKey] = useState(0);
 
   const titleRef = useRef<HTMLInputElement>(null);
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const titleSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const contentSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Load note when noteId changes
   useEffect(() => {
@@ -54,8 +55,9 @@ export function NoteClient({ noteId, onNoteActivity }: NoteClientProps) {
 
   const debouncedSave = useCallback(
     (field: "title" | "content", value: string, nId: string) => {
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = setTimeout(async () => {
+      const timerRef = field === "title" ? titleSaveTimerRef : contentSaveTimerRef;
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(async () => {
         if (field === "title") {
           await updateNote(nId, { title: value });
           onNoteActivity?.(nId, value);

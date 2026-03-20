@@ -193,7 +193,7 @@ export async function listChats(): Promise<Chat[]> {
 
   const { data, error } = await supabase
     .from('chats')
-    .select('*')
+    .select('id, title, model, created_at, updated_at')
     .eq('user_id', user.id)
     .order('updated_at', { ascending: false });
 
@@ -203,16 +203,7 @@ export async function listChats(): Promise<Chat[]> {
 
 /** Get messages for a chat */
 export async function getMessages(chatId: string): Promise<Message[]> {
-  const { supabase, user } = await getAuthenticatedClient();
-
-  const { data: chat } = await supabase
-    .from('chats')
-    .select('id')
-    .eq('id', chatId)
-    .eq('user_id', user.id)
-    .single();
-
-  if (!chat) throw new Error('Chat not found or access denied');
+  const { supabase } = await getAuthenticatedClient();
 
   const { data, error } = await supabase
     .from('messages')
@@ -228,15 +219,6 @@ export async function getMessages(chatId: string): Promise<Message[]> {
 export async function saveMessage(chatId: string, role: 'user' | 'assistant', content: string): Promise<Message> {
   const { supabase, user } = await getAuthenticatedClient();
 
-  const { data: chat } = await supabase
-    .from('chats')
-    .select('id')
-    .eq('id', chatId)
-    .eq('user_id', user.id)
-    .single();
-
-  if (!chat) throw new Error('Chat not found or access denied');
-
   const { data, error } = await supabase
     .from('messages')
     .insert({ chat_id: chatId, role, content })
@@ -248,7 +230,8 @@ export async function saveMessage(chatId: string, role: 'user' | 'assistant', co
   await supabase
     .from('chats')
     .update({ updated_at: new Date().toISOString() })
-    .eq('id', chatId);
+    .eq('id', chatId)
+    .eq('user_id', user.id);
 
   return data as Message;
 }

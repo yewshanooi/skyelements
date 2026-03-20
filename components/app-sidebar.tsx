@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useMemo } from "react"
 import Image from "next/image"
 
 import { NavChats } from "@/components/nav-chats"
@@ -36,17 +37,17 @@ export function AppSidebar({ user, signout, onNewChat, chats, activeChatId, onSe
   onDeleteNote?: (noteId: string) => void
   onNewNote?: () => void
 }) {
-  const chatItems = (chats ?? []).map(chat => ({
+  const chatItems = useMemo(() => (chats ?? []).map(chat => ({
     id: chat.id,
     name: chat.title,
     updatedAt: chat.updated_at,
-  }));
+  })), [chats]);
 
-  const noteItems = (notes ?? []).map(note => ({
+  const noteItems = useMemo(() => (notes ?? []).map(note => ({
     id: note.id,
     name: note.title || 'New note',
     updatedAt: note.updated_at,
-  }));
+  })), [notes]);
 
   return (
     <Sidebar variant="inset" {...props}>
