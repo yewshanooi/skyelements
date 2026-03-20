@@ -7,7 +7,6 @@ import {
   updateNote,
   type Note,
 } from "./note-actions";
-import { Spinner } from "@/components/ui/spinner";
 import { Editor } from "@/components/blocks/editor-00/editor";
 
 interface NoteClientProps {
@@ -21,11 +20,22 @@ export function NoteClient({ noteId, onNoteActivity }: NoteClientProps) {
   const [title, setTitle] = useState("");
   const [editorState, setEditorState] = useState<SerializedEditorState | undefined>(undefined);
   const [loading, setLoading] = useState(false);
+  const [showLoadingBar, setShowLoadingBar] = useState(false);
   const [editorKey, setEditorKey] = useState(0);
 
   const titleRef = useRef<HTMLInputElement>(null);
   const titleSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const contentSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
+    if (loading) {
+      timer = setTimeout(() => setShowLoadingBar(true), 250);
+    } else {
+      setShowLoadingBar(false);
+    }
+    return () => clearTimeout(timer);
+  }, [loading]);
 
   // Load note when noteId changes
   useEffect(() => {
@@ -82,12 +92,25 @@ export function NoteClient({ noteId, onNoteActivity }: NoteClientProps) {
 
   if (loading) {
     return (
-      <div className="flex flex-col h-full">
+      <div className="flex flex-col h-full relative">
+        {showLoadingBar && (
+          <>
+            <style>{`
+              @keyframes loadingBar {
+                0% { transform: translateX(-100%); }
+                100% { transform: translateX(200%); }
+              }
+              .animate-loading-bar {
+                animation: loadingBar 1.5s infinite linear;
+              }
+            `}</style>
+            <div className="absolute top-0 left-0 right-0 h-[3px] bg-primary/20 overflow-hidden z-50">
+              <div className="h-full bg-primary w-1/2 animate-loading-bar" />
+            </div>
+          </>
+        )}
         <div className="flex-1 overflow-y-auto p-8 pt-12">
           <div className="w-full max-w-3xl mx-auto">
-            <p className="p-4 text-muted-foreground italic flex items-center gap-2">
-              <Spinner /> Loading history...
-            </p>
           </div>
         </div>
       </div>

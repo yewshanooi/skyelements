@@ -90,6 +90,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [loading, setLoading] = useState(false);
     const [loadingHistory, setLoadingHistory] = useState(false);
+    const [showLoadingBar, setShowLoadingBar] = useState(false);
     const [selectedModel, setSelectedModel] = useState("gemini-3.1-flash-lite-preview");
     const [currentChatId, setCurrentChatId] = useState<string | null>(chatId ?? null);
     const [pendingImage, setPendingImage] = useState<{ base64: string; mimeType: string; previewUrl: string } | null>(null);
@@ -150,6 +151,16 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
         setGreeting(greetings[Math.floor(Math.random() * greetings.length)]);
         setSampleQuery(sampleQueries[Math.floor(Math.random() * sampleQueries.length)]);
     }, []);
+
+    useEffect(() => {
+        let timer: ReturnType<typeof setTimeout>;
+        if (loadingHistory) {
+            timer = setTimeout(() => setShowLoadingBar(true), 250);
+        } else {
+            setShowLoadingBar(false);
+        }
+        return () => clearTimeout(timer);
+    }, [loadingHistory]);
 
     // Load messages when chatId changes (switching chats)
     useEffect(() => {
@@ -395,14 +406,26 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
 
     // Active chat
     return (
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col h-full relative">
+            {showLoadingBar && (
+                <>
+                    <style>{`
+                        @keyframes loadingBar {
+                            0% { transform: translateX(-100%); }
+                            100% { transform: translateX(200%); }
+                        }
+                        .animate-loading-bar {
+                            animation: loadingBar 1.5s infinite linear;
+                        }
+                    `}</style>
+                    <div className="absolute top-0 left-0 right-0 h-[3px] bg-primary/20 overflow-hidden z-50">
+                        <div className="h-full bg-primary w-1/2 animate-loading-bar" />
+                    </div>
+                </>
+            )}
             <div className="flex-1 overflow-y-auto p-8 pt-12">
                 <div className="w-full max-w-3xl mx-auto space-y-6">
-                    {loadingHistory ? (
-                        <p className="p-4 text-muted-foreground italic flex items-center gap-2">
-                            <Spinner /> Loading conversation...
-                        </p>
-                    ) : (
+                    {loadingHistory ? null : (
                         <>
                             {messages.map((msg, i) => (
                                 <div key={i} className={`p-4 rounded-lg ${msg.role === 'user' ? 'bg-muted' : ''}`}>
