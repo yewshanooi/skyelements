@@ -124,6 +124,7 @@ export function NoteClient({ noteId, onNoteActivity }: NoteClientProps) {
           <input
             ref={titleRef}
             type="text"
+            maxLength={50}
             placeholder="New note"
             value={title}
             onChange={handleTitleChange}
