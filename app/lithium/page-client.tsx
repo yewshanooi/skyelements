@@ -119,6 +119,7 @@ export function PageClient({ user, signout }: PageClientProps) {
   };
 
   const handleSelectNote = (noteId: string) => {
+    if (activeView.type === 'note' && activeView.id === noteId) return;
     const note = notes.find(n => n.id === noteId);
     setActiveView({ type: 'note', id: noteId });
     setNoteTitle(note?.title || "New note");
