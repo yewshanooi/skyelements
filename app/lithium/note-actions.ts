@@ -88,6 +88,8 @@ export async function updateNote(noteId: string, updates: { title?: string, cont
 
 /** Delete a note */
 export async function deleteNote(noteId: string): Promise<void> {
+  if (!noteId || noteId === 'null') return;
+
   const { supabase, user } = await getAuthenticatedClient();
 
   const { error } = await supabase

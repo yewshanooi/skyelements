@@ -150,6 +150,10 @@ export async function generateContent(
       return `⚠️ **Free quota exceeded**\n\nWe've hit the daily free quota for the ${actualModel} model. Please change to another model or try again tomorrow.`;
     }
 
+    if (error?.status === 503) {
+      return '⚠️ **Unavailable**\n\nThis model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.';
+    }
+
     return "Sorry, I couldn't generate a response at this time.";
   }
 }
@@ -215,7 +219,7 @@ export async function getMessages(chatId: string): Promise<Message[]> {
   return (data ?? []) as Message[];
 }
 
-/** Save a message to a chat and bump the chat's updated_at timestamp */
+/** Save a message to a chat */
 export async function saveMessage(chatId: string, role: 'user' | 'assistant', content: string): Promise<Message> {
   const { supabase, user } = await getAuthenticatedClient();
 
