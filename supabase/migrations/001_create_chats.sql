@@ -2,8 +2,8 @@
 CREATE TABLE IF NOT EXISTS chats (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  title TEXT NOT NULL DEFAULT 'New Chat',
-  model TEXT NOT NULL DEFAULT 'openrouter:arcee-ai/trinity-large-preview:free',
+  title TEXT NOT NULL DEFAULT 'New chat',
+  model TEXT NOT NULL DEFAULT 'gemini-3.1-flash-lite-preview',
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );

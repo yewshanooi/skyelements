@@ -14,6 +14,11 @@ export type ChatMessage = {
   content: string;
 };
 
+export type ImageAttachment = {
+  base64: string;
+  mimeType: string;
+};
+
 export type Chat = {
   id: string;
   user_id: string;
@@ -37,8 +42,9 @@ export type Message = {
 
 export async function generateContent(
   prompt: string,
-  model: string = "openrouter:arcee-ai/trinity-large-preview:free",
-  history: ChatMessage[] = []
+  model: string = "gemini-3.1-flash-lite-preview",
+  history: ChatMessage[] = [],
+  image?: ImageAttachment
 ) {
   await getAuthenticatedClient();
 
@@ -48,6 +54,10 @@ export async function generateContent(
 
   const isOpenRouter = model.startsWith("openrouter:");
   const actualModel = isOpenRouter ? model.replace("openrouter:", "") : model;
+
+  if (image && isOpenRouter) {
+    return "Sorry, image upload is not supported for this model.";
+  }
 
   if (isOpenRouter) {
     if (!process.env.OPENROUTER_API_KEY) {
@@ -70,9 +80,11 @@ export async function generateContent(
 
     try {
       const stream = await openrouter.chat.send({
-        model: actualModel,
-        messages,
-        stream: true
+        chatGenerationParams: {
+          model: actualModel,
+          messages: messages,
+          stream: true
+        }
       });
 
       let fullResponse = "";
@@ -114,7 +126,15 @@ export async function generateContent(
       role: msg.role === 'assistant' ? 'model' : 'user',
       parts: [{ text: msg.content }]
     } as Content)),
-    { role: 'user', parts: [{ text: prompt }] } as Content
+    image
+      ? {
+        role: 'user',
+        parts: [
+          { inlineData: { data: image.base64, mimeType: image.mimeType } },
+          { text: prompt || 'What is in this image?' }
+        ]
+      } as Content
+      : { role: 'user', parts: [{ text: prompt }] } as Content
   ];
 
   try {
@@ -150,7 +170,7 @@ async function getAuthenticatedClient() {
 // ---------------------------------------------------------------------------
 
 /** Create a new chat and return it */
-export async function createChat(model: string = 'openrouter:arcee-ai/trinity-large-preview:free'): Promise<Chat> {
+export async function createChat(model: string = 'gemini-3.1-flash-lite-preview'): Promise<Chat> {
   if (!ALLOWED_MODEL_IDS.has(model)) {
     throw new Error('Invalid model specified.');
   }
@@ -159,7 +179,7 @@ export async function createChat(model: string = 'openrouter:arcee-ai/trinity-la
 
   const { data, error } = await supabase
     .from('chats')
-    .insert({ user_id: user.id, model, title: 'New Chat' })
+    .insert({ user_id: user.id, model, title: 'New chat' })
     .select()
     .single();
 
@@ -173,7 +193,7 @@ export async function listChats(): Promise<Chat[]> {
 
   const { data, error } = await supabase
     .from('chats')
-    .select('*')
+    .select('id, title, model, created_at, updated_at')
     .eq('user_id', user.id)
     .order('updated_at', { ascending: false });
 
@@ -183,16 +203,7 @@ export async function listChats(): Promise<Chat[]> {
 
 /** Get messages for a chat */
 export async function getMessages(chatId: string): Promise<Message[]> {
-  const { supabase, user } = await getAuthenticatedClient();
-
-  const { data: chat } = await supabase
-    .from('chats')
-    .select('id')
-    .eq('id', chatId)
-    .eq('user_id', user.id)
-    .single();
-
-  if (!chat) throw new Error('Chat not found or access denied');
+  const { supabase } = await getAuthenticatedClient();
 
   const { data, error } = await supabase
     .from('messages')
@@ -208,15 +219,6 @@ export async function getMessages(chatId: string): Promise<Message[]> {
 export async function saveMessage(chatId: string, role: 'user' | 'assistant', content: string): Promise<Message> {
   const { supabase, user } = await getAuthenticatedClient();
 
-  const { data: chat } = await supabase
-    .from('chats')
-    .select('id')
-    .eq('id', chatId)
-    .eq('user_id', user.id)
-    .single();
-
-  if (!chat) throw new Error('Chat not found or access denied');
-
   const { data, error } = await supabase
     .from('messages')
     .insert({ chat_id: chatId, role, content })
@@ -228,7 +230,8 @@ export async function saveMessage(chatId: string, role: 'user' | 'assistant', co
   await supabase
     .from('chats')
     .update({ updated_at: new Date().toISOString() })
-    .eq('id', chatId);
+    .eq('id', chatId)
+    .eq('user_id', user.id);
 
   return data as Message;
 }

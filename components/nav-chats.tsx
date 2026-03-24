@@ -2,9 +2,9 @@
 
 import { useState } from "react"
 import {
+  Bot,
   MoreHorizontal,
   Trash2,
-  type LucideIcon,
 } from "lucide-react"
 
 import {
@@ -45,7 +45,6 @@ export function NavChats({
   chats: {
     id: string
     name: string
-    icon: LucideIcon
     updatedAt: string
   }[]
   activeChatId?: string | null
@@ -82,7 +81,7 @@ export function NavChats({
               onClick={() => onSelectChat?.(item.id)}
               className="cursor-pointer"
             >
-              <item.icon />
+              <Bot />
               <span>{item.name}</span>
             </SidebarMenuButton>
             <DropdownMenu>
@@ -106,6 +105,8 @@ export function NavChats({
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">{new Date(item.updatedAt).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">Lithium is AI and can make mistakes.</DropdownMenuLabel>
               </DropdownMenuContent>
             </DropdownMenu>
           </SidebarMenuItem>
@@ -121,7 +122,7 @@ export function NavChats({
         <AlertDialogHeader>
           <AlertDialogTitle>Delete chat?</AlertDialogTitle>
           <AlertDialogDescription>
-            Once you delete a chat, the messages are gone forever on every device.
+            Once you delete a chat, it&apos;s gone forever.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

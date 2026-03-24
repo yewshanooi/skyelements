@@ -53,17 +53,20 @@ export function NavUser({
   user,
   signout,
   onDeleteAllChats,
+  onDeleteAllNotes,
 }: {
   user: {
     email: string
   }
   signout?: () => Promise<void>
   onDeleteAllChats?: () => Promise<void>
+  onDeleteAllNotes?: () => Promise<void>
 }) {
   const { isMobile } = useSidebar()
   const router = useRouter()
   const { theme, setTheme } = useTheme()
   const [deleteAllOpen, setDeleteAllOpen] = useState(false)
+  const [deleteAllNotesOpen, setDeleteAllNotesOpen] = useState(false)
 
   return (
     <>
@@ -160,6 +163,14 @@ export function NavUser({
               <DropdownMenuLabel className="text-xs text-muted-foreground">Danger zone</DropdownMenuLabel>
               <DropdownMenuItem
                 variant="destructive"
+                onClick={() => setDeleteAllNotesOpen(true)}
+                className="cursor-pointer"
+              >
+                <Trash2 />
+                Clear note history
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                variant="destructive"
                 onClick={() => setDeleteAllOpen(true)}
                 className="cursor-pointer"
               >
@@ -184,12 +195,32 @@ export function NavUser({
       </SidebarMenuItem>
     </SidebarMenu>
 
+    <AlertDialog open={deleteAllNotesOpen} onOpenChange={setDeleteAllNotesOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Clear your note history?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This will delete all your Lithium notes. This action cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel className="cursor-pointer">Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            className={buttonVariants({ variant: "outline", className: "text-destructive cursor-pointer hover:text-destructive" })}
+            onClick={() => onDeleteAllNotes?.()}
+          >
+            Delete All
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
     <AlertDialog open={deleteAllOpen} onOpenChange={setDeleteAllOpen}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Clear your chat history?</AlertDialogTitle>
           <AlertDialogDescription>
-            This will delete prompts, responses, and feedback from your Lithium chat history. This action cannot be undone.
+            This will delete all your Lithium chats. This action cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
