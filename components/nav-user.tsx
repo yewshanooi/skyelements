@@ -10,6 +10,7 @@ import {
   LogOut,
   Trash2,
   User,
+  Settings,
 } from "lucide-react"
 import { useTheme } from "next-themes"
 
@@ -80,12 +81,11 @@ export function NavUser({
             >
               <Avatar className="h-8 w-8 rounded-lg">
                 <AvatarFallback className="rounded-lg">
-                  <User className="size-4" />
+                  <Settings className="size-4" />
                 </AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">{user.email}</span>
-                <span className="truncate text-xs">User</span>
+                <span className="truncate font-medium">Settings</span>
               </div>
               <ChevronsUpDown className="ml-auto size-4" />
             </SidebarMenuButton>
@@ -105,7 +105,7 @@ export function NavUser({
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">{user.email}</span>
-                  <span className="truncate text-xs">User</span>
+                  {/* <span className="truncate text-xs">User</span> */}
                 </div>
               </div>
             </DropdownMenuLabel>
