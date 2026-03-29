@@ -261,7 +261,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
         <div>
             <input
                 type="file"
-                accept="image/*"
+                accept="image/png, image/jpeg"
                 ref={fileInputRef}
                 onChange={handleImageSelect}
                 className="hidden"
