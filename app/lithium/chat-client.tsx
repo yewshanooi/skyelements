@@ -22,7 +22,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner"
-import { generateContent, createChat, saveMessage, getMessages, updateChatTitle, type ChatMessage, type Message, type ImageAttachment } from "./chat-actions";
+import { generateContent, createChat, saveMessage, getMessages, updateChatTitle, uploadChatImage, type ChatMessage, type Message, type ImageAttachment } from "./chat-actions";
 import { MODELS } from "@/lib/models";
 import Image from 'next/image'
 
@@ -87,7 +87,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
     const [greeting, setGreeting] = useState("");
     const [sampleQuery, setSampleQuery] = useState("");
     const [prompt, setPrompt] = useState("");
-    const [messages, setMessages] = useState<ChatMessage[]>([]);
+    const [messages, setMessages] = useState<(ChatMessage & { imageUrl?: string | null })[]>([]);
     const [loading, setLoading] = useState(false);
     const [loadingHistory, setLoadingHistory] = useState(false);
     const [showLoadingBar, setShowLoadingBar] = useState(false);
@@ -179,8 +179,30 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
         setCurrentChatId(chatId ?? null);
         if (chatId) {
             setLoadingHistory(true);
-            getMessages(chatId).then((msgs) => {
-                setMessages(msgs.map((m: Message) => ({ role: m.role, content: m.content })));
+            getMessages(chatId).then(async (msgs) => {
+                const mapped = msgs.map((m) => ({
+                    role: m.role,
+                    content: m.content,
+                    imageUrl: m.signedImageUrl ?? null,
+                }));
+
+                // Preload all images before showing messages
+                const imageUrls = mapped
+                    .map(m => m.imageUrl)
+                    .filter((url): url is string => !!url);
+
+                if (imageUrls.length > 0) {
+                    await Promise.all(
+                        imageUrls.map(url => new Promise<void>((resolve) => {
+                            const img = new window.Image();
+                            img.onload = () => resolve();
+                            img.onerror = () => resolve();
+                            img.src = url;
+                        }))
+                    );
+                }
+
+                setMessages(mapped);
                 setLoadingHistory(false);
             }).catch(() => {
                 setLoadingHistory(false);
@@ -202,9 +224,15 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
 
         const history = [...messages];
         const displayContent = imageToSend
-            ? `📷 *Image attached*${userMessage ? '\n\n' + userMessage : ''}`
+            ? `${userMessage ? '\n\n' + userMessage : ''}`
             : userMessage;
-        setMessages(prev => [...prev, { role: 'user' as const, content: displayContent }]);
+            
+        // Show immediate preview while uploading
+        setMessages(prev => [...prev, {
+            role: 'user' as const,
+            content: displayContent,
+            imageUrl: imageToSend?.previewUrl ?? null,
+        }]);
 
         try {
             let activeChatId = currentChatId;
@@ -220,7 +248,13 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                 onChatCreated?.(activeChatId, title);
             }
 
-            await saveMessage(activeChatId, 'user', displayContent);
+            // Upload image to Supabase Storage if attached
+            let storagePath: string | null = null;
+            if (imageToSend) {
+                storagePath = await uploadChatImage(imageToSend.base64, imageToSend.mimeType);
+            }
+
+            await saveMessage(activeChatId, 'user', displayContent, storagePath);
             onChatActivity?.(activeChatId);
 
             let result: string | undefined;
@@ -432,6 +466,15 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                                     <p className="text-xs font-medium text-muted-foreground mb-2">
                                         {msg.role === 'user' ? 'You' : 'Lithium'}
                                     </p>
+                                    {msg.imageUrl && (
+                                        <div className="mb-3">
+                                            <img
+                                                src={msg.imageUrl}
+                                                alt="Attached image"
+                                                className="max-h-64 max-w-sm rounded-lg border object-contain"
+                                            />
+                                        </div>
+                                    )}
                                     <div className="prose prose-md dark:prose-invert max-w-none overflow-x-auto">
                                         <ReactMarkdown remarkPlugins={[remarkGfm]}>
                                             {msg.content}

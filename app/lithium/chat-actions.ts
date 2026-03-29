@@ -33,6 +33,7 @@ export type Message = {
   chat_id: string;
   role: 'user' | 'assistant';
   content: string;
+  image_url?: string | null;
   created_at: string;
 };
 
@@ -170,6 +171,53 @@ async function getAuthenticatedClient() {
 }
 
 // ---------------------------------------------------------------------------
+// Image Storage
+// ---------------------------------------------------------------------------
+
+const BUCKET = 'chat-images';
+const SIGNED_URL_EXPIRY = 3600; // 1 hour
+
+/** Upload an image to Supabase Storage and return the storage path */
+export async function uploadChatImage(
+  base64: string,
+  mimeType: string,
+): Promise<string> {
+  const { supabase, user } = await getAuthenticatedClient();
+
+  const ext = mimeType.split('/')[1] || 'png';
+  const fileName = `${crypto.randomUUID()}.${ext}`;
+  const storagePath = `${user.id}/${fileName}`;
+
+  // Decode base64 to binary
+  const buffer = Buffer.from(base64, 'base64');
+
+  const { error } = await supabase.storage
+    .from(BUCKET)
+    .upload(storagePath, buffer, {
+      contentType: mimeType,
+      upsert: false,
+    });
+
+  if (error) throw new Error(`Image upload failed: ${error.message}`);
+  return storagePath;
+}
+
+/** Generate a signed URL for a stored image */
+export async function getSignedImageUrl(storagePath: string): Promise<string | null> {
+  const { supabase } = await getAuthenticatedClient();
+
+  const { data, error } = await supabase.storage
+    .from(BUCKET)
+    .createSignedUrl(storagePath, SIGNED_URL_EXPIRY);
+
+  if (error || !data?.signedUrl) {
+    console.error('Failed to create signed URL:', error);
+    return null;
+  }
+  return data.signedUrl;
+}
+
+// ---------------------------------------------------------------------------
 // Chat CRUD
 // ---------------------------------------------------------------------------
 
@@ -206,7 +254,7 @@ export async function listChats(): Promise<Chat[]> {
 }
 
 /** Get messages for a chat */
-export async function getMessages(chatId: string): Promise<Message[]> {
+export async function getMessages(chatId: string): Promise<(Message & { signedImageUrl?: string | null })[]> {
   const { supabase } = await getAuthenticatedClient();
 
   const { data, error } = await supabase
@@ -216,16 +264,37 @@ export async function getMessages(chatId: string): Promise<Message[]> {
     .order('created_at', { ascending: true });
 
   if (error) throw new Error(error.message);
-  return (data ?? []) as Message[];
+  const messages = (data ?? []) as Message[];
+
+  // Generate signed URLs for messages that have images
+  const enriched = await Promise.all(
+    messages.map(async (msg) => {
+      if (msg.image_url) {
+        const signedImageUrl = await getSignedImageUrl(msg.image_url);
+        return { ...msg, signedImageUrl };
+      }
+      return { ...msg, signedImageUrl: null };
+    })
+  );
+
+  return enriched;
 }
 
 /** Save a message to a chat */
-export async function saveMessage(chatId: string, role: 'user' | 'assistant', content: string): Promise<Message> {
+export async function saveMessage(
+  chatId: string,
+  role: 'user' | 'assistant',
+  content: string,
+  imageUrl?: string | null,
+): Promise<Message> {
   const { supabase, user } = await getAuthenticatedClient();
+
+  const insertData: Record<string, unknown> = { chat_id: chatId, role, content };
+  if (imageUrl) insertData.image_url = imageUrl;
 
   const { data, error } = await supabase
     .from('messages')
-    .insert({ chat_id: chatId, role, content })
+    .insert(insertData)
     .select()
     .single();
 
@@ -257,6 +326,17 @@ export async function updateChatTitle(chatId: string, title: string): Promise<vo
 export async function deleteChat(chatId: string): Promise<void> {
   const { supabase, user } = await getAuthenticatedClient();
 
+  const { data: msgs } = await supabase
+    .from('messages')
+    .select('image_url')
+    .eq('chat_id', chatId)
+    .not('image_url', 'is', null);
+
+  const paths = (msgs ?? []).map((m: { image_url: string }) => m.image_url).filter(Boolean);
+  if (paths.length > 0) {
+    await supabase.storage.from(BUCKET).remove(paths);
+  }
+
   const { error } = await supabase
     .from('chats')
     .delete()
@@ -269,6 +349,26 @@ export async function deleteChat(chatId: string): Promise<void> {
 /** Delete all chats for the current user */
 export async function deleteAllChats(): Promise<void> {
   const { supabase, user } = await getAuthenticatedClient();
+
+  const { data: chats } = await supabase
+    .from('chats')
+    .select('id')
+    .eq('user_id', user.id);
+
+  const chatIds = (chats ?? []).map((c: { id: string }) => c.id);
+
+  if (chatIds.length > 0) {
+    const { data: msgs } = await supabase
+      .from('messages')
+      .select('image_url')
+      .in('chat_id', chatIds)
+      .not('image_url', 'is', null);
+
+    const paths = (msgs ?? []).map((m: { image_url: string }) => m.image_url).filter(Boolean);
+    if (paths.length > 0) {
+      await supabase.storage.from(BUCKET).remove(paths);
+    }
+  }
 
   const { error } = await supabase
     .from('chats')
