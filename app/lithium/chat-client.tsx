@@ -22,7 +22,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner"
-import { generateContent, createChat, saveMessage, getMessages, updateChatTitle, type ChatMessage, type Message, type ImageAttachment } from "./chat-actions";
+import { LoadingBar } from "@/components/ui/loading-bar"
+import { generateContent, createChat, saveMessage, getMessages, updateChatTitle, type ChatMessage, type Message } from "./chat-actions";
+import { createClient } from "@/utils/supabase/client";
 import { MODELS } from "@/lib/models";
 import Image from 'next/image'
 
@@ -87,7 +89,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
     const [greeting, setGreeting] = useState("");
     const [sampleQuery, setSampleQuery] = useState("");
     const [prompt, setPrompt] = useState("");
-    const [messages, setMessages] = useState<ChatMessage[]>([]);
+    const [messages, setMessages] = useState<(ChatMessage & { imageUrl?: string | null })[]>([]);
     const [loading, setLoading] = useState(false);
     const [loadingHistory, setLoadingHistory] = useState(false);
     const [showLoadingBar, setShowLoadingBar] = useState(false);
@@ -179,8 +181,30 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
         setCurrentChatId(chatId ?? null);
         if (chatId) {
             setLoadingHistory(true);
-            getMessages(chatId).then((msgs) => {
-                setMessages(msgs.map((m: Message) => ({ role: m.role, content: m.content })));
+            getMessages(chatId).then(async (msgs) => {
+                const mapped = msgs.map((m) => ({
+                    role: m.role,
+                    content: m.content,
+                    imageUrl: m.signedImageUrl ?? null,
+                }));
+
+                // Preload all images before showing messages
+                const imageUrls = mapped
+                    .map(m => m.imageUrl)
+                    .filter((url): url is string => !!url);
+
+                if (imageUrls.length > 0) {
+                    await Promise.all(
+                        imageUrls.map(url => new Promise<void>((resolve) => {
+                            const img = new window.Image();
+                            img.onload = () => resolve();
+                            img.onerror = () => resolve();
+                            img.src = url;
+                        }))
+                    );
+                }
+
+                setMessages(mapped);
                 setLoadingHistory(false);
             }).catch(() => {
                 setLoadingHistory(false);
@@ -202,9 +226,15 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
 
         const history = [...messages];
         const displayContent = imageToSend
-            ? `📷 *Image attached*${userMessage ? '\n\n' + userMessage : ''}`
+            ? `${userMessage ? '\n\n' + userMessage : ''}`
             : userMessage;
-        setMessages(prev => [...prev, { role: 'user' as const, content: displayContent }]);
+            
+        // Show immediate preview while uploading
+        setMessages(prev => [...prev, {
+            role: 'user' as const,
+            content: displayContent,
+            imageUrl: imageToSend?.previewUrl ?? null,
+        }]);
 
         try {
             let activeChatId = currentChatId;
@@ -220,13 +250,40 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                 onChatCreated?.(activeChatId, title);
             }
 
-            await saveMessage(activeChatId, 'user', displayContent);
+            // Upload image to Supabase Storage directly from client (bypass server action serialization)
+            let storagePath: string | null = null;
+            if (imageToSend) {
+                const supabase = createClient();
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) throw new Error('Not authenticated');
+
+                const ext = imageToSend.mimeType.split('/')[1] || 'png';
+                const fileName = `${crypto.randomUUID()}.${ext}`;
+                storagePath = `${user.id}/${fileName}`;
+
+                // Decode base64 to binary
+                const binaryStr = atob(imageToSend.base64);
+                const bytes = new Uint8Array(binaryStr.length);
+                for (let i = 0; i < binaryStr.length; i++) {
+                    bytes[i] = binaryStr.charCodeAt(i);
+                }
+
+                const { error: uploadError } = await supabase.storage
+                    .from('chat-images')
+                    .upload(storagePath, bytes, {
+                        contentType: imageToSend.mimeType,
+                        upsert: false,
+                    });
+
+                if (uploadError) throw new Error(`Image upload failed: ${uploadError.message}`);
+            }
+
+            await saveMessage(activeChatId, 'user', displayContent, storagePath);
             onChatActivity?.(activeChatId);
 
             let result: string | undefined;
-            if (imageToSend) {
-                const image: ImageAttachment = { base64: imageToSend.base64, mimeType: imageToSend.mimeType };
-                result = await generateContent(userMessage, selectedModel, history, image);
+            if (storagePath) {
+                result = await generateContent(userMessage, selectedModel, history, storagePath);
             } else {
                 result = await generateContent(userMessage, selectedModel, history);
             }
@@ -407,22 +464,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
     // Active chat
     return (
         <div className="flex flex-col h-full relative">
-            {showLoadingBar && (
-                <>
-                    <style>{`
-                        @keyframes loadingBar {
-                            0% { transform: translateX(-100%); }
-                            100% { transform: translateX(200%); }
-                        }
-                        .animate-loading-bar {
-                            animation: loadingBar 1.5s infinite linear;
-                        }
-                    `}</style>
-                    <div className="absolute top-0 left-0 right-0 h-[3px] bg-primary/20 overflow-hidden z-50">
-                        <div className="h-full bg-primary w-1/2 animate-loading-bar" />
-                    </div>
-                </>
-            )}
+            {showLoadingBar && <LoadingBar />}
             <div className="flex-1 overflow-y-auto p-8 pt-12">
                 <div className="w-full max-w-3xl mx-auto space-y-6">
                     {loadingHistory ? null : (
@@ -432,6 +474,15 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                                     <p className="text-xs font-medium text-muted-foreground mb-2">
                                         {msg.role === 'user' ? 'You' : 'Lithium'}
                                     </p>
+                                    {msg.imageUrl && (
+                                        <div className="mb-3">
+                                            <img
+                                                src={msg.imageUrl}
+                                                alt="Attached image"
+                                                className="max-h-64 max-w-full rounded-lg border object-contain"
+                                            />
+                                        </div>
+                                    )}
                                     <div className="prose prose-md dark:prose-invert max-w-none overflow-x-auto">
                                         <ReactMarkdown remarkPlugins={[remarkGfm]}>
                                             {msg.content}

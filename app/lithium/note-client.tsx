@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { LoadingBar } from "@/components/ui/loading-bar";
 import { SerializedEditorState } from "lexical";
 import {
   getNote,
@@ -93,22 +94,7 @@ export function NoteClient({ noteId, onNoteActivity }: NoteClientProps) {
   if (loading) {
     return (
       <div className="flex flex-col h-full relative">
-        {showLoadingBar && (
-          <>
-            <style>{`
-              @keyframes loadingBar {
-                0% { transform: translateX(-100%); }
-                100% { transform: translateX(200%); }
-              }
-              .animate-loading-bar {
-                animation: loadingBar 1.5s infinite linear;
-              }
-            `}</style>
-            <div className="absolute top-0 left-0 right-0 h-[3px] bg-primary/20 overflow-hidden z-50">
-              <div className="h-full bg-primary w-1/2 animate-loading-bar" />
-            </div>
-          </>
-        )}
+        {showLoadingBar && <LoadingBar />}
         <div className="flex-1 overflow-y-auto p-8 pt-12">
           <div className="w-full max-w-3xl mx-auto">
           </div>
