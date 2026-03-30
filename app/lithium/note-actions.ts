@@ -1,6 +1,6 @@
 'use server';
 
-import { createActionClient } from "@/utils/supabase/actions";
+import { getAuthenticatedClient } from "./auth";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -14,17 +14,6 @@ export type Note = {
   created_at: string;
   updated_at: string;
 };
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-async function getAuthenticatedClient() {
-  const supabase = await createActionClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Not authenticated');
-  return { supabase, user };
-}
 
 // ---------------------------------------------------------------------------
 // Notes CRUD

@@ -2,8 +2,8 @@
 
 import { GoogleGenAI, Content } from "@google/genai";
 import { OpenRouter } from "@openrouter/sdk";
-import { createActionClient } from "@/utils/supabase/actions";
 import { ALLOWED_MODEL_IDS } from "@/lib/models";
+import { getAuthenticatedClient } from "./auth";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -45,7 +45,7 @@ export async function generateContent(
   prompt: string,
   model: string = "gemini-3.1-flash-lite-preview",
   history: ChatMessage[] = [],
-  image?: ImageAttachment
+  imageStoragePath?: string
 ) {
   await getAuthenticatedClient();
 
@@ -56,8 +56,27 @@ export async function generateContent(
   const isOpenRouter = model.startsWith("openrouter:");
   const actualModel = isOpenRouter ? model.replace("openrouter:", "") : model;
 
-  if (image && isOpenRouter) {
+  if (imageStoragePath && isOpenRouter) {
     return "Sorry, image upload is not supported for this model.";
+  }
+
+  // Fetch image data from Supabase Storage if a storage path was provided
+  let image: ImageAttachment | undefined;
+  if (imageStoragePath) {
+    const { supabase } = await getAuthenticatedClient();
+    const { data, error } = await supabase.storage
+      .from(BUCKET)
+      .download(imageStoragePath);
+
+    if (error || !data) {
+      console.error('Failed to download image from storage:', error);
+      return "Sorry, I couldn't process the attached image.";
+    }
+
+    const arrayBuffer = await data.arrayBuffer();
+    const base64 = Buffer.from(arrayBuffer).toString('base64');
+    const mimeType = data.type || 'image/png';
+    image = { base64, mimeType };
   }
 
   if (isOpenRouter) {
@@ -160,50 +179,14 @@ export async function generateContent(
 }
 
 // ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-async function getAuthenticatedClient() {
-  const supabase = await createActionClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Not authenticated');
-  return { supabase, user };
-}
-
-// ---------------------------------------------------------------------------
-// Image Storage
+// Image Storage Helpers
 // ---------------------------------------------------------------------------
 
 const BUCKET = 'chat-images';
 const SIGNED_URL_EXPIRY = 3600; // 1 hour
 
-/** Upload an image to Supabase Storage and return the storage path */
-export async function uploadChatImage(
-  base64: string,
-  mimeType: string,
-): Promise<string> {
-  const { supabase, user } = await getAuthenticatedClient();
-
-  const ext = mimeType.split('/')[1] || 'png';
-  const fileName = `${crypto.randomUUID()}.${ext}`;
-  const storagePath = `${user.id}/${fileName}`;
-
-  // Decode base64 to binary
-  const buffer = Buffer.from(base64, 'base64');
-
-  const { error } = await supabase.storage
-    .from(BUCKET)
-    .upload(storagePath, buffer, {
-      contentType: mimeType,
-      upsert: false,
-    });
-
-  if (error) throw new Error(`Image upload failed: ${error.message}`);
-  return storagePath;
-}
-
 /** Generate a signed URL for a stored image */
-export async function getSignedImageUrl(storagePath: string): Promise<string | null> {
+async function getSignedImageUrl(storagePath: string): Promise<string | null> {
   const { supabase } = await getAuthenticatedClient();
 
   const { data, error } = await supabase.storage
@@ -215,6 +198,25 @@ export async function getSignedImageUrl(storagePath: string): Promise<string | n
     return null;
   }
   return data.signedUrl;
+}
+
+/** Remove stored images for the given chat IDs */
+async function removeStorageImages(
+  supabase: Awaited<ReturnType<typeof getAuthenticatedClient>>['supabase'],
+  chatIds: string[],
+) {
+  if (chatIds.length === 0) return;
+
+  const { data: msgs } = await supabase
+    .from('messages')
+    .select('image_url')
+    .in('chat_id', chatIds)
+    .not('image_url', 'is', null);
+
+  const paths = (msgs ?? []).map((m: { image_url: string }) => m.image_url).filter(Boolean);
+  if (paths.length > 0) {
+    await supabase.storage.from(BUCKET).remove(paths);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -326,16 +328,7 @@ export async function updateChatTitle(chatId: string, title: string): Promise<vo
 export async function deleteChat(chatId: string): Promise<void> {
   const { supabase, user } = await getAuthenticatedClient();
 
-  const { data: msgs } = await supabase
-    .from('messages')
-    .select('image_url')
-    .eq('chat_id', chatId)
-    .not('image_url', 'is', null);
-
-  const paths = (msgs ?? []).map((m: { image_url: string }) => m.image_url).filter(Boolean);
-  if (paths.length > 0) {
-    await supabase.storage.from(BUCKET).remove(paths);
-  }
+  await removeStorageImages(supabase, [chatId]);
 
   const { error } = await supabase
     .from('chats')
@@ -356,19 +349,7 @@ export async function deleteAllChats(): Promise<void> {
     .eq('user_id', user.id);
 
   const chatIds = (chats ?? []).map((c: { id: string }) => c.id);
-
-  if (chatIds.length > 0) {
-    const { data: msgs } = await supabase
-      .from('messages')
-      .select('image_url')
-      .in('chat_id', chatIds)
-      .not('image_url', 'is', null);
-
-    const paths = (msgs ?? []).map((m: { image_url: string }) => m.image_url).filter(Boolean);
-    if (paths.length > 0) {
-      await supabase.storage.from(BUCKET).remove(paths);
-    }
-  }
+  await removeStorageImages(supabase, chatIds);
 
   const { error } = await supabase
     .from('chats')
