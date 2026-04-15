@@ -120,11 +120,17 @@ export function NavigationBar() {
                 </NavigationMenuItem>
 
                 <NavigationMenuItem>
-                  <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
-                    <a href="https://github.com/yewshanooi/skyelements" target="_blank" className="flex-row items-center gap-2">
-                      GitHub <ExternalLink />
-                    </a>
-                  </NavigationMenuLink>
+                  <NavigationMenuTrigger className="cursor-pointer">More</NavigationMenuTrigger>
+                  <NavigationMenuContent>
+                    <ul className="w-72">
+                      <ListItem href="https://skyelements.betteruptime.com/" title={<>Uptime <ExternalLink className="ml-1 h-4 w-4" /></>} target="_blank">
+                        View our uptime on Better Stack
+                      </ListItem>
+                      <ListItem href="https://github.com/yewshanooi/skyelements" title={<>Source Code <ExternalLink className="ml-1 h-4 w-4" /></>} target="_blank">
+                        View our source code on GitHub
+                      </ListItem>
+                    </ul>
+                  </NavigationMenuContent>
                 </NavigationMenuItem>
                 
               </NavigationMenuList>
@@ -233,15 +239,28 @@ export function NavigationBar() {
 
             <DropdownMenuSeparator />
 
-            <DropdownMenuItem asChild>
-              <a 
-                href="https://github.com/yewshanooi/skyelements"
-                className="w-full cursor-pointer flex items-center gap-2"
-                target="_blank"
-              >
-                GitHub <ExternalLink className="h-4 w-4" />
-              </a>
-            </DropdownMenuItem>
+            <div className="px-2 py-1.5">
+              <div className="text-sm font-semibold mb-2 text-muted-foreground">More</div>
+              <DropdownMenuItem asChild>
+                <a 
+                  href="https://skyelements.betteruptime.com/"
+                  className="w-full cursor-pointer pl-4"
+                  target="_blank"
+                >
+                  Uptime <ExternalLink className="h-4 w-4" />
+                </a>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <a 
+                  href="https://github.com/yewshanooi/skyelements"
+                  className="w-full cursor-pointer pl-4"
+                  target="_blank"
+                >
+                  Source Code <ExternalLink className="h-4 w-4" />
+                </a>
+              </DropdownMenuItem>
+            </div>
+
           </DropdownMenuContent>
         </DropdownMenu>
 
