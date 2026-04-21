@@ -61,7 +61,7 @@ export function NavChats({
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton disabled>
-              <span className="text-muted-foreground text-xs">Your chat history is empty.</span>
+              <span className="text-muted-foreground text-xs">Your chats will show up here.</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

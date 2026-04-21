@@ -1,11 +1,23 @@
 'use client';
 
 import { useState, useEffect, useCallback } from "react";
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function sortNotes<T extends { is_pinned: boolean; updated_at: string }>(notes: T[]): T[] {
+  return [...notes].sort((a, b) => {
+    if (a.is_pinned !== b.is_pinned) return a.is_pinned ? -1 : 1;
+    return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+  });
+}
+
 import { AppSidebar } from "@/components/app-sidebar";
 import { ChatClient } from "./chat-client";
 import { NoteClient } from "./note-client";
 import { listChats, deleteChat, deleteAllChats, type Chat } from "./chat-actions";
-import { listNotes, deleteNote, deleteAllNotes, createNote, type Note } from "./note-actions";
+import { listNotes, deleteNote, deleteAllNotes, createNote, updateNote, type Note } from "./note-actions";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -113,10 +125,10 @@ export function PageClient({ user, signout }: PageClientProps) {
     try {
       const note = await createNote();
       const now = new Date().toISOString();
-      setNotes(prev => [
-        { id: note.id, title: note.title, content: '', user_id: '', created_at: now, updated_at: now } as Note,
+      setNotes(prev => sortNotes([
+        { id: note.id, title: note.title, content: '', user_id: '', is_pinned: false, created_at: now, updated_at: now } as Note,
         ...prev,
-      ]);
+      ]));
       setActiveView({ type: 'note', id: note.id });
       setNoteTitle('New note');
       setNoteKey(prev => prev + 1);
@@ -144,10 +156,10 @@ export function PageClient({ user, signout }: PageClientProps) {
     setNotes(prev => {
       if (prev.some(n => n.id === noteId)) return prev;
       const now = new Date().toISOString();
-      return [
-        { id: noteId, title, content: '', user_id: '', created_at: now, updated_at: now } as Note,
+      return sortNotes([
+        { id: noteId, title, content: '', user_id: '', is_pinned: false, created_at: now, updated_at: now } as Note,
         ...prev,
-      ];
+      ]);
     });
   }, []);
 
@@ -156,9 +168,31 @@ export function PageClient({ user, signout }: PageClientProps) {
       const idx = prev.findIndex(n => n.id === noteId);
       if (idx < 0) return prev;
       const note = { ...prev[idx], title, updated_at: new Date().toISOString() };
-      return [note, ...prev.slice(0, idx), ...prev.slice(idx + 1)];
+      return sortNotes([note, ...prev.slice(0, idx), ...prev.slice(idx + 1)]);
     });
     setNoteTitle(title || 'New note');
+  }, []);
+
+  const handleTogglePinNote = useCallback(async (noteId: string, currentPinStatus: boolean) => {
+    // Optimistic update — flip pin state immediately without touching updated_at
+    setNotes(prev => {
+      const idx = prev.findIndex(n => n.id === noteId);
+      if (idx < 0) return prev;
+      const note = { ...prev[idx], is_pinned: !currentPinStatus };
+      return sortNotes([note, ...prev.slice(0, idx), ...prev.slice(idx + 1)]);
+    });
+    try {
+      await updateNote(noteId, { is_pinned: !currentPinStatus });
+    } catch (error) {
+      console.error('Failed to toggle pin on note:', error);
+      // Roll back on failure
+      setNotes(prev => {
+        const idx = prev.findIndex(n => n.id === noteId);
+        if (idx < 0) return prev;
+        const note = { ...prev[idx], is_pinned: currentPinStatus };
+        return sortNotes([note, ...prev.slice(0, idx), ...prev.slice(idx + 1)]);
+      });
+    }
   }, []);
 
   const handleDeleteNote = useCallback(async (noteId: string) => {
@@ -216,6 +250,7 @@ export function PageClient({ user, signout }: PageClientProps) {
         onSelectNote={handleSelectNote}
         onDeleteNote={handleDeleteNote}
         onNewNote={handleNewNote}
+        onTogglePinNote={handleTogglePinNote}
       />
       <SidebarInset className="overflow-hidden">
         <header className="flex h-16 shrink-0 items-center gap-2 bg-background">

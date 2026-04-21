@@ -6,6 +6,8 @@ import {
   Trash2,
   StickyNote,
   Plus,
+  Pin,
+  PinOff,
 } from "lucide-react"
 
 import {
@@ -44,16 +46,19 @@ export function NavNotes({
   onSelectNote,
   onDeleteNote,
   onNewNote,
+  onTogglePinNote,
 }: {
   notes: {
     id: string
     name: string
+    isPinned?: boolean
     updatedAt: string
   }[]
   activeNoteId?: string | null
   onSelectNote?: (noteId: string) => void
   onDeleteNote?: (noteId: string) => void
   onNewNote?: () => void
+  onTogglePinNote?: (noteId: string, currentPinStatus: boolean) => void
 }) {
   const { isMobile } = useSidebar()
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
@@ -69,12 +74,12 @@ export function NavNotes({
           {notes.length === 0 ? (
             <SidebarMenuItem>
               <SidebarMenuButton disabled>
-                <span className="text-muted-foreground text-xs">Your note history is empty.</span>
+                <span className="text-muted-foreground text-xs">Your notes will show up here.</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           ) : (
             notes.map((item) => (
-              <SidebarMenuItem key={item.id}>
+              <SidebarMenuItem key={`${item.id}-${item.isPinned}`}>
                 <SidebarMenuButton
                   isActive={activeNoteId === item.id}
                   onClick={() => onSelectNote?.(item.id)}
@@ -85,8 +90,15 @@ export function NavNotes({
                 </SidebarMenuButton>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <SidebarMenuAction showOnHover>
-                      <MoreHorizontal />
+                    <SidebarMenuAction showOnHover={!item.isPinned} className="group/action">
+                      {item.isPinned ? (
+                        <>
+                          <Pin className="h-4 w-4 text-muted-foreground group-hover/menu-item:hidden group-data-[state=open]/action:hidden" />
+                          <MoreHorizontal className="h-4 w-4 hidden group-hover/menu-item:block group-data-[state=open]/action:block" />
+                        </>
+                      ) : (
+                        <MoreHorizontal />
+                      )}
                       <span className="sr-only">More</span>
                     </SidebarMenuAction>
                   </DropdownMenuTrigger>
@@ -95,6 +107,12 @@ export function NavNotes({
                     side={isMobile ? "bottom" : "right"}
                     align={isMobile ? "end" : "start"}
                   >
+                    <DropdownMenuItem
+                      onClick={() => onTogglePinNote?.(item.id, item.isPinned || false)}
+                    >
+                      {item.isPinned ? <PinOff className="text-muted-foreground" /> : <Pin className="text-muted-foreground" />}
+                      <span>{item.isPinned ? 'Unpin' : 'Pin'}</span>
+                    </DropdownMenuItem>
                     <DropdownMenuItem
                       variant="destructive"
                       onClick={() => setPendingDeleteId(item.id)}

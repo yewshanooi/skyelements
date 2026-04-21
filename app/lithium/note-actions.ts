@@ -11,6 +11,7 @@ export type Note = {
   user_id: string;
   title: string;
   content: string;
+  is_pinned: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -39,8 +40,9 @@ export async function listNotes(): Promise<Note[]> {
 
   const { data, error } = await supabase
     .from('notes')
-    .select('id, title, updated_at')
+    .select('id, title, updated_at, is_pinned')
     .eq('user_id', user.id)
+    .order('is_pinned', { ascending: false, nullsFirst: false })
     .order('updated_at', { ascending: false });
 
   if (error) throw new Error(error.message);
@@ -63,7 +65,7 @@ export async function getNote(noteId: string): Promise<Note> {
 }
 
 /** Update note */
-export async function updateNote(noteId: string, updates: { title?: string, content?: string }): Promise<void> {
+export async function updateNote(noteId: string, updates: { title?: string, content?: string, is_pinned?: boolean }): Promise<void> {
   const { supabase, user } = await getAuthenticatedClient();
 
   const { error } = await supabase
