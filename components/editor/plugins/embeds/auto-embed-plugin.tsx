@@ -18,7 +18,7 @@ import {
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext"
 import { PopoverPortal } from "@radix-ui/react-popover"
 import type { LexicalEditor } from "lexical"
-import { Youtube } from "lucide-react"
+import { SquarePlay } from "lucide-react"
 
 import { useEditorModal } from "@/components/editor/editor-hooks/use-modal"
 import { INSERT_YOUTUBE_COMMAND } from "@/components/editor/plugins/embeds/youtube-plugin"
@@ -57,10 +57,9 @@ export interface CustomEmbedConfig extends EmbedConfig {
 export const YoutubeEmbedConfig: CustomEmbedConfig = {
   contentName: "YouTube Video",
 
-  exampleUrl: "https://www.youtube.com/watch?v=lIxQe1R5hs0",
+  exampleUrl: "https://www.youtube.com/watch?v=M4E_uvV5SsM",
 
-  // Icon for display.
-  icon: <Youtube className="size-4" />,
+  icon: <SquarePlay className="size-4" />,
 
   insertNode: (editor: LexicalEditor, result: EmbedMatchResult) => {
     editor.dispatchCommand(INSERT_YOUTUBE_COMMAND, result.id)
@@ -198,10 +197,8 @@ export function AutoEmbedPlugin(): JSX.Element {
         menuRenderFn={(
           anchorElementRef,
           {
-            selectedIndex,
             options,
             selectOptionAndCleanUp,
-            setHighlightedIndex,
           }
         ) => {
           return anchorElementRef.current ? (

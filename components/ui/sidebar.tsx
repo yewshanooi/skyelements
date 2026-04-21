@@ -262,6 +262,7 @@ function SidebarTrigger({
 
   return (
     <Button
+      title="Toggle sidebar"
       data-sidebar="trigger"
       data-slot="sidebar-trigger"
       variant="ghost"
