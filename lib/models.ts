@@ -15,8 +15,7 @@ export const MODELS: ModelDefinition[] = [
   // OpenRouter models
   { id: 'openrouter:nvidia/nemotron-3-super-120b-a12b:free', label: 'Nemotron 3 Super', icon: '/lithium/nvidia.png', shortcut: '120B' },
   { id: 'openrouter:nvidia/nemotron-3-nano-30b-a3b:free', label: 'Nemotron 3 Nano', icon: '/lithium/nvidia.png', shortcut: '30B' },
-  { id: 'openrouter:z-ai/glm-4.5-air:free', label: 'GLM 4.5 Air', icon: '/lithium/zai.png', shortcut: '' },
-  { id: 'openrouter:openai/gpt-oss-120b:free', label: 'gpt-oss', icon: '/lithium/openai.png', shortcut: '120B' },
+  { id: 'openrouter:tencent/hy3-preview:free', label: 'Hy3 Preview', icon: '/lithium/tencent.png', shortcut: '' },
 ];
 
 export const ALLOWED_MODEL_IDS = new Set(MODELS.map(m => m.id));
