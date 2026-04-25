@@ -16,12 +16,19 @@ import {
 } from "@/components/ui/navigation-menu"
 import { Button } from "@/components/ui/button"
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu"
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+  SheetDescription,
+} from "@/components/ui/sheet"
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
 import { ThemeToggle } from "./theme-client";
 
 export function NavigationBar() {
@@ -34,7 +41,7 @@ export function NavigationBar() {
   }
 
   return (
-    <div className="sticky top-4 z-50 flex justify-center px-4">
+    <div className="sticky top-4 z-[60] flex justify-center px-4">
       <div className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-gray-200/20 rounded-xl shadow-xs px-6 py-3 w-full max-w-7xl">
         {/* Desktop Navigation */}
         <div className="hidden lg:grid grid-cols-3 items-center gap-8">
@@ -161,128 +168,121 @@ export function NavigationBar() {
           />
         </Link>
         
-        <DropdownMenu open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="icon" className="cursor-pointer ml-auto">
-              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent 
-            align="end" 
-            className="w-50 max-h-[46vh] overflow-y-auto"
-          >
-            <DropdownMenuItem asChild>
-              <Link href="/" className="w-full cursor-pointer">
-                Home
-              </Link>
-            </DropdownMenuItem>
-
-            <DropdownMenuSeparator />
-            
-            <div className="px-2 py-1.5">
-              <div className="text-sm font-semibold mb-2 text-muted-foreground">Sodium</div>
-              <DropdownMenuItem asChild>
-                <Link href="/sodium" className="w-full cursor-pointer pl-4">
-                  About
+        <div className="ml-auto flex items-center gap-2">
+          <Button variant="outline" size="icon" className="cursor-pointer" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </Button>
+          <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen} modal={false}>
+            <SheetContent 
+              side="top" 
+              showCloseButton={false}
+              className="h-[100dvh] w-full flex flex-col border-none pt-[140px] pb-8 bg-background"
+            >
+              <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
+              <SheetDescription className="sr-only">Access all sections of the site.</SheetDescription>
+              
+              <div className="w-full max-w-[280px] mx-auto flex-1 flex flex-col gap-6 overflow-y-auto overflow-x-hidden scrollbar-hide text-left">
+                <Link href="/" className="text-2xl font-medium hover:text-muted-foreground transition-colors" onClick={() => setMobileMenuOpen(false)}>
+                  Home
                 </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/commands" className="w-full cursor-pointer pl-4">
-                  Commands
+                
+                <Accordion type="single" collapsible className="w-full">
+                  <AccordionItem value="sodium">
+                    <AccordionTrigger className="justify-between gap-2 text-2xl font-medium hover:no-underline hover:text-muted-foreground transition-colors [&>svg]:size-5 py-0">
+                      Sodium
+                    </AccordionTrigger>
+                    <AccordionContent className="flex flex-col gap-5 pt-4 pb-2 pl-4">
+                      <Link href="/sodium" className="text-xl text-muted-foreground hover:text-foreground transition-colors text-left" onClick={() => setMobileMenuOpen(false)}>
+                        About
+                      </Link>
+                      <Link href="/commands" className="text-xl text-muted-foreground hover:text-foreground transition-colors text-left" onClick={() => setMobileMenuOpen(false)}>
+                        Commands
+                      </Link>
+                      <a 
+                        href="https://github.com/yewshanooi/sodium/blob/main/README.md#guides"
+                        className="text-xl text-muted-foreground hover:text-foreground transition-colors flex items-center justify-start gap-2"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        Get Started <ExternalLink className="h-5 w-5" />
+                      </a>
+                      <a 
+                        href="https://github.com/yewshanooi/sodium/blob/main/LICENSE"
+                        className="text-xl text-muted-foreground hover:text-foreground transition-colors flex items-center justify-start gap-2"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        License <ExternalLink className="h-5 w-5" />
+                      </a>
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
+                
+                <Link href="/lithium" className="text-2xl font-medium hover:text-muted-foreground transition-colors" onClick={() => setMobileMenuOpen(false)}>
+                  Lithium
                 </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <a 
-                  href="https://github.com/yewshanooi/sodium/blob/main/README.md#guides"
-                  className="w-full cursor-pointer pl-4"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Get Started <ExternalLink className="h-4 w-4" />
-                </a>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <a 
-                  href="https://github.com/yewshanooi/sodium/blob/main/LICENSE"
-                  className="w-full cursor-pointer pl-4"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  License <ExternalLink className="h-4 w-4" />
-                </a>
-              </DropdownMenuItem>
-            </div>
-
-            <DropdownMenuSeparator />
-
-            <DropdownMenuItem asChild>
-              <Link href="/lithium" className="w-full cursor-pointer">
-                Lithium
-              </Link>
-            </DropdownMenuItem>
-
-            <DropdownMenuSeparator />
-
-            <DropdownMenuItem asChild>
-              <Link href="/branding" className="w-full cursor-pointer">
-                Branding
-              </Link>
-            </DropdownMenuItem>
-
-            <DropdownMenuSeparator />
-
-            <DropdownMenuItem asChild>
-              <Link href="/credits" className="w-full cursor-pointer">
-                Credits
-              </Link>
-            </DropdownMenuItem>
-
-            <DropdownMenuSeparator />
-
-            <div className="px-2 py-1.5">
-              <div className="text-sm font-semibold mb-2 text-muted-foreground">Policies</div>
-              <DropdownMenuItem asChild>
-                <Link href="/cookie-policy" className="w-full cursor-pointer pl-4">
-                  Cookie Policy
+                
+                <Link href="/branding" className="text-2xl font-medium hover:text-muted-foreground transition-colors" onClick={() => setMobileMenuOpen(false)}>
+                  Branding
                 </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/privacy-policy" className="w-full cursor-pointer pl-4">
-                  Privacy Policy
+                
+                <Link href="/credits" className="text-2xl font-medium hover:text-muted-foreground transition-colors" onClick={() => setMobileMenuOpen(false)}>
+                  Credits
                 </Link>
-              </DropdownMenuItem>
-            </div>
+                
+                <Accordion type="single" collapsible className="w-full">
+                  <AccordionItem value="policies">
+                    <AccordionTrigger className="justify-between gap-2 text-2xl font-medium hover:no-underline hover:text-muted-foreground transition-colors [&>svg]:size-5 py-0">
+                      Policies
+                    </AccordionTrigger>
+                    <AccordionContent className="flex flex-col gap-5 pt-4 pb-2 pl-4">
+                      <Link href="/cookie-policy" className="text-xl text-muted-foreground hover:text-foreground transition-colors text-left" onClick={() => setMobileMenuOpen(false)}>
+                        Cookie Policy
+                      </Link>
+                      <Link href="/privacy-policy" className="text-xl text-muted-foreground hover:text-foreground transition-colors text-left" onClick={() => setMobileMenuOpen(false)}>
+                        Privacy Policy
+                      </Link>
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
+                
+                <Accordion type="single" collapsible className="w-full">
+                  <AccordionItem value="resources">
+                    <AccordionTrigger className="justify-between gap-2 text-2xl font-medium hover:no-underline hover:text-muted-foreground transition-colors [&>svg]:size-5 py-0">
+                      Resources
+                    </AccordionTrigger>
+                    <AccordionContent className="flex flex-col gap-5 pt-4 pb-2 pl-4">
+                      <a 
+                        href="https://skyelements.betteruptime.com/"
+                        className="text-xl text-muted-foreground hover:text-foreground transition-colors flex items-center justify-start gap-2"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        Uptime <ExternalLink className="h-5 w-5" />
+                      </a>
+                      <a 
+                        href="https://github.com/yewshanooi/skyelements"
+                        className="text-xl text-muted-foreground hover:text-foreground transition-colors flex items-center justify-start gap-2"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        Source Code <ExternalLink className="h-5 w-5" />
+                      </a>
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
+              </div>
 
-            <DropdownMenuSeparator />
-
-            <div className="px-2 py-1.5">
-              <div className="text-sm font-semibold mb-2 text-muted-foreground">Resources</div>
-              <DropdownMenuItem asChild>
-                <a 
-                  href="https://skyelements.betteruptime.com/"
-                  className="w-full cursor-pointer pl-4"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Uptime <ExternalLink className="h-4 w-4" />
-                </a>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <a 
-                  href="https://github.com/yewshanooi/skyelements"
-                  className="w-full cursor-pointer pl-4"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Source Code <ExternalLink className="h-4 w-4" />
-                </a>
-              </DropdownMenuItem>
-            </div>
-
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        <ThemeToggle />
+              <div className="w-full max-w-[280px] mx-auto pt-4 mt-auto flex justify-start">
+                <ThemeToggle align="start" />
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
       </div>
       </div>
     </div>
