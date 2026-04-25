@@ -8,7 +8,7 @@ import {
 
 export const metadata: Metadata = {
   title: "Cookie Policy",
-  description: "Some of the ways our website collects your data",
+  description: "How we use cookies to improve your experience",
 };
 
 export default function CookiePolicyPage() {
@@ -20,7 +20,7 @@ export default function CookiePolicyPage() {
           Cookie Policy
         </h1> 
         <p className="text-muted-foreground text-center text-l max-w-3xl">
-          Some of the ways our website collects your data.
+          How we use cookies to improve your experience.
         </p>
       </div>
 

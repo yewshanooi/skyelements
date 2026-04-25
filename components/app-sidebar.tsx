@@ -36,7 +36,7 @@ export function AppSidebar({ user, signout, onNewChat, chats, activeChatId, onSe
   onSelectNote?: (noteId: string) => void
   onDeleteNote?: (noteId: string) => void
   onNewNote?: () => void
-  onTogglePinNote?: (noteId: string, currentPinStatus: boolean) => void
+  onTogglePinNote?: (noteId: string, currentPinStatus: boolean) => void | Promise<void>
 }) {
   const chatItems = useMemo(() => (chats ?? []).map(chat => ({
     id: chat.id,

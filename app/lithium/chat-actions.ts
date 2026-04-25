@@ -120,12 +120,11 @@ export async function generateContent(
       console.error("Error generating content:", error);
 
       if (error?.statusCode === 429) {
-        const errorBody = typeof error.body === 'string' ? JSON.parse(error.body) : error.body;
-        return `⚠️ **${errorBody?.error?.message}**\n\n${errorBody?.error?.metadata?.raw}`;
+        return `⚠️ **Rate Limited**\n\nWe've being rate limited for the ${actualModel} model. Please change to another model or try again later.`;
       }
 
       if (error?.statusCode === 500) {
-        return '⚠️ **Internal server error**';
+        return '⚠️ **Service Unavailable**\n\nThe model provider is currently experiencing issues. Please try again later.';
       }
 
       return "Sorry, I couldn't generate a response at this time.";
@@ -167,11 +166,11 @@ export async function generateContent(
     console.error("Error generating content:", error);
 
     if (error?.status === 429) {
-      return `⚠️ **Free quota exceeded**\n\nWe've hit the daily free quota for the ${actualModel} model. Please change to another model or try again tomorrow.`;
+      return `⚠️ **Free Quota Exceeded**\n\nWe've hit the daily free quota for the ${actualModel} model. Please change to another model or try again tomorrow.`;
     }
 
     if (error?.status === 503) {
-      return '⚠️ **Unavailable**\n\nThis model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.';
+      return '⚠️ **Service Unavailable**\n\nThis model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.';
     }
 
     return "Sorry, I couldn't generate a response at this time.";
@@ -237,7 +236,11 @@ export async function createChat(model: string = 'gemini-3.1-flash-lite-preview'
     .select()
     .single();
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    console.error('[chat-actions] createChat DB error:', error);
+    throw new Error('Failed to create chat.');
+  }
+
   return data as Chat;
 }
 
@@ -251,7 +254,11 @@ export async function listChats(): Promise<Chat[]> {
     .eq('user_id', user.id)
     .order('updated_at', { ascending: false });
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    console.error('[chat-actions] listChats DB error:', error);
+    throw new Error('Failed to load chats.');
+  }
+
   return (data ?? []) as Chat[];
 }
 
@@ -265,7 +272,11 @@ export async function getMessages(chatId: string): Promise<(Message & { signedIm
     .eq('chat_id', chatId)
     .order('created_at', { ascending: true });
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    console.error('[chat-actions] getMessages DB error:', error);
+    throw new Error('Failed to load messages.');
+  }
+  
   const messages = (data ?? []) as Message[];
 
   // Generate signed URLs for messages that have images
@@ -321,7 +332,10 @@ export async function updateChatTitle(chatId: string, title: string): Promise<vo
     .eq('id', chatId)
     .eq('user_id', user.id);
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    console.error('[chat-actions] updateChatTitle DB error:', error);
+    throw new Error('Failed to update chat title.');
+  }
 }
 
 /** Delete a chat */
@@ -336,7 +350,10 @@ export async function deleteChat(chatId: string): Promise<void> {
     .eq('id', chatId)
     .eq('user_id', user.id);
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    console.error('[chat-actions] deleteChat DB error:', error);
+    throw new Error('Failed to delete chat.');
+  }
 }
 
 /** Delete all chats for the current user */
@@ -356,5 +373,8 @@ export async function deleteAllChats(): Promise<void> {
     .delete()
     .eq('user_id', user.id);
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    console.error('[chat-actions] deleteAllChats DB error:', error);
+    throw new Error('Failed to delete chats.');
+  }
 }

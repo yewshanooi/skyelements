@@ -58,7 +58,7 @@ export function NavNotes({
   onSelectNote?: (noteId: string) => void
   onDeleteNote?: (noteId: string) => void
   onNewNote?: () => void
-  onTogglePinNote?: (noteId: string, currentPinStatus: boolean) => void
+  onTogglePinNote?: (noteId: string, currentPinStatus: boolean) => void | Promise<void>
 }) {
   const { isMobile } = useSidebar()
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
@@ -79,7 +79,7 @@ export function NavNotes({
             </SidebarMenuItem>
           ) : (
             notes.map((item) => (
-              <SidebarMenuItem key={`${item.id}-${item.isPinned}`}>
+              <SidebarMenuItem key={item.id}>
                 <SidebarMenuButton
                   isActive={activeNoteId === item.id}
                   onClick={() => onSelectNote?.(item.id)}

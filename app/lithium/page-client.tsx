@@ -17,7 +17,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { ChatClient } from "./chat-client";
 import { NoteClient } from "./note-client";
 import { listChats, deleteChat, deleteAllChats, type Chat } from "./chat-actions";
-import { listNotes, deleteNote, deleteAllNotes, createNote, updateNote, type Note } from "./note-actions";
+import { listNotes, deleteNote, deleteAllNotes, createNote, togglePinNote, type Note } from "./note-actions";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -164,34 +164,22 @@ export function PageClient({ user, signout }: PageClientProps) {
   }, []);
 
   const handleNoteActivity = useCallback((noteId: string, title: string) => {
-    setNotes(prev => {
-      const idx = prev.findIndex(n => n.id === noteId);
-      if (idx < 0) return prev;
-      const note = { ...prev[idx], title, updated_at: new Date().toISOString() };
-      return sortNotes([note, ...prev.slice(0, idx), ...prev.slice(idx + 1)]);
-    });
+    setNotes(prev => sortNotes(
+      prev.map(n => n.id === noteId ? { ...n, title, updated_at: new Date().toISOString() } : n)
+    ));
     setNoteTitle(title || 'New note');
   }, []);
 
   const handleTogglePinNote = useCallback(async (noteId: string, currentPinStatus: boolean) => {
+    const newPinStatus = !currentPinStatus;
     // Optimistic update — flip pin state immediately without touching updated_at
-    setNotes(prev => {
-      const idx = prev.findIndex(n => n.id === noteId);
-      if (idx < 0) return prev;
-      const note = { ...prev[idx], is_pinned: !currentPinStatus };
-      return sortNotes([note, ...prev.slice(0, idx), ...prev.slice(idx + 1)]);
-    });
+    setNotes(prev => sortNotes(prev.map(n => n.id === noteId ? { ...n, is_pinned: newPinStatus } : n)));
     try {
-      await updateNote(noteId, { is_pinned: !currentPinStatus });
+      await togglePinNote(noteId, newPinStatus);
     } catch (error) {
       console.error('Failed to toggle pin on note:', error);
       // Roll back on failure
-      setNotes(prev => {
-        const idx = prev.findIndex(n => n.id === noteId);
-        if (idx < 0) return prev;
-        const note = { ...prev[idx], is_pinned: currentPinStatus };
-        return sortNotes([note, ...prev.slice(0, idx), ...prev.slice(idx + 1)]);
-      });
+      setNotes(prev => sortNotes(prev.map(n => n.id === noteId ? { ...n, is_pinned: currentPinStatus } : n)));
     }
   }, []);
 

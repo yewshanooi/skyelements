@@ -42,14 +42,14 @@ export default function SodiumPage() {
 
       <div className="mt-8">
         <Button asChild variant="secondary">
-          <a href="https://github.com/yewshanooi/sodium/blob/main/README.md#guides" target="_blank">
+          <a href="https://github.com/yewshanooi/sodium/blob/main/README.md#guides" target="_blank" rel="noopener noreferrer">
             Get started <ExternalLink />
           </a>
         </Button>
       </div>
 
       <div className="text-muted-foreground text-xs mt-8 max-w-3xl">
-        <p>*By clicking &quot;Get started&quot;, you agree to the <a href="https://github.com/yewshanooi/sodium/blob/main/LICENSE" target="_blank"><u>license</u></a></p>
+        <p>*By clicking &quot;Get started&quot;, you agree to the <a href="https://github.com/yewshanooi/sodium/blob/main/LICENSE" target="_blank" rel="noopener noreferrer"><u>license</u></a></p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-24 w-full max-w-3xl">
@@ -83,7 +83,7 @@ export default function SodiumPage() {
             </div>
           </CardHeader>
         </Card>
-        <a href="https://deepmind.google/models/gemini/" target="_blank">
+        <a href="https://deepmind.google/models/gemini/" target="_blank" rel="noopener noreferrer">
           <Card className="w-full">
             <CardHeader>
               <div className="flex items-center gap-6 mt-2">
@@ -103,7 +103,7 @@ export default function SodiumPage() {
             </CardHeader>
           </Card>
         </a>
-        <a href="https://huggingface.co/docs/transformers.js/v3.0.0/index" target="_blank">
+        <a href="https://huggingface.co/docs/transformers.js/v3.0.0/index" target="_blank" rel="noopener noreferrer">
           <Card className="w-full">
             <CardHeader>
               <div className="flex items-center gap-6 mt-2">
@@ -123,7 +123,7 @@ export default function SodiumPage() {
             </CardHeader>
           </Card>
         </a>
-        <a href="https://www.mongodb.com/products/platform" target="_blank">
+        <a href="https://www.mongodb.com/products/platform" target="_blank" rel="noopener noreferrer">
           <Card className="w-full">
             <CardHeader>
               <div className="flex items-center gap-6 mt-2">
@@ -143,7 +143,7 @@ export default function SodiumPage() {
             </CardHeader>
           </Card>
         </a>
-        <a href="https://lavalink.dev/" target="_blank">
+        <a href="https://lavalink.dev/" target="_blank" rel="noopener noreferrer">
           <Card className="w-full">
             <CardHeader>
               <div className="flex items-center gap-6 mt-2">
@@ -410,8 +410,8 @@ export default function SodiumPage() {
 
       <div className="text-muted-foreground text-sm mt-24 w-full max-w-3xl">
         <p>
-          ¹ Based on discord.js&apos;s stable branch <a href="https://github.com/discordjs/discord.js/releases" target="_blank"><u>release</u></a> schedule.<br />
-          ² No fees or subscriptions required. Users must abide by the <a href="https://github.com/yewshanooi/sodium/blob/main/LICENSE" target="_blank"><u>license</u></a> to modify or distribute the bot.<br />
+          ¹ Based on discord.js&apos;s stable branch <a href="https://github.com/discordjs/discord.js/releases" target="_blank" rel="noopener noreferrer"><u>release</u></a> schedule.<br />
+          ² No fees or subscriptions required. Users must abide by the <a href="https://github.com/yewshanooi/sodium/blob/main/LICENSE" target="_blank" rel="noopener noreferrer"><u>license</u></a> to modify or distribute the bot.<br />
           ³ Gemini is a large language model developed by Google DeepMind. It is the successor to LaMDA and PaLM 2.<br />
           ⁴ Transformers.js is an npm package developed by Hugging Face to run pre-trained machine learning models.
         </p>

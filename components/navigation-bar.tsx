@@ -112,17 +112,23 @@ export function NavigationBar() {
                 </NavigationMenuItem>
 
                 <NavigationMenuItem>
-                  <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
-                    <Link href="/cookie-policy">
-                      Cookie Policy
-                    </Link>
-                  </NavigationMenuLink>
+                  <NavigationMenuTrigger className="cursor-pointer">Policies</NavigationMenuTrigger>
+                  <NavigationMenuContent>
+                    <ul className="w-90">
+                      <ListItem href="/cookie-policy" title="Cookie Policy">
+                        How we use cookies to improve your experience
+                      </ListItem>
+                      <ListItem href="/privacy-policy" title="Privacy Policy">
+                        How we collect, use, and protect your personal data
+                      </ListItem>
+                    </ul>
+                  </NavigationMenuContent>
                 </NavigationMenuItem>
 
                 <NavigationMenuItem>
-                  <NavigationMenuTrigger className="cursor-pointer">More</NavigationMenuTrigger>
+                  <NavigationMenuTrigger className="cursor-pointer">Resources</NavigationMenuTrigger>
                   <NavigationMenuContent>
-                    <ul className="w-72">
+                    <ul className="w-60">
                       <ListItem href="https://skyelements.betteruptime.com/" title={<>Uptime <ExternalLink className="ml-1 h-4 w-4" /></>} target="_blank">
                         View our uptime on Better Stack
                       </ListItem>
@@ -163,7 +169,7 @@ export function NavigationBar() {
           </DropdownMenuTrigger>
           <DropdownMenuContent 
             align="end" 
-            className="w-50 max-h-[70vh] overflow-y-auto"
+            className="w-50 max-h-[46vh] overflow-y-auto"
           >
             <DropdownMenuItem asChild>
               <Link href="/" className="w-full cursor-pointer">
@@ -190,6 +196,7 @@ export function NavigationBar() {
                   href="https://github.com/yewshanooi/sodium/blob/main/README.md#guides"
                   className="w-full cursor-pointer pl-4"
                   target="_blank"
+                  rel="noopener noreferrer"
                 >
                   Get Started <ExternalLink className="h-4 w-4" />
                 </a>
@@ -199,6 +206,7 @@ export function NavigationBar() {
                   href="https://github.com/yewshanooi/sodium/blob/main/LICENSE"
                   className="w-full cursor-pointer pl-4"
                   target="_blank"
+                  rel="noopener noreferrer"
                 >
                   License <ExternalLink className="h-4 w-4" />
                 </a>
@@ -231,21 +239,30 @@ export function NavigationBar() {
 
             <DropdownMenuSeparator />
 
-            <DropdownMenuItem asChild>
-              <Link href="/cookie-policy" className="w-full cursor-pointer">
-                Cookie Policy
-              </Link>
-            </DropdownMenuItem>
+            <div className="px-2 py-1.5">
+              <div className="text-sm font-semibold mb-2 text-muted-foreground">Policies</div>
+              <DropdownMenuItem asChild>
+                <Link href="/cookie-policy" className="w-full cursor-pointer pl-4">
+                  Cookie Policy
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/privacy-policy" className="w-full cursor-pointer pl-4">
+                  Privacy Policy
+                </Link>
+              </DropdownMenuItem>
+            </div>
 
             <DropdownMenuSeparator />
 
             <div className="px-2 py-1.5">
-              <div className="text-sm font-semibold mb-2 text-muted-foreground">More</div>
+              <div className="text-sm font-semibold mb-2 text-muted-foreground">Resources</div>
               <DropdownMenuItem asChild>
                 <a 
                   href="https://skyelements.betteruptime.com/"
                   className="w-full cursor-pointer pl-4"
                   target="_blank"
+                  rel="noopener noreferrer"
                 >
                   Uptime <ExternalLink className="h-4 w-4" />
                 </a>
@@ -255,6 +272,7 @@ export function NavigationBar() {
                   href="https://github.com/yewshanooi/skyelements"
                   className="w-full cursor-pointer pl-4"
                   target="_blank"
+                  rel="noopener noreferrer"
                 >
                   Source Code <ExternalLink className="h-4 w-4" />
                 </a>
@@ -264,7 +282,6 @@ export function NavigationBar() {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* Mobile Settings Toggle */}
         <ThemeToggle />
       </div>
       </div>

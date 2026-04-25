@@ -83,7 +83,7 @@ export default function SignupForm() {
 
                 <div className="mt-6">
                     <FieldDescription className="px-16 text-center">
-                        By creating an account, you agree to our <Link href="/cookie-policy">Cookie Policy</Link>.
+                        By creating an account, you agree to our <Link href="/privacy-policy">Privacy Policy</Link>.
                     </FieldDescription>
                 </div>
             </div>

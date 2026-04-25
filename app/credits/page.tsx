@@ -36,7 +36,7 @@ export default function CreditsPage() {
             </CardDescription>
             <CardAction>
               <Button asChild variant="secondary">
-                <a href="https://bun.com/docs/pm/cli/install" target="_blank">
+                <a href="https://bun.com/docs/pm/cli/install" target="_blank" rel="noopener noreferrer">
                   <ExternalLink />
                 </a>
               </Button>
@@ -51,7 +51,7 @@ export default function CreditsPage() {
             </CardDescription>
             <CardAction>
               <Button asChild variant="secondary">
-                <a href="https://www.cloudflare.com/application-services/products/turnstile/" target="_blank">
+                <a href="https://www.cloudflare.com/application-services/products/turnstile/" target="_blank" rel="noopener noreferrer">
                   <ExternalLink />
                 </a>
               </Button>
@@ -66,7 +66,7 @@ export default function CreditsPage() {
             </CardDescription>
             <CardAction>
               <Button asChild variant="secondary">
-                <a href="https://aistudio.google.com/" target="_blank">
+                <a href="https://aistudio.google.com/" target="_blank" rel="noopener noreferrer">
                   <ExternalLink />
                 </a>
               </Button>
@@ -81,7 +81,7 @@ export default function CreditsPage() {
             </CardDescription>
             <CardAction>
               <Button asChild variant="secondary">
-                <a href="https://fonts.google.com/?query=Geist" target="_blank">
+                <a href="https://fonts.google.com/?query=Geist" target="_blank" rel="noopener noreferrer">
                   <ExternalLink />
                 </a>
               </Button>
@@ -96,7 +96,7 @@ export default function CreditsPage() {
             </CardDescription>
             <CardAction>
               <Button asChild variant="secondary">
-                <a href="https://icons8.com/" target="_blank">
+                <a href="https://icons8.com/" target="_blank" rel="noopener noreferrer">
                   <ExternalLink />
                 </a>
               </Button>
@@ -111,7 +111,7 @@ export default function CreditsPage() {
             </CardDescription>
             <CardAction>
               <Button asChild variant="secondary">
-                <a href="https://lucide.dev/" target="_blank">
+                <a href="https://lucide.dev/" target="_blank" rel="noopener noreferrer">
                   <ExternalLink />
                 </a>
               </Button>
@@ -126,7 +126,7 @@ export default function CreditsPage() {
             </CardDescription>
             <CardAction>
               <Button asChild variant="secondary">
-                <a href="https://nextjs.org/" target="_blank">
+                <a href="https://nextjs.org/" target="_blank" rel="noopener noreferrer">
                   <ExternalLink />
                 </a>
               </Button>
@@ -141,7 +141,7 @@ export default function CreditsPage() {
             </CardDescription>
             <CardAction>
               <Button asChild variant="secondary">
-                <a href="https://openrouter.ai/" target="_blank">
+                <a href="https://openrouter.ai/" target="_blank" rel="noopener noreferrer">
                   <ExternalLink />
                 </a>
               </Button>
@@ -156,7 +156,7 @@ export default function CreditsPage() {
             </CardDescription>
             <CardAction>
               <Button asChild variant="secondary">
-                <a href="https://ui.shadcn.com/" target="_blank">
+                <a href="https://ui.shadcn.com/" target="_blank" rel="noopener noreferrer">
                   <ExternalLink />
                 </a>
               </Button>
@@ -171,7 +171,7 @@ export default function CreditsPage() {
             </CardDescription>
             <CardAction>
               <Button asChild variant="secondary">
-                <a href="https://supabase.com/" target="_blank">
+                <a href="https://supabase.com/" target="_blank" rel="noopener noreferrer">
                   <ExternalLink />
                 </a>
               </Button>
@@ -186,7 +186,7 @@ export default function CreditsPage() {
             </CardDescription>
             <CardAction>
               <Button asChild variant="secondary">
-                <a href="https://vercel.com/" target="_blank">
+                <a href="https://vercel.com/" target="_blank" rel="noopener noreferrer">
                   <ExternalLink />
                 </a>
               </Button>

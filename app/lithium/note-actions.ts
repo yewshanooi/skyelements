@@ -30,7 +30,11 @@ export async function createNote(): Promise<Note> {
     .select()
     .single();
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    console.error('[note-actions] createNote DB error:', error);
+    throw new Error('Failed to create note.');
+  }
+  
   return data as Note;
 }
 
@@ -45,7 +49,11 @@ export async function listNotes(): Promise<Note[]> {
     .order('is_pinned', { ascending: false, nullsFirst: false })
     .order('updated_at', { ascending: false });
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    console.error('[note-actions] listNotes DB error:', error);
+    throw new Error('Failed to load notes.');
+  }
+  
   return (data ?? []) as Note[];
 }
 
@@ -60,12 +68,16 @@ export async function getNote(noteId: string): Promise<Note> {
     .eq('user_id', user.id)
     .single();
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    console.error('[note-actions] getNote DB error:', error);
+    throw new Error('Note not found.');
+  }
+  
   return data as Note;
 }
 
 /** Update note */
-export async function updateNote(noteId: string, updates: { title?: string, content?: string, is_pinned?: boolean }): Promise<void> {
+export async function updateNote(noteId: string, updates: { title?: string; content?: string }): Promise<void> {
   const { supabase, user } = await getAuthenticatedClient();
 
   const { error } = await supabase
@@ -74,7 +86,26 @@ export async function updateNote(noteId: string, updates: { title?: string, cont
     .eq('id', noteId)
     .eq('user_id', user.id);
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    console.error('[note-actions] updateNote DB error:', error);
+    throw new Error('Failed to update note.');
+  }
+}
+
+/** Update note pinned state */
+export async function togglePinNote(noteId: string, isPinned: boolean): Promise<void> {
+  const { supabase, user } = await getAuthenticatedClient();
+
+  const { error } = await supabase
+    .from('notes')
+    .update({ is_pinned: isPinned })
+    .eq('id', noteId)
+    .eq('user_id', user.id);
+
+  if (error) {
+    console.error('[note-actions] togglePinNote DB error:', error);
+    throw new Error('Failed to update pin state.');
+  }
 }
 
 /** Delete a note */
@@ -89,7 +120,10 @@ export async function deleteNote(noteId: string): Promise<void> {
     .eq('id', noteId)
     .eq('user_id', user.id);
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    console.error('[note-actions] deleteNote DB error:', error);
+    throw new Error('Failed to delete note.');
+  }
 }
 
 /** Delete all notes for the current user */
@@ -101,5 +135,8 @@ export async function deleteAllNotes(): Promise<void> {
     .delete()
     .eq('user_id', user.id);
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    console.error('[note-actions] deleteAllNotes DB error:', error);
+    throw new Error('Failed to delete notes.');
+  }
 }
