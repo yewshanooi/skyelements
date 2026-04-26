@@ -10,7 +10,7 @@ import {
   DropdownMenuCheckboxItem,
 } from "@/components/ui/dropdown-menu"
 
-export function ThemeToggle() {
+export function ThemeToggle({ align = "end" }: { align?: "start" | "center" | "end" } = {}) {
   const { theme, setTheme } = useTheme()
 
   return (
@@ -21,7 +21,7 @@ export function ThemeToggle() {
           <Moon className="absolute h-[1.2rem] w-[1.2rem] scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent side="bottom" align="end">
+      <DropdownMenuContent side="bottom" align={align}>
         <DropdownMenuCheckboxItem
           checked={theme === "system"}
           onCheckedChange={() => setTheme("system")}
