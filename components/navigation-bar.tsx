@@ -18,9 +18,7 @@ import { Button } from "@/components/ui/button"
 import {
   Sheet,
   SheetContent,
-  SheetHeader,
   SheetTitle,
-  SheetTrigger,
   SheetDescription,
 } from "@/components/ui/sheet"
 import {
@@ -34,6 +32,17 @@ import { ThemeToggle } from "./theme-client";
 export function NavigationBar() {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false)
   const pathname = usePathname()
+
+  React.useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        setMobileMenuOpen(false)
+      }
+    }
+
+    window.addEventListener("resize", handleResize)
+    return () => window.removeEventListener("resize", handleResize)
+  }, [])
 
   // Hide navigation bar on /lithium
   if (pathname === "/lithium") {
@@ -176,22 +185,22 @@ export function NavigationBar() {
             <SheetContent 
               side="top" 
               showCloseButton={false}
-              className="h-[100dvh] w-full flex flex-col border-none pt-[140px] pb-8 bg-background"
+              className="h-[100dvh] w-full flex flex-col border-none pt-[130px] pb-8 bg-background"
             >
               <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
               <SheetDescription className="sr-only">Access all sections of the site.</SheetDescription>
               
               <div className="w-full max-w-[280px] mx-auto flex-1 flex flex-col gap-6 overflow-y-auto overflow-x-hidden scrollbar-hide text-left">
-                <Link href="/" className="text-2xl font-medium hover:text-muted-foreground transition-colors" onClick={() => setMobileMenuOpen(false)}>
+                <Link href="/" className="text-2xl font-medium transition-colors" onClick={() => setMobileMenuOpen(false)}>
                   Home
                 </Link>
                 
                 <Accordion type="single" collapsible className="w-full">
                   <AccordionItem value="sodium">
-                    <AccordionTrigger className="justify-between gap-2 text-2xl font-medium hover:no-underline hover:text-muted-foreground transition-colors [&>svg]:size-5 py-0">
+                    <AccordionTrigger className="justify-between gap-2 text-2xl font-medium hover:no-underline transition-colors [&>svg]:size-5 py-0">
                       Sodium
                     </AccordionTrigger>
-                    <AccordionContent className="flex flex-col gap-5 pt-4 pb-2 pl-4">
+                    <AccordionContent className="flex flex-col gap-5 pt-4 pb-2 pl-2">
                       <Link href="/sodium" className="text-xl text-muted-foreground hover:text-foreground transition-colors text-left" onClick={() => setMobileMenuOpen(false)}>
                         About
                       </Link>
@@ -220,24 +229,24 @@ export function NavigationBar() {
                   </AccordionItem>
                 </Accordion>
                 
-                <Link href="/lithium" className="text-2xl font-medium hover:text-muted-foreground transition-colors" onClick={() => setMobileMenuOpen(false)}>
+                <Link href="/lithium" className="text-2xl font-medium transition-colors" onClick={() => setMobileMenuOpen(false)}>
                   Lithium
                 </Link>
                 
-                <Link href="/branding" className="text-2xl font-medium hover:text-muted-foreground transition-colors" onClick={() => setMobileMenuOpen(false)}>
+                <Link href="/branding" className="text-2xl font-medium transition-colors" onClick={() => setMobileMenuOpen(false)}>
                   Branding
                 </Link>
                 
-                <Link href="/credits" className="text-2xl font-medium hover:text-muted-foreground transition-colors" onClick={() => setMobileMenuOpen(false)}>
+                <Link href="/credits" className="text-2xl font-medium transition-colors" onClick={() => setMobileMenuOpen(false)}>
                   Credits
                 </Link>
                 
                 <Accordion type="single" collapsible className="w-full">
                   <AccordionItem value="policies">
-                    <AccordionTrigger className="justify-between gap-2 text-2xl font-medium hover:no-underline hover:text-muted-foreground transition-colors [&>svg]:size-5 py-0">
+                    <AccordionTrigger className="justify-between gap-2 text-2xl font-medium hover:no-underline transition-colors [&>svg]:size-5 py-0">
                       Policies
                     </AccordionTrigger>
-                    <AccordionContent className="flex flex-col gap-5 pt-4 pb-2 pl-4">
+                    <AccordionContent className="flex flex-col gap-5 pt-4 pb-2 pl-2">
                       <Link href="/cookie-policy" className="text-xl text-muted-foreground hover:text-foreground transition-colors text-left" onClick={() => setMobileMenuOpen(false)}>
                         Cookie Policy
                       </Link>
@@ -250,10 +259,10 @@ export function NavigationBar() {
                 
                 <Accordion type="single" collapsible className="w-full">
                   <AccordionItem value="resources">
-                    <AccordionTrigger className="justify-between gap-2 text-2xl font-medium hover:no-underline hover:text-muted-foreground transition-colors [&>svg]:size-5 py-0">
+                    <AccordionTrigger className="justify-between gap-2 text-2xl font-medium hover:no-underline transition-colors [&>svg]:size-5 py-0">
                       Resources
                     </AccordionTrigger>
-                    <AccordionContent className="flex flex-col gap-5 pt-4 pb-2 pl-4">
+                    <AccordionContent className="flex flex-col gap-5 pt-4 pb-2 pl-2">
                       <a 
                         href="https://skyelements.betteruptime.com/"
                         className="text-xl text-muted-foreground hover:text-foreground transition-colors flex items-center justify-start gap-2"
