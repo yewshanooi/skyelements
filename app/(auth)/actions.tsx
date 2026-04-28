@@ -101,3 +101,23 @@ export async function signout() {
 
     redirect('/')
 }
+
+export async function signInWithGoogle(formData?: FormData) {
+    const supabase = await createActionClient();
+
+    const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+            redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback?next=/lithium`,
+        },
+    });
+
+    if (error) {
+        console.error(error.message);
+        return;
+    }
+
+    if (data.url) {
+        redirect(data.url);
+    }
+}
