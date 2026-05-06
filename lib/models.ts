@@ -14,6 +14,7 @@ export const MODELS: ModelDefinition[] = [
 
   // OpenRouter models
   { id: 'openrouter:nvidia/nemotron-3-super-120b-a12b:free', label: 'Nemotron 3 Super', icon: '/lithium/nvidia.png', shortcut: '120B' },
+  { id: 'openrouter:poolside/laguna-m.1:free', label: 'Laguna M.1', icon: '/lithium/poolside.png', shortcut: '' },
   { id: 'openrouter:openai/gpt-oss-120b:free', label: 'gpt-oss', icon: '/lithium/openai.png', shortcut: '120B' },
   { id: 'openrouter:z-ai/glm-4.5-air:free', label: 'GLM 4.5 Air', icon: '/lithium/zai.png', shortcut: '' },
 ];
