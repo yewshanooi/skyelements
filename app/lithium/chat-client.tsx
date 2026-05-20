@@ -93,7 +93,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
     const [loading, setLoading] = useState(false);
     const [loadingHistory, setLoadingHistory] = useState(false);
     const [showLoadingBar, setShowLoadingBar] = useState(false);
-    const [selectedModel, setSelectedModel] = useState("gemini-3.1-flash-lite-preview");
+    const [selectedModel, setSelectedModel] = useState("gemini-3.1-flash-lite");
     const [currentChatId, setCurrentChatId] = useState<string | null>(chatId ?? null);
     const [pendingImage, setPendingImage] = useState<{ base64: string; mimeType: string; previewUrl: string } | null>(null);
     const [imageError, setImageError] = useState<string | null>(null);

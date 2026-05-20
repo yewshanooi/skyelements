@@ -43,7 +43,7 @@ export type Message = {
 
 export async function generateContent(
   prompt: string,
-  model: string = "gemini-3.1-flash-lite-preview",
+  model: string = "gemini-3.1-flash-lite",
   history: ChatMessage[] = [],
   imageStoragePath?: string
 ) {
@@ -223,7 +223,7 @@ async function removeStorageImages(
 // ---------------------------------------------------------------------------
 
 /** Create a new chat and return it */
-export async function createChat(model: string = 'gemini-3.1-flash-lite-preview'): Promise<Chat> {
+export async function createChat(model: string = 'gemini-3.1-flash-lite'): Promise<Chat> {
   if (!ALLOWED_MODEL_IDS.has(model)) {
     throw new Error('Invalid model specified.');
   }
