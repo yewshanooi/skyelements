@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, memo } from "react";
 import { ArrowUpIcon, ChevronDown, Paperclip, FileText, X } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -105,12 +105,83 @@ type DisplayAttachment = {
 };
 
 type DisplayMessage = ChatMessage & {
+    id: string;
     attachments: DisplayAttachment[];
 };
 
 const MAX_IMAGE_SIZE = 4 * 1024 * 1024; // 4 MB
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
 const MAX_ATTACHMENTS = 5;
+
+const REMARK_PLUGINS = [remarkGfm];
+
+// Memoized so old messages don't re-parse markdown when a new one is appended.
+const MessageItem = memo(function MessageItem({ msg }: { msg: DisplayMessage }) {
+    return (
+        <div className={`p-4 rounded-lg ${msg.role === 'user' ? 'bg-muted' : ''}`}>
+            <p className="text-xs font-medium text-muted-foreground mb-2">
+                {msg.role === 'user' ? 'You' : 'Lithium'}
+            </p>
+            {msg.attachments.length > 0 && (
+                <div className="mb-3 flex flex-wrap gap-2">
+                    {msg.attachments.map((att, ai) => {
+                        const isImg = isImageMimeType(att.fileMimeType);
+                        if (isImg && att.fileUrl) {
+                            return (
+                                <a
+                                    key={ai}
+                                    href={att.fileUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    title={att.fileName ?? 'Attached image'}
+                                    className="block h-20 w-20 rounded-lg overflow-hidden border"
+                                >
+                                    <img
+                                        src={att.fileUrl}
+                                        alt={att.fileName ?? 'Attached image'}
+                                        className="h-full w-full object-cover"
+                                    />
+                                </a>
+                            );
+                        }
+                        const inner = (
+                            <div className="h-full w-full rounded-lg border bg-muted/50 flex flex-col items-center justify-center gap-1 px-2 py-1.5 overflow-hidden">
+                                <FileText className="size-6 text-muted-foreground shrink-0" />
+                                <span className="text-[10px] leading-tight text-center line-clamp-2 break-all w-full">
+                                    {att.fileName}
+                                </span>
+                            </div>
+                        );
+                        if (att.fileUrl) {
+                            return (
+                                <a
+                                    key={ai}
+                                    href={att.fileUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    title={att.fileName}
+                                    className="block h-20 w-20 hover:opacity-80 transition-opacity"
+                                >
+                                    {inner}
+                                </a>
+                            );
+                        }
+                        return (
+                            <div key={ai} title={att.fileName} className="h-20 w-20">
+                                {inner}
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+            <div className="prose prose-md dark:prose-invert max-w-none overflow-x-auto">
+                <ReactMarkdown remarkPlugins={REMARK_PLUGINS}>
+                    {msg.content}
+                </ReactMarkdown>
+            </div>
+        </div>
+    );
+});
 
 export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
     chatId?: string | null;
@@ -139,6 +210,22 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
     const isEmptyState = messages.length === 0 && !loading && !loadingHistory;
     const isOverLimit = prompt.length > MAX_INPUT_CHARS;
     const hasPendingAttachments = pendingAttachments.length > 0;
+
+    // Refs that mirror state used inside `sendMessage` so the callback
+    // can stay referentially stable across renders.
+    const messagesRef = useRef<DisplayMessage[]>(messages);
+    const pendingAttachmentsRef = useRef<PendingAttachment[]>(pendingAttachments);
+    const currentChatIdRef = useRef<string | null>(currentChatId);
+    const selectedModelRef = useRef<string>(selectedModel);
+    const onChatCreatedRef = useRef(onChatCreated);
+    const onChatActivityRef = useRef(onChatActivity);
+
+    useEffect(() => { messagesRef.current = messages; }, [messages]);
+    useEffect(() => { pendingAttachmentsRef.current = pendingAttachments; }, [pendingAttachments]);
+    useEffect(() => { currentChatIdRef.current = currentChatId; }, [currentChatId]);
+    useEffect(() => { selectedModelRef.current = selectedModel; }, [selectedModel]);
+    useEffect(() => { onChatCreatedRef.current = onChatCreated; }, [onChatCreated]);
+    useEffect(() => { onChatActivityRef.current = onChatActivity; }, [onChatActivity]);
 
     // Compress an image to a max dimension and convert to WebP
     const compressImage = (imgFile: File): Promise<{ blob: Blob; previewUrl: string }> => {
@@ -301,6 +388,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
             setLoadingHistory(true);
             getMessages(chatId).then(async (msgs) => {
                 const mapped: DisplayMessage[] = msgs.map((m) => ({
+                    id: m.id,
                     role: m.role,
                     content: m.content,
                     attachments: m.attachments.map(a => ({
@@ -338,21 +426,35 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
         }
     }, [chatId]);
 
+    // Revoke any pending blob URLs on unmount to prevent memory leaks.
+    useEffect(() => {
+        return () => {
+            for (const a of pendingAttachmentsRef.current) {
+                if (a.previewUrl) URL.revokeObjectURL(a.previewUrl);
+            }
+        };
+    }, []);
+
     const sendMessage = useCallback(async (userMessage: string) => {
-        if (!userMessage.trim() && pendingAttachments.length === 0) return;
+        const pendingNow = pendingAttachmentsRef.current;
+        if (!userMessage.trim() && pendingNow.length === 0) return;
         if (userMessage.length > MAX_INPUT_CHARS) return;
 
         const myGenId = ++generationIdRef.current;
+        const model = selectedModelRef.current;
+        const startingChatId = currentChatIdRef.current;
+        const history = messagesRef.current.map(({ role, content }) => ({ role, content }));
+
         setLoading(true);
         setPrompt("");
-        const attachmentsToSend = pendingAttachments;
+        const attachmentsToSend = pendingNow;
         setPendingAttachments([]);
         setAttachmentError(null);
 
-        const history = messages.map(({ role, content }) => ({ role, content }));
-
         // Optimistic preview while uploading
+        const optimisticId = crypto.randomUUID();
         setMessages(prev => [...prev, {
+            id: optimisticId,
             role: 'user' as const,
             content: userMessage,
             attachments: attachmentsToSend.map(a => ({
@@ -368,9 +470,9 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
             if (!user) throw new Error('Not authenticated');
 
             // Run chat creation and file uploads in parallel
-            let activeChatId = currentChatId;
+            let activeChatId = startingChatId;
             const chatCreationPromise = !activeChatId
-                ? createChat(selectedModel)
+                ? createChat(model)
                 : Promise.resolve(null);
 
             const uploadPromises: Promise<AttachmentRef>[] = attachmentsToSend.map(async (att) => {
@@ -396,6 +498,8 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                 Promise.all(uploadPromises),
             ]);
 
+            // Title side-effect runs in parallel with the user-save + generation below.
+            let titlePromise: Promise<unknown> = Promise.resolve();
             if (newChat) {
                 activeChatId = newChat.id;
                 pendingNewChatIdRef.current = activeChatId;
@@ -408,44 +512,64 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                             ? `${attachmentsToSend.length} files`
                             : 'New chat');
                 const title = titleSource.length > 50 ? titleSource.slice(0, 50) + '…' : titleSource;
-                await updateChatTitle(activeChatId, title);
-                onChatCreated?.(activeChatId, title);
+                titlePromise = updateChatTitle(activeChatId, title).catch((e) => {
+                    console.error('updateChatTitle failed:', e);
+                });
+                onChatCreatedRef.current?.(activeChatId, title);
             }
 
-            await saveMessage(activeChatId!, 'user', userMessage, uploadedRefs);
-            onChatActivity?.(activeChatId!);
+            onChatActivityRef.current?.(activeChatId!);
+
+            // Save the user message and start generation in parallel.
+            const userSavePromise = saveMessage(activeChatId!, 'user', userMessage, uploadedRefs)
+                .catch((e) => { console.error('saveMessage(user) failed:', e); });
 
             const result = await generateContent(
                 userMessage,
-                selectedModel,
+                model,
                 history,
                 uploadedRefs,
             );
             const assistantContent = result ?? "Sorry, I couldn't generate a response.";
 
-            await saveMessage(activeChatId!, 'assistant', assistantContent);
+            // Persist the assistant message in the background; don't block UI.
+            Promise.all([userSavePromise, titlePromise])
+                .then(() => saveMessage(activeChatId!, 'assistant', assistantContent))
+                .catch((e) => { console.error('saveMessage(assistant) failed:', e); });
 
             if (generationIdRef.current !== myGenId) return;
-            setMessages(prev => [...prev, { role: 'assistant' as const, content: assistantContent, attachments: [] }]);
+            setMessages(prev => [...prev, {
+                id: crypto.randomUUID(),
+                role: 'assistant' as const,
+                content: assistantContent,
+                attachments: [],
+            }]);
         } catch (error) {
             console.error(error);
             if (generationIdRef.current !== myGenId) return;
-            setMessages(prev => [...prev, { role: 'assistant' as const, content: "An error occurred while fetching the response.", attachments: [] }]);
+            setMessages(prev => [...prev, {
+                id: crypto.randomUUID(),
+                role: 'assistant' as const,
+                content: "An error occurred while fetching the response.",
+                attachments: [],
+            }]);
         } finally {
             if (generationIdRef.current === myGenId) {
                 setLoading(false);
             }
         }
-    }, [currentChatId, messages, selectedModel, pendingAttachments, onChatCreated, onChatActivity]);
+    }, []);
 
-    const handleSend = () => sendMessage(prompt.trim());
+    const handleSend = useCallback(() => {
+        sendMessage(prompt.trim());
+    }, [prompt, sendMessage]);
 
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            handleSend();
+            sendMessage(prompt.trim());
         }
-    };
+    }, [prompt, sendMessage]);
 
     const inputGroup = useMemo(() => (
         <div>
@@ -570,7 +694,6 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                                         alt={model.label}
                                         width={16}
                                         height={16}
-                                        priority
                                     />
                                     {model.label}
                                     <DropdownMenuShortcut>
@@ -642,73 +765,8 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                 <div className="w-full max-w-3xl mx-auto space-y-6">
                     {loadingHistory ? null : (
                         <>
-                            {messages.map((msg, i) => (
-                                <div key={i} className={`p-4 rounded-lg ${msg.role === 'user' ? 'bg-muted' : ''}`}>
-                                    <p className="text-xs font-medium text-muted-foreground mb-2">
-                                        {msg.role === 'user' ? 'You' : 'Lithium'}
-                                    </p>
-                                    {msg.attachments.length > 0 && (
-                                        <div className="mb-3 flex flex-wrap gap-2">
-                                            {msg.attachments.map((att, ai) => {
-                                                const isImg = isImageMimeType(att.fileMimeType);
-                                                if (isImg && att.fileUrl) {
-                                                    return (
-                                                        <a
-                                                            key={ai}
-                                                            href={att.fileUrl}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            title={att.fileName ?? 'Attached image'}
-                                                            className="block h-20 w-20 rounded-lg overflow-hidden border"
-                                                        >
-                                                            <img
-                                                                src={att.fileUrl}
-                                                                alt={att.fileName ?? 'Attached image'}
-                                                                className="h-full w-full object-cover"
-                                                            />
-                                                        </a>
-                                                    );
-                                                }
-                                                const inner = (
-                                                    <div className="h-full w-full rounded-lg border bg-muted/50 flex flex-col items-center justify-center gap-1 px-2 py-1.5 overflow-hidden">
-                                                        <FileText className="size-6 text-muted-foreground shrink-0" />
-                                                        <span className="text-[10px] leading-tight text-center line-clamp-2 break-all w-full">
-                                                            {att.fileName}
-                                                        </span>
-                                                    </div>
-                                                );
-                                                if (att.fileUrl) {
-                                                    return (
-                                                        <a
-                                                            key={ai}
-                                                            href={att.fileUrl}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            title={att.fileName}
-                                                            className="block h-20 w-20 hover:opacity-80 transition-opacity"
-                                                        >
-                                                            {inner}
-                                                        </a>
-                                                    );
-                                                }
-                                                return (
-                                                    <div
-                                                        key={ai}
-                                                        title={att.fileName}
-                                                        className="h-20 w-20"
-                                                    >
-                                                        {inner}
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    )}
-                                    <div className="prose prose-md dark:prose-invert max-w-none overflow-x-auto">
-                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                            {msg.content}
-                                        </ReactMarkdown>
-                                    </div>
-                                </div>
+                            {messages.map((msg) => (
+                                <MessageItem key={msg.id} msg={msg} />
                             ))}
                             {loading && (
                                 <div className="p-4">

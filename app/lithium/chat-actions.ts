@@ -180,21 +180,6 @@ export async function generateContent(
 const BUCKET = 'chat-uploads';
 const SIGNED_URL_EXPIRY = 3600; // 1 hour
 
-/** Generate a signed URL for a stored file */
-async function getSignedFileUrl(storagePath: string): Promise<string | null> {
-  const { supabase } = await getAuthenticatedClient();
-
-  const { data, error } = await supabase.storage
-    .from(BUCKET)
-    .createSignedUrl(storagePath, SIGNED_URL_EXPIRY);
-
-  if (error || !data?.signedUrl) {
-    console.error('Failed to create signed URL:', error);
-    return null;
-  }
-  return data.signedUrl;
-}
-
 /** Remove stored files for the given chat IDs */
 async function removeStorageFiles(
   supabase: Awaited<ReturnType<typeof getAuthenticatedClient>>['supabase'],
@@ -313,27 +298,44 @@ export async function getMessages(chatId: string): Promise<MessageWithAttachment
 
   const rows = (data ?? []) as (Message & { attachments: MessageAttachment[] | null })[];
 
-  const enriched: MessageWithAttachments[] = await Promise.all(
-    rows.map(async (msg) => {
-      const atts = (msg.attachments ?? []).slice().sort((a, b) => a.position - b.position);
-      const signed = await Promise.all(
-        atts.map(async (a) => ({
-          ...a,
-          signedFileUrl: await getSignedFileUrl(a.file_url),
-        }))
-      );
-      return {
-        id: msg.id,
-        chat_id: msg.chat_id,
-        role: msg.role,
-        content: msg.content,
-        created_at: msg.created_at,
-        attachments: signed,
-      };
-    })
+  // Collect every storage path, then sign them all in a single batched call.
+  const allPaths = Array.from(
+    new Set(
+      rows.flatMap((m) => (m.attachments ?? []).map((a) => a.file_url)).filter(Boolean) as string[]
+    )
   );
 
-  return enriched;
+  const signedMap = new Map<string, string>();
+  if (allPaths.length > 0) {
+    const { data: signedData, error: signErr } = await supabase.storage
+      .from(BUCKET)
+      .createSignedUrls(allPaths, SIGNED_URL_EXPIRY);
+
+    if (signErr) {
+      console.error('[chat-actions] getMessages createSignedUrls error:', signErr);
+    } else {
+      for (const entry of signedData ?? []) {
+        if (entry?.signedUrl && entry.path) {
+          signedMap.set(entry.path, entry.signedUrl);
+        }
+      }
+    }
+  }
+
+  return rows.map((msg) => {
+    const atts = (msg.attachments ?? []).slice().sort((a, b) => a.position - b.position);
+    return {
+      id: msg.id,
+      chat_id: msg.chat_id,
+      role: msg.role,
+      content: msg.content,
+      created_at: msg.created_at,
+      attachments: atts.map((a) => ({
+        ...a,
+        signedFileUrl: signedMap.get(a.file_url) ?? null,
+      })),
+    };
+  });
 }
 
 /** Save a message, optionally with multiple attachments */
