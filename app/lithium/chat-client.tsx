@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { ArrowUpIcon, ChevronDown, ImagePlus, Paperclip, FileText, X } from "lucide-react";
+import { ArrowUpIcon, ChevronDown, Paperclip, FileText, X } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {
@@ -23,8 +23,8 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner"
 import { LoadingBar } from "@/components/ui/loading-bar"
-import { generateContent, createChat, saveMessage, getMessages, updateChatTitle, type ChatMessage, type Message } from "./chat-actions";
-import { SUPPORTED_MIME_TYPES } from "@/lib/file-types";
+import { generateContent, createChat, saveMessage, getMessages, updateChatTitle, type ChatMessage } from "./chat-actions";
+import { SUPPORTED_MIME_TYPES, isImageMimeType } from "@/lib/file-types";
 import { createClient } from "@/utils/supabase/client";
 import { MAX_INPUT_CHARS } from "@/lib/chat-context";
 import { MODELS } from "@/lib/models";
@@ -82,6 +82,21 @@ const sampleQueries = [
     'How does the human immune system function?'
 ];
 
+type PendingAttachment = {
+    file: File | Blob;
+    mimeType: string;
+    fileName: string;
+    previewUrl: string | null; // only set for images
+};
+
+type DisplayMessage = ChatMessage & {
+    fileUrl?: string | null;
+    fileName?: string | null;
+    fileMimeType?: string | null;
+};
+
+const MAX_IMAGE_SIZE = 4 * 1024 * 1024; // 4 MB
+const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
 
 export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
     chatId?: string | null;
@@ -91,160 +106,130 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
     const [greeting, setGreeting] = useState("");
     const [sampleQuery, setSampleQuery] = useState("");
     const [prompt, setPrompt] = useState("");
-    const [messages, setMessages] = useState<(ChatMessage & { imageUrl?: string | null; fileUrl?: string | null; fileName?: string | null; fileMimeType?: string | null })[]>([]);
+    const [messages, setMessages] = useState<DisplayMessage[]>([]);
     const [loading, setLoading] = useState(false);
     const [loadingHistory, setLoadingHistory] = useState(false);
     const [showLoadingBar, setShowLoadingBar] = useState(false);
     const [selectedModel, setSelectedModel] = useState("gemini-3.1-flash-lite");
     const [currentChatId, setCurrentChatId] = useState<string | null>(chatId ?? null);
-    const [pendingImage, setPendingImage] = useState<{ file: Blob; mimeType: string; previewUrl: string } | null>(null);
-    const [pendingFile, setPendingFile] = useState<{ file: File | Blob; mimeType: string; fileName: string } | null>(null);
-    const [imageError, setImageError] = useState<string | null>(null);
-    const [fileError, setFileError] = useState<string | null>(null);
+    const [pendingAttachment, setPendingAttachment] = useState<PendingAttachment | null>(null);
+    const [attachmentError, setAttachmentError] = useState<string | null>(null);
     const generationIdRef = useRef(0);
     const pendingNewChatIdRef = useRef<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const docInputRef = useRef<HTMLInputElement>(null);
 
     const selectedModelInfo = useMemo(
         () => MODELS.find(m => m.id === selectedModel) ?? MODELS[0],
         [selectedModel]
     );
     const isEmptyState = messages.length === 0 && !loading && !loadingHistory;
-    const supportsVision = !selectedModel.startsWith('openrouter:');
-    const supportsFiles = !selectedModel.startsWith('openrouter:');
+    const supportsAttachments = !selectedModel.startsWith('openrouter:');
     const isOverLimit = prompt.length > MAX_INPUT_CHARS;
-    const MAX_IMAGE_SIZE = 4 * 1024 * 1024; // 4 MB
-    const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
 
-    // Clear pending attachments when switching to a model that doesn't support them
+    // Clear pending attachment when switching to a model that doesn't support it
     useEffect(() => {
-        if (!supportsVision) {
-            setPendingImage(null);
-            setImageError(null);
+        if (!supportsAttachments) {
+            setPendingAttachment((prev) => {
+                if (prev?.previewUrl) URL.revokeObjectURL(prev.previewUrl);
+                return null;
+            });
+            setAttachmentError(null);
         }
-        if (!supportsFiles) {
-            setPendingFile(null);
-            setFileError(null);
-        }
-    }, [supportsVision, supportsFiles]);
+    }, [supportsAttachments]);
 
-    const handleImageSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-        setImageError(null);
+    // Compress an image to a max dimension and convert to WebP
+    const compressImage = (imgFile: File): Promise<{ blob: Blob; previewUrl: string }> => {
+        return new Promise((resolve, reject) => {
+            const url = URL.createObjectURL(imgFile);
+            const img = new window.Image();
+            img.onload = () => {
+                const MAX_DIM = 2048;
+                let { width, height } = img;
+                if (width > MAX_DIM || height > MAX_DIM) {
+                    const scale = MAX_DIM / Math.max(width, height);
+                    width = Math.round(width * scale);
+                    height = Math.round(height * scale);
+                }
+
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                if (!ctx) { reject(new Error('Canvas not supported')); return; }
+                ctx.drawImage(img, 0, 0, width, height);
+
+                canvas.toBlob(
+                    (blob) => {
+                        URL.revokeObjectURL(url);
+                        if (!blob) { reject(new Error('Compression failed')); return; }
+                        const previewUrl = URL.createObjectURL(blob);
+                        resolve({ blob, previewUrl });
+                    },
+                    'image/webp',
+                    0.82,
+                );
+            };
+            img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Failed to load image')); };
+            img.src = url;
+        });
+    };
+
+    const handleAttachmentSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        setAttachmentError(null);
         const file = e.target.files?.[0];
         if (!file) return;
 
-        if (!file.type.startsWith('image/')) {
-            setImageError('Please select an image file.');
-            e.target.value = '';
-            return;
-        }
+        const isImage = isImageMimeType(file.type);
 
-        if (file.size > MAX_IMAGE_SIZE) {
-            setImageError('Image must be under 4 MB.');
-            e.target.value = '';
-            return;
-        }
-
-        // Use canvas-based compression for images to reduce upload size and AI token usage
-        const compressImage = (imgFile: File): Promise<{ blob: Blob; previewUrl: string }> => {
-            return new Promise((resolve, reject) => {
-                const url = URL.createObjectURL(imgFile);
-                const img = new window.Image();
-                img.onload = () => {
-                    // Limit dimensions to 2048px max (Gemini's optimal input size)
-                    const MAX_DIM = 2048;
-                    let { width, height } = img;
-                    if (width > MAX_DIM || height > MAX_DIM) {
-                        const scale = MAX_DIM / Math.max(width, height);
-                        width = Math.round(width * scale);
-                        height = Math.round(height * scale);
-                    }
-
-                    const canvas = document.createElement('canvas');
-                    canvas.width = width;
-                    canvas.height = height;
-                    const ctx = canvas.getContext('2d');
-                    if (!ctx) { reject(new Error('Canvas not supported')); return; }
-                    ctx.drawImage(img, 0, 0, width, height);
-
-                    // Use WebP for better compression, fall back to JPEG
-                    const outputType = 'image/webp';
-                    const quality = 0.82;
-                    canvas.toBlob(
-                        (blob) => {
-                            URL.revokeObjectURL(url);
-                            if (!blob) { reject(new Error('Compression failed')); return; }
-                            const previewUrl = URL.createObjectURL(blob);
-                            resolve({ blob, previewUrl });
-                        },
-                        outputType,
-                        quality,
-                    );
-                };
-                img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Failed to load image')); };
-                img.src = url;
-            });
-        };
-
-        // Compress if the image is over 512KB, otherwise use raw file
-        const shouldCompress = file.size > 512 * 1024;
-
-        if (shouldCompress) {
-            compressImage(file).then(({ blob, previewUrl }) => {
-                setPendingImage({ file: blob, mimeType: blob.type || 'image/webp', previewUrl });
-            }).catch(() => {
-                // Fallback: use original file without compression
-                const previewUrl = URL.createObjectURL(file);
-                setPendingImage({ file, mimeType: file.type, previewUrl });
-            });
-        } else {
-            const previewUrl = URL.createObjectURL(file);
-            setPendingImage({ file, mimeType: file.type, previewUrl });
-        }
-
-        e.target.value = '';
-    }, []);
-
-    const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-        setFileError(null);
-        const file = e.target.files?.[0];
-        if (!file) return;
-
+        // Validate type
         if (!SUPPORTED_MIME_TYPES.includes(file.type) && !file.type.startsWith('text/')) {
-            setFileError('Unsupported file type. Supported: PDF, TXT, MD, CSV, HTML, CSS, JS, JSON, XML, Python, Java, C/C++, TypeScript.');
+            setAttachmentError('Unsupported file type. Supported: images, PDF, TXT, MD, CSV, HTML, CSS, JS, JSON, XML, Python, Java, C/C++, TypeScript.');
             e.target.value = '';
             return;
         }
 
-        if (file.size > MAX_FILE_SIZE) {
-            setFileError('File must be under 20 MB.');
+        // Validate size (stricter for images)
+        const sizeLimit = isImage ? MAX_IMAGE_SIZE : MAX_FILE_SIZE;
+        if (file.size > sizeLimit) {
+            setAttachmentError(isImage ? 'Image must be under 4 MB.' : 'File must be under 20 MB.');
             e.target.value = '';
             return;
         }
 
-        // Don't allow both image and file at the same time
-        if (pendingImage) {
-            setFileError('Remove the attached image first to attach a file instead.');
-            e.target.value = '';
-            return;
+        // Clean up any previous preview URL
+        if (pendingAttachment?.previewUrl) URL.revokeObjectURL(pendingAttachment.previewUrl);
+
+        if (isImage) {
+            // Compress images larger than 512KB; preview either way
+            const useCompression = file.size > 512 * 1024;
+            if (useCompression) {
+                compressImage(file).then(({ blob, previewUrl }) => {
+                    setPendingAttachment({
+                        file: blob,
+                        mimeType: blob.type || 'image/webp',
+                        fileName: file.name,
+                        previewUrl,
+                    });
+                }).catch(() => {
+                    const previewUrl = URL.createObjectURL(file);
+                    setPendingAttachment({ file, mimeType: file.type, fileName: file.name, previewUrl });
+                });
+            } else {
+                const previewUrl = URL.createObjectURL(file);
+                setPendingAttachment({ file, mimeType: file.type, fileName: file.name, previewUrl });
+            }
+        } else {
+            setPendingAttachment({ file, mimeType: file.type, fileName: file.name, previewUrl: null });
         }
 
-        // Store the File object directly — no base64 conversion needed until upload
-        setPendingFile({ file, mimeType: file.type, fileName: file.name });
         e.target.value = '';
-    }, [pendingImage]);
+    }, [pendingAttachment]);
 
-    const clearPendingImage = useCallback(() => {
-        if (pendingImage?.previewUrl) URL.revokeObjectURL(pendingImage.previewUrl);
-        setPendingImage(null);
-        setImageError(null);
-    }, [pendingImage]);
-
-    const clearPendingFile = useCallback(() => {
-        setPendingFile(null);
-        setFileError(null);
-    }, []);
+    const clearPendingAttachment = useCallback(() => {
+        if (pendingAttachment?.previewUrl) URL.revokeObjectURL(pendingAttachment.previewUrl);
+        setPendingAttachment(null);
+        setAttachmentError(null);
+    }, [pendingAttachment]);
 
     useEffect(() => {
         setGreeting(greetings[Math.floor(Math.random() * greetings.length)]);
@@ -263,8 +248,6 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
 
     // Load messages when chatId changes (switching chats)
     useEffect(() => {
-        // If the parent is just syncing to a chat we created internally via sendMessage,
-        // skip invalidation and refetch to avoid disrupting the in-flight generation.
         if (chatId && chatId === pendingNewChatIdRef.current) {
             pendingNewChatIdRef.current = null;
             setCurrentChatId(chatId);
@@ -272,26 +255,24 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
         }
         pendingNewChatIdRef.current = null;
 
-        // Invalidate any in-flight generation so its UI update is skipped
         generationIdRef.current++;
         setLoading(false);
         setCurrentChatId(chatId ?? null);
         if (chatId) {
             setLoadingHistory(true);
             getMessages(chatId).then(async (msgs) => {
-                const mapped = msgs.map((m) => ({
+                const mapped: DisplayMessage[] = msgs.map((m) => ({
                     role: m.role,
                     content: m.content,
-                    imageUrl: m.signedImageUrl ?? null,
                     fileUrl: m.signedFileUrl ?? null,
                     fileName: m.file_name ?? null,
                     fileMimeType: m.file_mime_type ?? null,
                 }));
 
-                // Preload all images before showing messages
+                // Preload images so they don't pop in
                 const imageUrls = mapped
-                    .map(m => m.imageUrl)
-                    .filter((url): url is string => !!url);
+                    .filter(m => m.fileMimeType && isImageMimeType(m.fileMimeType) && m.fileUrl)
+                    .map(m => m.fileUrl as string);
 
                 if (imageUrls.length > 0) {
                     await Promise.all(
@@ -315,90 +296,64 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
     }, [chatId]);
 
     const sendMessage = useCallback(async (userMessage: string) => {
-        if (!userMessage.trim() && !pendingImage && !pendingFile) return;
+        if (!userMessage.trim() && !pendingAttachment) return;
         if (userMessage.length > MAX_INPUT_CHARS) return;
 
         const myGenId = ++generationIdRef.current;
         setLoading(true);
         setPrompt("");
-        const imageToSend = pendingImage;
-        const fileToSend = pendingFile;
-        setPendingImage(null);
-        setPendingFile(null);
-        setImageError(null);
-        setFileError(null);
+        const attachmentToSend = pendingAttachment;
+        setPendingAttachment(null);
+        setAttachmentError(null);
 
-        const history = [...messages];
-        const displayContent = imageToSend
+        const history = messages.map(({ role, content }) => ({ role, content }));
+        const displayContent = attachmentToSend
             ? `${userMessage ? '\n\n' + userMessage : ''}`
-            : fileToSend
-                ? `${userMessage ? '\n\n' + userMessage : ''}`
-                : userMessage;
-            
-        // Show immediate preview while uploading
+            : userMessage;
+
+        // Optimistic preview while uploading
         setMessages(prev => [...prev, {
             role: 'user' as const,
             content: displayContent,
-            imageUrl: imageToSend?.previewUrl ?? null,
-            fileName: fileToSend?.fileName ?? null,
-            fileMimeType: fileToSend?.mimeType ?? null,
+            fileUrl: attachmentToSend?.previewUrl ?? null,
+            fileName: attachmentToSend?.fileName ?? null,
+            fileMimeType: attachmentToSend?.mimeType ?? null,
         }]);
 
         try {
-            // Get authenticated user once for all operations
             const supabase = createClient();
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error('Not authenticated');
 
-            // Start chat creation in parallel with file upload if needed
+            // Run chat creation and file upload in parallel
             let activeChatId = currentChatId;
             const chatCreationPromise = !activeChatId
                 ? createChat(selectedModel)
                 : Promise.resolve(null);
 
-            // Upload image/file in parallel with chat creation
             let uploadPromise: Promise<string | null> = Promise.resolve(null);
-            let fileUploadPromise: Promise<string | null> = Promise.resolve(null);
-
-            if (imageToSend) {
-                const ext = imageToSend.mimeType.split('/')[1]?.replace('webp', 'webp') || 'png';
+            if (attachmentToSend) {
+                const ext = attachmentToSend.fileName.includes('.')
+                    ? attachmentToSend.fileName.split('.').pop()!
+                    : (attachmentToSend.mimeType.split('/')[1] || 'bin');
                 const fileName = `${crypto.randomUUID()}.${ext}`;
                 const storagePath = `${user.id}/${fileName}`;
 
                 uploadPromise = supabase.storage
                     .from('chat-images')
-                    .upload(storagePath, imageToSend.file, {
-                        contentType: imageToSend.mimeType,
+                    .upload(storagePath, attachmentToSend.file, {
+                        contentType: attachmentToSend.mimeType,
                         upsert: false,
                     })
                     .then(({ error }) => {
-                        if (error) throw new Error(`Image upload failed: ${error.message}`);
+                        if (error) throw new Error(`Upload failed: ${error.message}`);
                         return storagePath;
                     });
             }
 
-            if (fileToSend) {
-                const ext = fileToSend.fileName.split('.').pop() || 'bin';
-                const fileName = `${crypto.randomUUID()}.${ext}`;
-                const storagePath = `${user.id}/${fileName}`;
-
-                fileUploadPromise = supabase.storage
-                    .from('chat-images')
-                    .upload(storagePath, fileToSend.file, {
-                        contentType: fileToSend.mimeType,
-                        upsert: false,
-                    })
-                    .then(({ error }) => {
-                        if (error) throw new Error(`File upload failed: ${error.message}`);
-                        return storagePath;
-                    });
-            }
-
-            // Await all parallel operations
-            const [newChat, storagePath, fileStoragePath] = await Promise.all([
+            const [newChat, fileStoragePath] = await Promise.all([
                 chatCreationPromise,
                 uploadPromise,
-                fileUploadPromise,
             ]);
 
             if (newChat) {
@@ -406,7 +361,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                 pendingNewChatIdRef.current = activeChatId;
                 setCurrentChatId(activeChatId);
 
-                const titleSource = userMessage || (imageToSend ? 'Image analysis' : fileToSend ? fileToSend.fileName : 'New chat');
+                const titleSource = userMessage || (attachmentToSend ? attachmentToSend.fileName : 'New chat');
                 const title = titleSource.length > 50 ? titleSource.slice(0, 50) + '…' : titleSource;
                 await updateChatTitle(activeChatId, title);
                 onChatCreated?.(activeChatId, title);
@@ -416,26 +371,23 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                 activeChatId!,
                 'user',
                 displayContent,
-                storagePath,
                 fileStoragePath,
-                fileToSend?.mimeType ?? null,
-                fileToSend?.fileName ?? null,
+                attachmentToSend?.mimeType ?? null,
+                attachmentToSend?.fileName ?? null,
             );
             onChatActivity?.(activeChatId!);
 
-            let result: string | undefined;
-            if (storagePath) {
-                result = await generateContent(userMessage, selectedModel, history, storagePath);
-            } else if (fileStoragePath && fileToSend) {
-                result = await generateContent(userMessage, selectedModel, history, undefined, fileStoragePath, fileToSend.mimeType);
-            } else {
-                result = await generateContent(userMessage, selectedModel, history);
-            }
+            const result = await generateContent(
+                userMessage,
+                selectedModel,
+                history,
+                fileStoragePath ?? undefined,
+                attachmentToSend?.mimeType ?? undefined,
+            );
             const assistantContent = result ?? "Sorry, I couldn't generate a response.";
 
             await saveMessage(activeChatId!, 'assistant', assistantContent);
 
-            // Only update UI if user hasn't switched to a different chat
             if (generationIdRef.current !== myGenId) return;
             setMessages(prev => [...prev, { role: 'assistant' as const, content: assistantContent }]);
         } catch (error) {
@@ -447,7 +399,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                 setLoading(false);
             }
         }
-    }, [currentChatId, messages, selectedModel, pendingImage, pendingFile, onChatCreated, onChatActivity]);
+    }, [currentChatId, messages, selectedModel, pendingAttachment, onChatCreated, onChatActivity]);
 
     const handleSend = () => sendMessage(prompt.trim());
 
@@ -458,100 +410,80 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
         }
     };
 
+    const isPendingImage = pendingAttachment ? isImageMimeType(pendingAttachment.mimeType) : false;
+
     const inputGroup = useMemo(() => (
         <div>
             <input
                 type="file"
-                accept="image/png, image/jpeg, image/webp, image/heic, image/heif"
+                accept="image/png,image/jpeg,image/webp,image/heic,image/heif,.pdf,.txt,.md,.csv,.log,.html,.htm,.css,.js,.mjs,.json,.xml,.py,.java,.c,.h,.cpp,.hpp,.cc,.ts,.tsx"
                 ref={fileInputRef}
-                onChange={handleImageSelect}
-                className="hidden"
-            />
-            <input
-                type="file"
-                accept=".pdf,.txt,.md,.csv,.log,.html,.htm,.css,.js,.mjs,.json,.xml,.py,.java,.c,.h,.cpp,.hpp,.cc,.ts,.tsx"
-                ref={docInputRef}
-                onChange={handleFileSelect}
+                onChange={handleAttachmentSelect}
                 className="hidden"
             />
 
-            {pendingImage && (
+            {pendingAttachment && (
                 <div className="mb-4 ml-4 flex items-start gap-2">
-                    <div className="relative group">
-                        <img
-                            src={pendingImage.previewUrl}
-                            alt="Upload preview"
-                            className="h-20 w-20 rounded-lg object-cover border"
-                        />
-                        <button
-                            onClick={clearPendingImage}
-                            className="absolute -top-2 -right-2 bg-primary text-secondary rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                        >
-                            <X className="size-3" />
-                        </button>
-                    </div>
+                    {isPendingImage && pendingAttachment.previewUrl ? (
+                        <div className="relative group">
+                            <img
+                                src={pendingAttachment.previewUrl}
+                                alt="Upload preview"
+                                className="h-20 w-20 rounded-lg object-cover border"
+                            />
+                            <button
+                                onClick={clearPendingAttachment}
+                                className="absolute -top-2 -right-2 bg-primary text-secondary rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                            >
+                                <X className="size-3" />
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="relative group flex items-center gap-2 rounded-lg border px-3 py-2 bg-muted/50">
+                            <FileText className="size-5 text-muted-foreground shrink-0" />
+                            <span className="text-sm truncate max-w-[200px]">{pendingAttachment.fileName}</span>
+                            <button
+                                onClick={clearPendingAttachment}
+                                className="absolute -top-2 -right-2 bg-primary text-secondary rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                            >
+                                <X className="size-3" />
+                            </button>
+                        </div>
+                    )}
                 </div>
             )}
 
-            {pendingFile && (
-                <div className="mb-4 ml-4 flex items-start gap-2">
-                    <div className="relative group flex items-center gap-2 rounded-lg border px-3 py-2 bg-muted/50">
-                        <FileText className="size-5 text-muted-foreground shrink-0" />
-                        <span className="text-sm truncate max-w-[200px]">{pendingFile.fileName}</span>
-                        <button
-                            onClick={clearPendingFile}
-                            className="absolute -top-2 -right-2 bg-primary text-secondary rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                        >
-                            <X className="size-3" />
-                        </button>
-                    </div>
-                </div>
-            )}
-
-            {imageError && (
-                <p className="mb-4 ml-4 text-sm text-destructive">{imageError}</p>
-            )}
-
-            {fileError && (
-                <p className="mb-4 ml-4 text-sm text-destructive">{fileError}</p>
+            {attachmentError && (
+                <p className="mb-4 ml-4 text-sm text-destructive">{attachmentError}</p>
             )}
 
             <InputGroup>
                 <InputGroupTextarea
-                    placeholder={pendingImage ? "Ask anything about this image..." : pendingFile ? `Ask anything about ${pendingFile.fileName}...` : "Ask anything..."}
+                    placeholder={
+                        pendingAttachment
+                            ? isPendingImage
+                                ? "Ask anything about this image..."
+                                : "Ask anything about this file..."
+                            : "Ask anything..."
+                    }
                     value={prompt}
                     onChange={(e) => setPrompt(e.target.value.slice(0, MAX_INPUT_CHARS))}
                     onKeyDown={handleKeyDown}
                     disabled={loading}
                     maxLength={MAX_INPUT_CHARS}
-                // autoFocus
                 />
                 <InputGroupAddon align="block-end">
-                    {supportsFiles && (
-                        <InputGroupButton
-                            variant="secondary"
-                            className="rounded-sm cursor-pointer"
-                            size="icon-xs"
-                            onClick={() => docInputRef.current?.click()}
-                            title="Upload a file (PDF, TXT, code)"
-                            disabled={loading || !!pendingImage}
-                        >
-                            <Paperclip className="size-4" />
-                            <span className="sr-only">Upload a file</span>
-                        </InputGroupButton>
-                    )}
-
-                    {supportsVision && (
+                    {supportsAttachments && (
                         <InputGroupButton
                             variant="secondary"
                             className="rounded-sm cursor-pointer"
                             size="icon-xs"
                             onClick={() => fileInputRef.current?.click()}
-                            title="Upload an image"
-                            disabled={loading || !!pendingFile}
+                            title="Attach an image or file"
+                            disabled={loading}
                         >
-                            <ImagePlus className="size-4" />
-                            <span className="sr-only">Upload an image</span>
+                            <Paperclip className="size-4" />
+                            <span className="sr-only">Attach a file</span>
                         </InputGroupButton>
                     )}
 
@@ -609,7 +541,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                         size="icon-xs"
                         onClick={handleSend}
                         title="Send"
-                        disabled={loading || isOverLimit || (!prompt.trim() && !pendingImage && !pendingFile)}
+                        disabled={loading || isOverLimit || (!prompt.trim() && !pendingAttachment)}
                     >
                         <ArrowUpIcon />
                         <span className="sr-only">Send</span>
@@ -617,7 +549,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                 </InputGroupAddon>
             </InputGroup>
         </div>
-    ), [prompt, loading, pendingImage, pendingFile, imageError, fileError, supportsVision, supportsFiles, selectedModelInfo, selectedModel, handleKeyDown, handleSend, handleImageSelect, handleFileSelect, clearPendingImage, clearPendingFile]);
+    ), [prompt, loading, pendingAttachment, isPendingImage, attachmentError, supportsAttachments, selectedModelInfo, selectedModel, handleKeyDown, handleSend, handleAttachmentSelect, clearPendingAttachment]);
 
     // New Chat page
     if (isEmptyState) {
@@ -632,7 +564,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
 
                     {inputGroup}
 
-                    {sampleQuery && !pendingImage && !pendingFile && (
+                    {sampleQuery && !pendingAttachment && (
                         <div className="mt-6 flex justify-center px-4">
                             <Button
                                 variant="outline"
@@ -656,47 +588,50 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                 <div className="w-full max-w-3xl mx-auto space-y-6">
                     {loadingHistory ? null : (
                         <>
-                            {messages.map((msg, i) => (
-                                <div key={i} className={`p-4 rounded-lg ${msg.role === 'user' ? 'bg-muted' : ''}`}>
-                                    <p className="text-xs font-medium text-muted-foreground mb-2">
-                                        {msg.role === 'user' ? 'You' : 'Lithium'}
-                                    </p>
-                                    {msg.imageUrl && (
-                                        <div className="mb-3">
-                                            <img
-                                                src={msg.imageUrl}
-                                                alt="Attached image"
-                                                className="max-h-64 max-w-full rounded-lg border object-contain"
-                                            />
+                            {messages.map((msg, i) => {
+                                const isImg = msg.fileMimeType ? isImageMimeType(msg.fileMimeType) : false;
+                                return (
+                                    <div key={i} className={`p-4 rounded-lg ${msg.role === 'user' ? 'bg-muted' : ''}`}>
+                                        <p className="text-xs font-medium text-muted-foreground mb-2">
+                                            {msg.role === 'user' ? 'You' : 'Lithium'}
+                                        </p>
+                                        {msg.fileUrl && isImg && (
+                                            <div className="mb-3">
+                                                <img
+                                                    src={msg.fileUrl}
+                                                    alt={msg.fileName ?? 'Attached image'}
+                                                    className="max-h-64 max-w-full rounded-lg border object-contain"
+                                                />
+                                            </div>
+                                        )}
+                                        {msg.fileName && !isImg && (
+                                            <div className="mb-3">
+                                                {msg.fileUrl ? (
+                                                    <a
+                                                        href={msg.fileUrl}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 bg-muted/50 hover:bg-muted transition-colors"
+                                                    >
+                                                        <FileText className="size-4 text-muted-foreground shrink-0" />
+                                                        <span className="text-sm">{msg.fileName}</span>
+                                                    </a>
+                                                ) : (
+                                                    <div className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 bg-muted/50">
+                                                        <FileText className="size-4 text-muted-foreground shrink-0" />
+                                                        <span className="text-sm">{msg.fileName}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                        <div className="prose prose-md dark:prose-invert max-w-none overflow-x-auto">
+                                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                                {msg.content}
+                                            </ReactMarkdown>
                                         </div>
-                                    )}
-                                    {msg.fileName && (
-                                        <div className="mb-3">
-                                            {msg.fileUrl ? (
-                                                <a
-                                                    href={msg.fileUrl}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 bg-muted/50 hover:bg-muted transition-colors"
-                                                >
-                                                    <FileText className="size-4 text-muted-foreground shrink-0" />
-                                                    <span className="text-sm">{msg.fileName}</span>
-                                                </a>
-                                            ) : (
-                                                <div className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 bg-muted/50">
-                                                    <FileText className="size-4 text-muted-foreground shrink-0" />
-                                                    <span className="text-sm">{msg.fileName}</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-                                    <div className="prose prose-md dark:prose-invert max-w-none overflow-x-auto">
-                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                            {msg.content}
-                                        </ReactMarkdown>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                             {loading && (
                                 <div className="p-4">
                                     <p className="text-xs font-medium text-muted-foreground mb-2">Lithium</p>
