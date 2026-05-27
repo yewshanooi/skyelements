@@ -1,54 +1,15 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
-import {
-  ChevronsUpDown,
-  KeyRound,
-  Sun,
-  Moon,
-  LogOut,
-  Trash2,
-  User,
-  Settings,
-} from "lucide-react"
-import { useTheme } from "next-themes"
+import { ChevronsUpDown, Settings } from "lucide-react"
 
-import {
-  Avatar,
-  AvatarFallback,
-} from "@/components/ui/avatar"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-  DropdownMenuSub,
-  DropdownMenuSubTrigger,
-  DropdownMenuSubContent,
-  DropdownMenuPortal,
-  DropdownMenuCheckboxItem,
-} from "@/components/ui/dropdown-menu"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  useSidebar,
 } from "@/components/ui/sidebar"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import { buttonVariants } from "@/components/ui/button"
+import { SettingsDialog } from "@/components/settings-dialog"
 
 export function NavUser({
   user,
@@ -63,171 +24,38 @@ export function NavUser({
   onDeleteAllChats?: () => Promise<void>
   onDeleteAllNotes?: () => Promise<void>
 }) {
-  const { isMobile } = useSidebar()
-  const router = useRouter()
-  const { theme, setTheme } = useTheme()
-  const [deleteAllOpen, setDeleteAllOpen] = useState(false)
-  const [deleteAllNotesOpen, setDeleteAllNotesOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
 
   return (
     <>
-    <SidebarMenu>
-      <SidebarMenuItem>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <SidebarMenuButton
-              size="lg"
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground cursor-pointer"
-            >
-              <Avatar className="h-8 w-8 rounded-lg">
-                <AvatarFallback className="rounded-lg">
-                  <Settings className="size-4" />
-                </AvatarFallback>
-              </Avatar>
-              <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">Settings</span>
-              </div>
-              <ChevronsUpDown className="ml-auto size-4" />
-            </SidebarMenuButton>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
-            side={isMobile ? "bottom" : "right"}
-            align="end"
-            sideOffset={4}
+      <SidebarMenu>
+        <SidebarMenuItem>
+          <SidebarMenuButton
+            size="lg"
+            onClick={() => setSettingsOpen(true)}
+            className="cursor-pointer"
           >
-            <DropdownMenuLabel className="p-0 font-normal">
-              <div className="flex items-center p-2 text-left text-sm">
-                <div className="grid flex-1 leading-tight">
-                  <span className="truncate font-medium">{user.email}</span>
-                </div>
-              </div>
-            </DropdownMenuLabel>
+            <Avatar className="h-8 w-8 rounded-lg">
+              <AvatarFallback className="rounded-lg">
+                <Settings className="size-4" />
+              </AvatarFallback>
+            </Avatar>
+            <div className="grid flex-1 text-left text-sm leading-tight">
+              <span className="truncate font-medium">Settings</span>
+            </div>
+            <ChevronsUpDown className="ml-auto size-4" />
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      </SidebarMenu>
 
-            <DropdownMenuSeparator />
-
-            <DropdownMenuGroup>
-              <DropdownMenuLabel className="text-xs text-muted-foreground">Account security</DropdownMenuLabel>
-              <DropdownMenuItem
-                onClick={() => router.push("/reset-password")}
-                className="cursor-pointer"
-              >
-                <KeyRound />
-                Reset password
-              </DropdownMenuItem>
-
-              <DropdownMenuSeparator />
-
-              <DropdownMenuLabel className="text-xs text-muted-foreground">Appearance</DropdownMenuLabel>
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger className="cursor-pointer">
-                  <Sun className="h-[1.2rem] w-[1.2rem] scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90" />
-                  <Moon className="absolute h-[1.2rem] w-[1.2rem] scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0" />
-                  Theme
-                </DropdownMenuSubTrigger>
-                <DropdownMenuPortal>
-                  <DropdownMenuSubContent>
-                    <DropdownMenuCheckboxItem
-                      checked={theme === "system"}
-                      onCheckedChange={() => setTheme("system")}
-                      className="cursor-pointer"
-                    >
-                      System
-                    </DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem
-                      checked={theme === "light"}
-                      onCheckedChange={() => setTheme("light")}
-                      className="cursor-pointer"
-                    >
-                      Light
-                    </DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem
-                      checked={theme === "dark"}
-                      onCheckedChange={() => setTheme("dark")}
-                      className="cursor-pointer"
-                    >
-                      Dark
-                    </DropdownMenuCheckboxItem>
-                  </DropdownMenuSubContent>
-                </DropdownMenuPortal>
-              </DropdownMenuSub>
-
-              <DropdownMenuSeparator />
-
-              <DropdownMenuLabel className="text-xs text-muted-foreground">Danger zone</DropdownMenuLabel>
-              <DropdownMenuItem
-                variant="destructive"
-                onClick={() => setDeleteAllNotesOpen(true)}
-                className="cursor-pointer"
-              >
-                <Trash2 />
-                Clear note history
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                variant="destructive"
-                onClick={() => setDeleteAllOpen(true)}
-                className="cursor-pointer"
-              >
-                <Trash2 />
-                Clear chat history
-              </DropdownMenuItem>
-
-              <DropdownMenuSeparator />
-
-              <DropdownMenuItem 
-                variant="destructive" 
-                onClick={() => signout?.()} 
-                className="cursor-pointer"
-              >
-                <LogOut />
-                Sign out
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </SidebarMenuItem>
-    </SidebarMenu>
-
-    <AlertDialog open={deleteAllNotesOpen} onOpenChange={setDeleteAllNotesOpen}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Clear your note history?</AlertDialogTitle>
-          <AlertDialogDescription>
-            This will delete all your Lithium notes. This action cannot be undone.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel className="cursor-pointer">Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            className={buttonVariants({ variant: "outline", className: "text-destructive cursor-pointer hover:text-destructive" })}
-            onClick={() => onDeleteAllNotes?.()}
-          >
-            Delete All
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-
-    <AlertDialog open={deleteAllOpen} onOpenChange={setDeleteAllOpen}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Clear your chat history?</AlertDialogTitle>
-          <AlertDialogDescription>
-            This will delete all your Lithium chats. This action cannot be undone.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel className="cursor-pointer">Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            className={buttonVariants({ variant: "outline", className: "text-destructive cursor-pointer hover:text-destructive" })}
-            onClick={() => onDeleteAllChats?.()}
-          >
-            Delete All
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+      <SettingsDialog
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
+        user={user}
+        signout={signout}
+        onDeleteAllChats={onDeleteAllChats}
+        onDeleteAllNotes={onDeleteAllNotes}
+      />
     </>
   )
 }
