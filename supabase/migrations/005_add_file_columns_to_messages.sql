@@ -1,0 +1,5 @@
+ALTER TABLE messages
+  DROP COLUMN IF EXISTS image_url,
+  ADD COLUMN IF NOT EXISTS file_url TEXT,
+  ADD COLUMN IF NOT EXISTS file_mime_type TEXT,
+  ADD COLUMN IF NOT EXISTS file_name TEXT;

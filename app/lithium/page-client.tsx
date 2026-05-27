@@ -6,8 +6,8 @@ import { useState, useEffect, useCallback } from "react";
 // Helpers
 // ---------------------------------------------------------------------------
 
-function sortNotes<T extends { is_pinned: boolean; updated_at: string }>(notes: T[]): T[] {
-  return [...notes].sort((a, b) => {
+function sortByPinned<T extends { is_pinned: boolean; updated_at: string }>(items: T[]): T[] {
+  return [...items].sort((a, b) => {
     if (a.is_pinned !== b.is_pinned) return a.is_pinned ? -1 : 1;
     return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
   });
@@ -16,7 +16,7 @@ function sortNotes<T extends { is_pinned: boolean; updated_at: string }>(notes: 
 import { AppSidebar } from "@/components/app-sidebar";
 import { ChatClient } from "./chat-client";
 import { NoteClient } from "./note-client";
-import { listChats, deleteChat, deleteAllChats, type Chat } from "./chat-actions";
+import { listChats, deleteChat, deleteAllChats, togglePinChat, type Chat } from "./chat-actions";
 import { listNotes, deleteNote, deleteAllNotes, createNote, togglePinNote, type Note } from "./note-actions";
 import {
   Breadcrumb,
@@ -74,20 +74,30 @@ export function PageClient({ user, signout }: PageClientProps) {
     setChats(prev => {
       if (prev.some(c => c.id === chatId)) return prev;
       const now = new Date().toISOString();
-      return [
-        { id: chatId, title, model: '', user_id: '', created_at: now, updated_at: now } as Chat,
+      return sortByPinned([
+        { id: chatId, title, model: '', user_id: '', is_pinned: false, created_at: now, updated_at: now } as Chat,
         ...prev,
-      ];
+      ]);
     });
   }, []);
 
   const handleChatActivity = useCallback((chatId: string) => {
-    setChats(prev => {
-      const idx = prev.findIndex(c => c.id === chatId);
-      if (idx <= 0) return prev;
-      const chat = { ...prev[idx], updated_at: new Date().toISOString() };
-      return [chat, ...prev.slice(0, idx), ...prev.slice(idx + 1)];
-    });
+    setChats(prev => sortByPinned(
+      prev.map(c => c.id === chatId ? { ...c, updated_at: new Date().toISOString() } : c)
+    ));
+  }, []);
+
+  const handleTogglePinChat = useCallback(async (chatId: string, currentPinStatus: boolean) => {
+    const newPinStatus = !currentPinStatus;
+    // Optimistic update — flip pin state immediately without touching updated_at
+    setChats(prev => sortByPinned(prev.map(c => c.id === chatId ? { ...c, is_pinned: newPinStatus } : c)));
+    try {
+      await togglePinChat(chatId, newPinStatus);
+    } catch (error) {
+      console.error('Failed to toggle pin on chat:', error);
+      // Roll back on failure
+      setChats(prev => sortByPinned(prev.map(c => c.id === chatId ? { ...c, is_pinned: currentPinStatus } : c)));
+    }
   }, []);
 
   const handleDeleteChat = useCallback(async (chatId: string) => {
@@ -125,7 +135,7 @@ export function PageClient({ user, signout }: PageClientProps) {
     try {
       const note = await createNote();
       const now = new Date().toISOString();
-      setNotes(prev => sortNotes([
+      setNotes(prev => sortByPinned([
         { id: note.id, title: note.title, content: '', user_id: '', is_pinned: false, created_at: now, updated_at: now } as Note,
         ...prev,
       ]));
@@ -156,7 +166,7 @@ export function PageClient({ user, signout }: PageClientProps) {
     setNotes(prev => {
       if (prev.some(n => n.id === noteId)) return prev;
       const now = new Date().toISOString();
-      return sortNotes([
+      return sortByPinned([
         { id: noteId, title, content: '', user_id: '', is_pinned: false, created_at: now, updated_at: now } as Note,
         ...prev,
       ]);
@@ -164,7 +174,7 @@ export function PageClient({ user, signout }: PageClientProps) {
   }, []);
 
   const handleNoteActivity = useCallback((noteId: string, title: string) => {
-    setNotes(prev => sortNotes(
+    setNotes(prev => sortByPinned(
       prev.map(n => n.id === noteId ? { ...n, title, updated_at: new Date().toISOString() } : n)
     ));
     setNoteTitle(title || 'New note');
@@ -173,13 +183,13 @@ export function PageClient({ user, signout }: PageClientProps) {
   const handleTogglePinNote = useCallback(async (noteId: string, currentPinStatus: boolean) => {
     const newPinStatus = !currentPinStatus;
     // Optimistic update — flip pin state immediately without touching updated_at
-    setNotes(prev => sortNotes(prev.map(n => n.id === noteId ? { ...n, is_pinned: newPinStatus } : n)));
+    setNotes(prev => sortByPinned(prev.map(n => n.id === noteId ? { ...n, is_pinned: newPinStatus } : n)));
     try {
       await togglePinNote(noteId, newPinStatus);
     } catch (error) {
       console.error('Failed to toggle pin on note:', error);
       // Roll back on failure
-      setNotes(prev => sortNotes(prev.map(n => n.id === noteId ? { ...n, is_pinned: currentPinStatus } : n)));
+      setNotes(prev => sortByPinned(prev.map(n => n.id === noteId ? { ...n, is_pinned: currentPinStatus } : n)));
     }
   }, []);
 
@@ -231,6 +241,7 @@ export function PageClient({ user, signout }: PageClientProps) {
         activeChatId={activeView.type === 'chat' ? activeView.id : null}
         onSelectChat={handleSelectChat}
         onDeleteChat={handleDeleteChat}
+        onTogglePinChat={handleTogglePinChat}
         onDeleteAllChats={handleDeleteAllChats}
         onDeleteAllNotes={handleDeleteAllNotes}
         notes={notes}
@@ -280,3 +291,4 @@ export function PageClient({ user, signout }: PageClientProps) {
     </SidebarProvider>
   );
 }
+

@@ -26,6 +26,7 @@ export type Chat = {
   user_id: string;
   title: string;
   model: string;
+  is_pinned: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -259,8 +260,9 @@ export async function listChats(): Promise<Chat[]> {
 
   const { data, error } = await supabase
     .from('chats')
-    .select('id, title, model, created_at, updated_at')
+    .select('id, title, model, is_pinned, created_at, updated_at')
     .eq('user_id', user.id)
+    .order('is_pinned', { ascending: false, nullsFirst: false })
     .order('updated_at', { ascending: false });
 
   if (error) {
@@ -345,6 +347,22 @@ export async function updateChatTitle(chatId: string, title: string): Promise<vo
   if (error) {
     console.error('[chat-actions] updateChatTitle DB error:', error);
     throw new Error('Failed to update chat title.');
+  }
+}
+
+/** Update chat pinned state */
+export async function togglePinChat(chatId: string, isPinned: boolean): Promise<void> {
+  const { supabase, user } = await getAuthenticatedClient();
+
+  const { error } = await supabase
+    .from('chats')
+    .update({ is_pinned: isPinned })
+    .eq('id', chatId)
+    .eq('user_id', user.id);
+
+  if (error) {
+    console.error('[chat-actions] togglePinChat DB error:', error);
+    throw new Error('Failed to update pin state.');
   }
 }
 
