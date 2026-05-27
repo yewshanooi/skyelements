@@ -1,7 +1,6 @@
 'use server';
 
 import { GoogleGenAI, Content } from "@google/genai";
-import { OpenRouter } from "@openrouter/sdk";
 import { ALLOWED_MODEL_IDS } from "@/lib/models";
 import { buildOptimizedHistory } from "@/lib/chat-context";
 import { getAuthenticatedClient } from "./auth";
@@ -59,13 +58,6 @@ export async function generateContent(
     return "Sorry, the requested model is not available.";
   }
 
-  const isOpenRouter = model.startsWith("openrouter:");
-  const actualModel = isOpenRouter ? model.replace("openrouter:", "") : model;
-
-  if (fileStoragePath && isOpenRouter) {
-    return "Sorry, file upload is not supported for this model.";
-  }
-
   // Optimize history to fit within model context budget
   const optimizedHistory = buildOptimizedHistory(history, model);
 
@@ -83,59 +75,6 @@ export async function generateContent(
     file = { base64, mimeType: fileMimeType, fileName };
   }
 
-  if (isOpenRouter) {
-    if (!process.env.OPENROUTER_API_KEY) {
-      console.error("OPENROUTER_API_KEY environment variable is not set.");
-
-      return "Sorry, I couldn't generate a response at this time.";
-    }
-
-    const openrouter = new OpenRouter({
-      apiKey: process.env.OPENROUTER_API_KEY
-    });
-
-    const messages = [
-      ...optimizedHistory.map(msg => ({
-        role: msg.role as 'user' | 'assistant',
-        content: msg.content
-      })),
-      { role: 'user' as const, content: prompt }
-    ];
-
-    try {
-      const stream = await openrouter.chat.send({
-        chatGenerationParams: {
-          model: actualModel,
-          messages: messages,
-          stream: true
-        }
-      });
-
-      let fullResponse = "";
-      for await (const chunk of stream) {
-        const content = chunk.choices[0]?.delta?.content;
-        if (content) {
-          fullResponse += content;
-        }
-      }
-
-      return fullResponse;
-    } catch (error: any) {
-      console.error("Error generating content:", error);
-
-      if (error?.statusCode === 429) {
-        return `⚠️ **Rate Limited**\n\nWe've being rate limited for the ${actualModel} model. Please change to another model or try again later.`;
-      }
-
-      if (error?.statusCode === 500) {
-        return '⚠️ **Service Unavailable**\n\nThe model provider is currently experiencing issues. Please try again later.';
-      }
-
-      return "Sorry, I couldn't generate a response at this time.";
-    }
-  }
-
-  // Google AI Studio models
   if (!process.env.GOOGLE_API_KEY) {
     console.error("GOOGLE_API_KEY environment variable is not set.");
 
@@ -165,7 +104,7 @@ export async function generateContent(
 
   try {
     const response = await ai.models.generateContent({
-      model: actualModel,
+      model,
       contents,
     });
     return response.text;
@@ -173,7 +112,7 @@ export async function generateContent(
     console.error("Error generating content:", error);
 
     if (error?.status === 429) {
-      return `⚠️ **Free Quota Exceeded**\n\nWe've hit the daily free quota for the ${actualModel} model. Please change to another model or try again tomorrow.`;
+      return `⚠️ **Free Quota Exceeded**\n\nWe've hit the daily free quota for the ${model} model. Please change to another model or try again tomorrow.`;
     }
 
     if (error?.status === 503) {

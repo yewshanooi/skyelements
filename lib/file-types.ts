@@ -1,4 +1,3 @@
-// Supported file MIME types for upload (Google models only)
 export const SUPPORTED_FILE_TYPES: Record<string, string[]> = {
   // Images
   'image/png': ['.png'],
@@ -6,8 +5,10 @@ export const SUPPORTED_FILE_TYPES: Record<string, string[]> = {
   'image/webp': ['.webp'],
   'image/heic': ['.heic'],
   'image/heif': ['.heif'],
+
   // Documents
   'application/pdf': ['.pdf'],
+  
   // Text/Code
   'text/plain': ['.txt', '.md', '.csv', '.log'],
   'text/html': ['.html', '.htm'],

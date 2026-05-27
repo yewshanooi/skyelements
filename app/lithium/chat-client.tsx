@@ -123,19 +123,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
         [selectedModel]
     );
     const isEmptyState = messages.length === 0 && !loading && !loadingHistory;
-    const supportsAttachments = !selectedModel.startsWith('openrouter:');
     const isOverLimit = prompt.length > MAX_INPUT_CHARS;
-
-    // Clear pending attachment when switching to a model that doesn't support it
-    useEffect(() => {
-        if (!supportsAttachments) {
-            setPendingAttachment((prev) => {
-                if (prev?.previewUrl) URL.revokeObjectURL(prev.previewUrl);
-                return null;
-            });
-            setAttachmentError(null);
-        }
-    }, [supportsAttachments]);
 
     // Compress an image to a max dimension and convert to WebP
     const compressImage = (imgFile: File): Promise<{ blob: Blob; previewUrl: string }> => {
@@ -473,19 +461,17 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                     maxLength={MAX_INPUT_CHARS}
                 />
                 <InputGroupAddon align="block-end">
-                    {supportsAttachments && (
-                        <InputGroupButton
-                            variant="secondary"
-                            className="rounded-sm cursor-pointer"
-                            size="icon-xs"
-                            onClick={() => fileInputRef.current?.click()}
-                            title="Attach an image or file"
-                            disabled={loading}
-                        >
-                            <Paperclip className="size-4" />
-                            <span className="sr-only">Attach a file</span>
-                        </InputGroupButton>
-                    )}
+                    <InputGroupButton
+                        variant="secondary"
+                        className="rounded-sm cursor-pointer"
+                        size="icon-xs"
+                        onClick={() => fileInputRef.current?.click()}
+                        title="Attach an image or file"
+                        disabled={loading}
+                    >
+                        <Paperclip className="size-4" />
+                        <span className="sr-only">Attach a file</span>
+                    </InputGroupButton>
 
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -549,7 +535,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                 </InputGroupAddon>
             </InputGroup>
         </div>
-    ), [prompt, loading, pendingAttachment, isPendingImage, attachmentError, supportsAttachments, selectedModelInfo, selectedModel, handleKeyDown, handleSend, handleAttachmentSelect, clearPendingAttachment]);
+    ), [prompt, loading, pendingAttachment, isPendingImage, attachmentError, selectedModelInfo, selectedModel, handleKeyDown, handleSend, handleAttachmentSelect, clearPendingAttachment]);
 
     // New Chat page
     if (isEmptyState) {

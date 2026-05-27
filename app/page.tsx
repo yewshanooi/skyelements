@@ -80,7 +80,7 @@ export default async function Page() {
 
                 <CardContent>
                   <CardDescription className="text-center mb-6">
-                    AI-powered note-taking app. Now with Google AI Studio and OpenRouter models.
+                    AI-powered note-taking app. Now with images, documents, and code support.
                   </CardDescription>
                   <div className="flex justify-center">
                     <Button asChild variant="secondary">
