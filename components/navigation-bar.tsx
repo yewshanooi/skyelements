@@ -31,7 +31,29 @@ import { ThemeToggle } from "./theme-client";
 
 export function NavigationBar() {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false)
+  const [elevatedZ, setElevatedZ] = React.useState(false)
   const pathname = usePathname()
+
+  React.useEffect(() => {
+    if (mobileMenuOpen) {
+      setElevatedZ(true)
+    } else {
+      // Keep elevated z-index until Sheet close animation finishes
+      const timer = setTimeout(() => setElevatedZ(false), 350)
+      return () => clearTimeout(timer)
+    }
+  }, [mobileMenuOpen])
+
+  React.useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [mobileMenuOpen])
 
   React.useEffect(() => {
     const handleResize = () => {
@@ -50,7 +72,7 @@ export function NavigationBar() {
   }
 
   return (
-    <div className="sticky top-4 z-[60] flex justify-center px-4">
+    <div className={`sticky top-4 flex justify-center px-4 ${elevatedZ ? 'z-[60]' : 'z-40'}`}>
       <div className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-gray-200/20 rounded-xl shadow-xs px-6 py-3 w-full max-w-7xl">
         {/* Desktop Navigation */}
         <div className="hidden lg:grid grid-cols-3 items-center gap-8">
