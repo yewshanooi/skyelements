@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
   KeyRound,
@@ -12,6 +13,7 @@ import {
   Monitor,
   Sun,
   Moon,
+  Shield,
 } from "lucide-react"
 import { useTheme } from "next-themes"
 
@@ -158,39 +160,69 @@ export function SettingsDialog({
   )
 
   const dataSection = (
-    <SettingsSection
-      title="Your data"
-      description="Manage your notes and chats data."
-    >
-      <SettingsRow
-        label="Notes"
-        action={
-          <Button
-            size="sm"
-            variant="secondary"
-            className="cursor-pointer text-destructive hover:text-destructive"
-            onClick={() => setDeleteAllNotesOpen(true)}
-          >
-            <Trash2 className="size-4" />
-            Delete all
-          </Button>
-        }
-      />
-      <SettingsRow
-        label="Chats"
-        action={
-          <Button
-            size="sm"
-            variant="secondary"
-            className="cursor-pointer text-destructive hover:text-destructive"
-            onClick={() => setDeleteAllChatsOpen(true)}
-          >
-            <Trash2 className="size-4" />
-            Delete all
-          </Button>
-        }
-      />
-    </SettingsSection>
+    <>
+      <SettingsSection
+        title="Your data"
+        description="Manage your notes and chats data."
+      >
+        <SettingsRow
+          label="Notes"
+          action={
+            <Button
+              size="sm"
+              variant="secondary"
+              className="cursor-pointer text-destructive hover:text-destructive"
+              onClick={() => setDeleteAllNotesOpen(true)}
+            >
+              <Trash2 className="size-4" />
+              Delete all
+            </Button>
+          }
+        />
+        <SettingsRow
+          label="Chats"
+          action={
+            <Button
+              size="sm"
+              variant="secondary"
+              className="cursor-pointer text-destructive hover:text-destructive"
+              onClick={() => setDeleteAllChatsOpen(true)}
+            >
+              <Trash2 className="size-4" />
+              Delete all
+            </Button>
+          }
+        />
+      </SettingsSection>
+
+      <Separator />
+
+      <SettingsSection
+        title="Policy"
+        description="How we collect, use, and protect your data."
+      >
+        <SettingsRow
+          label="Privacy policy"
+          action={
+            <Button
+              asChild
+              size="sm"
+              variant="secondary"
+              className="cursor-pointer"
+            >
+              <Link
+                href="/privacy-policy"
+                rel="noopener noreferrer"
+                onClick={() => onOpenChange(false)}
+              >
+                <Shield className="size-4" />
+                View
+              </Link>
+            </Button>
+          }
+        />
+      </SettingsSection>
+    </>
   )
 
   return (
