@@ -3,6 +3,7 @@
 import { GoogleGenAI, Content } from "@google/genai";
 import { OpenRouter } from "@openrouter/sdk";
 import { ALLOWED_MODEL_IDS } from "@/lib/models";
+import { buildOptimizedHistory } from "@/lib/chat-context";
 import { getAuthenticatedClient } from "./auth";
 
 // ---------------------------------------------------------------------------
@@ -60,6 +61,9 @@ export async function generateContent(
     return "Sorry, image upload is not supported for this model.";
   }
 
+  // Optimize history to fit within model context budget
+  const optimizedHistory = buildOptimizedHistory(history, model);
+
   // Fetch image data from Supabase Storage if a storage path was provided
   let image: ImageAttachment | undefined;
   if (imageStoragePath) {
@@ -91,7 +95,7 @@ export async function generateContent(
     });
 
     const messages = [
-      ...history.map(msg => ({
+      ...optimizedHistory.map(msg => ({
         role: msg.role as 'user' | 'assistant',
         content: msg.content
       })),
@@ -141,7 +145,7 @@ export async function generateContent(
   const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY });
 
   const contents: Content[] = [
-    ...history.map(msg => ({
+    ...optimizedHistory.map(msg => ({
       role: msg.role === 'assistant' ? 'model' : 'user',
       parts: [{ text: msg.content }]
     } as Content)),

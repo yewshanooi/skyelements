@@ -25,6 +25,7 @@ import { Spinner } from "@/components/ui/spinner"
 import { LoadingBar } from "@/components/ui/loading-bar"
 import { generateContent, createChat, saveMessage, getMessages, updateChatTitle, type ChatMessage, type Message } from "./chat-actions";
 import { createClient } from "@/utils/supabase/client";
+import { MAX_INPUT_CHARS } from "@/lib/chat-context";
 import { MODELS } from "@/lib/models";
 import Image from 'next/image'
 
@@ -107,6 +108,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
     );
     const isEmptyState = messages.length === 0 && !loading && !loadingHistory;
     const supportsVision = !selectedModel.startsWith('openrouter:');
+    const isOverLimit = prompt.length > MAX_INPUT_CHARS;
     const MAX_IMAGE_SIZE = 4 * 1024 * 1024; // 4 MB
 
     // Clear pending image when switching to a model that doesn't support vision
@@ -216,6 +218,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
 
     const sendMessage = useCallback(async (userMessage: string) => {
         if (!userMessage.trim() && !pendingImage) return;
+        if (userMessage.length > MAX_INPUT_CHARS) return;
 
         const myGenId = ++generationIdRef.current;
         setLoading(true);
@@ -350,9 +353,10 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                 <InputGroupTextarea
                     placeholder={pendingImage ? "Ask anything about this image..." : "Ask anything..."}
                     value={prompt}
-                    onChange={(e) => setPrompt(e.target.value)}
+                    onChange={(e) => setPrompt(e.target.value.slice(0, MAX_INPUT_CHARS))}
                     onKeyDown={handleKeyDown}
                     disabled={loading}
+                    maxLength={MAX_INPUT_CHARS}
                 // autoFocus
                 />
                 <InputGroupAddon align="block-end">
@@ -412,7 +416,9 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                     </DropdownMenu>
                     <InputGroupText className="ml-auto">
                         {prompt.length > 0 && (
-                            <span className="hidden lg:inline">{`${prompt.length} ${prompt.length === 1 ? 'character' : 'characters'}`}</span>
+                            <span className={`hidden lg:inline ${prompt.length >= MAX_INPUT_CHARS * 0.9 ? 'text-destructive' : prompt.length >= MAX_INPUT_CHARS * 0.75 ? 'text-yellow-500' : ''}`}>
+                                {prompt.length.toLocaleString()} / {MAX_INPUT_CHARS.toLocaleString()}
+                            </span>
                         )}
                     </InputGroupText>
                     <Separator orientation="vertical" className="mx-2 data-[orientation=vertical]:h-4" />
@@ -422,7 +428,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                         size="icon-xs"
                         onClick={handleSend}
                         title="Send"
-                        disabled={loading || (!prompt.trim() && !pendingImage)}
+                        disabled={loading || isOverLimit || (!prompt.trim() && !pendingImage)}
                     >
                         <ArrowUpIcon />
                         <span className="sr-only">Send</span>

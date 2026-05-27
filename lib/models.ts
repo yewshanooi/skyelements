@@ -17,8 +17,6 @@ export const MODELS: ModelDefinition[] = [
   { id: 'openrouter:poolside/laguna-m.1:free', label: 'Laguna M.1', icon: '/lithium/poolside.png', shortcut: '' },
   { id: 'openrouter:poolside/laguna-xs.2:free', label: 'Laguna XS.2', icon: '/lithium/poolside.png', shortcut: '' },
   { id: 'openrouter:z-ai/glm-4.5-air:free', label: 'GLM 4.5 Air', icon: '/lithium/zai.png', shortcut: '' },
-  { id: 'openrouter:arcee-ai/trinity-large-thinking:free', label: 'Trinity Large', icon: '/lithium/arcee.png', shortcut: 'Thinking' },
-  { id: 'openrouter:baidu/cobuddy:free', label: 'Qianfan CoBuddy', icon: '/lithium/baidu.png', shortcut: '' },
 ];
 
 export const ALLOWED_MODEL_IDS = new Set(MODELS.map(m => m.id));
