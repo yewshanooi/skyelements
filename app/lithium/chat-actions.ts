@@ -20,6 +20,13 @@ export type FileAttachment = {
   fileName: string;
 };
 
+/** Stored attachment reference passed from the client */
+export type AttachmentRef = {
+  storagePath: string;
+  mimeType: string;
+  fileName: string;
+};
+
 export type Chat = {
   id: string;
   user_id: string;
@@ -30,15 +37,26 @@ export type Chat = {
   updated_at: string;
 };
 
+export type MessageAttachment = {
+  id: string;
+  message_id: string;
+  file_url: string;
+  file_mime_type: string;
+  file_name: string;
+  position: number;
+  created_at: string;
+};
+
 export type Message = {
   id: string;
   chat_id: string;
   role: 'user' | 'assistant';
   content: string;
-  file_url?: string | null;
-  file_mime_type?: string | null;
-  file_name?: string | null;
   created_at: string;
+};
+
+export type MessageWithAttachments = Message & {
+  attachments: (MessageAttachment & { signedFileUrl: string | null })[];
 };
 
 // ---------------------------------------------------------------------------
@@ -49,8 +67,7 @@ export async function generateContent(
   prompt: string,
   model: string = "gemini-3.1-flash-lite",
   history: ChatMessage[] = [],
-  fileStoragePath?: string,
-  fileMimeType?: string,
+  attachments: AttachmentRef[] = [],
 ) {
   const { supabase } = await getAuthenticatedClient();
 
@@ -61,18 +78,29 @@ export async function generateContent(
   // Optimize history to fit within model context budget
   const optimizedHistory = buildOptimizedHistory(history, model);
 
-  // Download attached file from storage
-  let file: FileAttachment | undefined;
-  if (fileStoragePath && fileMimeType) {
-    const { data, error } = await supabase.storage.from(BUCKET).download(fileStoragePath);
-    if (error || !data) {
-      console.error('Failed to download file from storage:', error);
-      return "Sorry, I couldn't process the attached file.";
+  // Download attached files from storage (in parallel)
+  const files: FileAttachment[] = [];
+  if (attachments.length > 0) {
+    const downloads = await Promise.all(
+      attachments.map(async (att) => {
+        const { data, error } = await supabase.storage.from(BUCKET).download(att.storagePath);
+        if (error || !data) {
+          console.error('Failed to download file from storage:', att.storagePath, error);
+          return null;
+        }
+        const arrayBuffer = await data.arrayBuffer();
+        const base64 = Buffer.from(arrayBuffer).toString('base64');
+        return { base64, mimeType: att.mimeType, fileName: att.fileName } as FileAttachment;
+      })
+    );
+
+    for (const f of downloads) {
+      if (f) files.push(f);
     }
-    const arrayBuffer = await data.arrayBuffer();
-    const base64 = Buffer.from(arrayBuffer).toString('base64');
-    const fileName = fileStoragePath.split('/').pop() || 'file';
-    file = { base64, mimeType: fileMimeType, fileName };
+
+    if (files.length === 0 && attachments.length > 0) {
+      return "Sorry, I couldn't process the attached files.";
+    }
   }
 
   if (!process.env.GOOGLE_API_KEY) {
@@ -90,15 +118,37 @@ export async function generateContent(
     } as Content)),
   ];
 
-  // Build the user message parts
+  // Build the user message parts.
   const userParts: Content['parts'] = [];
 
-  if (file) {
-    userParts.push({ inlineData: { data: file.base64, mimeType: file.mimeType } });
+  let leadingPrompt = prompt;
+  if (!leadingPrompt && files.length > 0) {
+    const allImages = files.every(f => f.mimeType.startsWith('image/'));
+    if (allImages) {
+      leadingPrompt = files.length > 1
+        ? 'What is in these images?'
+        : 'What is in this image?';
+    } else {
+      leadingPrompt = files.length > 1
+        ? 'Analyze these files.'
+        : 'Analyze this file.';
+    }
   }
 
-  const isImage = file?.mimeType.startsWith('image/');
-  userParts.push({ text: prompt || (isImage ? 'What is in this image?' : file ? 'Analyze this file.' : '') });
+  if (files.length > 1) {
+    userParts.push({
+      text: `${leadingPrompt}\n\n(The user has attached ${files.length} files. Consider all of them in your response.)`,
+    });
+  } else if (leadingPrompt) {
+    userParts.push({ text: leadingPrompt });
+  }
+
+  files.forEach((file, idx) => {
+    if (files.length > 1) {
+      userParts.push({ text: `[Attachment ${idx + 1} of ${files.length}: ${file.fileName}]` });
+    }
+    userParts.push({ inlineData: { data: file.base64, mimeType: file.mimeType } });
+  });
 
   contents.push({ role: 'user', parts: userParts } as Content);
 
@@ -127,7 +177,7 @@ export async function generateContent(
 // File Storage Helpers
 // ---------------------------------------------------------------------------
 
-const BUCKET = 'chat-images';
+const BUCKET = 'chat-uploads';
 const SIGNED_URL_EXPIRY = 3600; // 1 hour
 
 /** Generate a signed URL for a stored file */
@@ -152,18 +202,37 @@ async function removeStorageFiles(
 ) {
   if (chatIds.length === 0) return;
 
-  const { data: msgs } = await supabase
+  // Single query: pull every attachment path for messages in these chats
+  const { data, error } = await supabase
     .from('messages')
-    .select('file_url')
-    .in('chat_id', chatIds)
-    .not('file_url', 'is', null);
+    .select('message_attachments(file_url)')
+    .in('chat_id', chatIds);
 
-  const paths = (msgs ?? [])
-    .map((m: { file_url?: string | null }) => m.file_url)
+  if (error) {
+    console.error('[chat-actions] removeStorageFiles read error:', error);
+    throw new Error('Failed to enumerate chat attachments for deletion.');
+  }
+
+  type Row = { message_attachments: { file_url: string | null }[] | null };
+  const paths = ((data ?? []) as Row[])
+    .flatMap((row) => row.message_attachments ?? [])
+    .map((a) => a.file_url)
     .filter((p): p is string => !!p);
 
-  if (paths.length > 0) {
-    await supabase.storage.from(BUCKET).remove(paths);
+  if (paths.length === 0) return;
+
+  // Supabase storage limits batch removes; chunk to be safe.
+  const CHUNK = 100;
+  for (let i = 0; i < paths.length; i += CHUNK) {
+    const slice = paths.slice(i, i + CHUNK);
+    const { error: removeErr } = await supabase.storage.from(BUCKET).remove(slice);
+    if (removeErr) {
+      console.error('[chat-actions] removeStorageFiles remove error:', removeErr, {
+        bucket: BUCKET,
+        sample: slice.slice(0, 3),
+      });
+      throw new Error('Failed to delete chat attachments from storage.');
+    }
   }
 }
 
@@ -212,13 +281,28 @@ export async function listChats(): Promise<Chat[]> {
   return (data ?? []) as Chat[];
 }
 
-/** Get messages for a chat */
-export async function getMessages(chatId: string): Promise<(Message & { signedFileUrl?: string | null })[]> {
+/** Get messages (with attachments) for a chat */
+export async function getMessages(chatId: string): Promise<MessageWithAttachments[]> {
   const { supabase } = await getAuthenticatedClient();
 
   const { data, error } = await supabase
     .from('messages')
-    .select('*')
+    .select(`
+      id,
+      chat_id,
+      role,
+      content,
+      created_at,
+      attachments:message_attachments (
+        id,
+        message_id,
+        file_url,
+        file_mime_type,
+        file_name,
+        position,
+        created_at
+      )
+    `)
     .eq('chat_id', chatId)
     .order('created_at', { ascending: true });
 
@@ -227,42 +311,64 @@ export async function getMessages(chatId: string): Promise<(Message & { signedFi
     throw new Error('Failed to load messages.');
   }
 
-  const messages = (data ?? []) as Message[];
+  const rows = (data ?? []) as (Message & { attachments: MessageAttachment[] | null })[];
 
-  // Generate signed URLs for messages that have files
-  const enriched = await Promise.all(
-    messages.map(async (msg) => {
-      const signedFileUrl = msg.file_url ? await getSignedFileUrl(msg.file_url) : null;
-      return { ...msg, signedFileUrl };
+  const enriched: MessageWithAttachments[] = await Promise.all(
+    rows.map(async (msg) => {
+      const atts = (msg.attachments ?? []).slice().sort((a, b) => a.position - b.position);
+      const signed = await Promise.all(
+        atts.map(async (a) => ({
+          ...a,
+          signedFileUrl: await getSignedFileUrl(a.file_url),
+        }))
+      );
+      return {
+        id: msg.id,
+        chat_id: msg.chat_id,
+        role: msg.role,
+        content: msg.content,
+        created_at: msg.created_at,
+        attachments: signed,
+      };
     })
   );
 
   return enriched;
 }
 
-/** Save a message to a chat */
+/** Save a message, optionally with multiple attachments */
 export async function saveMessage(
   chatId: string,
   role: 'user' | 'assistant',
   content: string,
-  fileUrl?: string | null,
-  fileMimeType?: string | null,
-  fileName?: string | null,
+  attachments: AttachmentRef[] = [],
 ): Promise<Message> {
   const { supabase, user } = await getAuthenticatedClient();
 
-  const insertData: Record<string, unknown> = { chat_id: chatId, role, content };
-  if (fileUrl) insertData.file_url = fileUrl;
-  if (fileMimeType) insertData.file_mime_type = fileMimeType;
-  if (fileName) insertData.file_name = fileName;
-
-  const { data, error } = await supabase
+  const { data: msgData, error: msgErr } = await supabase
     .from('messages')
-    .insert(insertData)
+    .insert({ chat_id: chatId, role, content })
     .select()
     .single();
 
-  if (error) throw new Error(error.message);
+  if (msgErr) throw new Error(msgErr.message);
+  const message = msgData as Message;
+
+  if (attachments.length > 0) {
+    const rows = attachments.map((a, i) => ({
+      message_id: message.id,
+      file_url: a.storagePath,
+      file_mime_type: a.mimeType,
+      file_name: a.fileName,
+      position: i,
+    }));
+
+    const { error: attErr } = await supabase.from('message_attachments').insert(rows);
+    if (attErr) {
+      console.error('[chat-actions] saveMessage attachment insert error:', attErr);
+      throw new Error('Failed to save attachments.');
+    }
+  }
 
   await supabase
     .from('chats')
@@ -270,7 +376,7 @@ export async function saveMessage(
     .eq('id', chatId)
     .eq('user_id', user.id);
 
-  return data as Message;
+  return message;
 }
 
 /** Update chat title */

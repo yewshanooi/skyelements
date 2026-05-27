@@ -23,7 +23,15 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner"
 import { LoadingBar } from "@/components/ui/loading-bar"
-import { generateContent, createChat, saveMessage, getMessages, updateChatTitle, type ChatMessage } from "./chat-actions";
+import {
+    generateContent,
+    createChat,
+    saveMessage,
+    getMessages,
+    updateChatTitle,
+    type ChatMessage,
+    type AttachmentRef,
+} from "./chat-actions";
 import { SUPPORTED_MIME_TYPES, isImageMimeType } from "@/lib/file-types";
 import { createClient } from "@/utils/supabase/client";
 import { MAX_INPUT_CHARS } from "@/lib/chat-context";
@@ -83,20 +91,26 @@ const sampleQueries = [
 ];
 
 type PendingAttachment = {
+    id: string;
     file: File | Blob;
     mimeType: string;
     fileName: string;
     previewUrl: string | null; // only set for images
 };
 
+type DisplayAttachment = {
+    fileUrl: string | null;
+    fileName: string;
+    fileMimeType: string;
+};
+
 type DisplayMessage = ChatMessage & {
-    fileUrl?: string | null;
-    fileName?: string | null;
-    fileMimeType?: string | null;
+    attachments: DisplayAttachment[];
 };
 
 const MAX_IMAGE_SIZE = 4 * 1024 * 1024; // 4 MB
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
+const MAX_ATTACHMENTS = 5;
 
 export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
     chatId?: string | null;
@@ -112,7 +126,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
     const [showLoadingBar, setShowLoadingBar] = useState(false);
     const [selectedModel, setSelectedModel] = useState("gemini-3.1-flash-lite");
     const [currentChatId, setCurrentChatId] = useState<string | null>(chatId ?? null);
-    const [pendingAttachment, setPendingAttachment] = useState<PendingAttachment | null>(null);
+    const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
     const [attachmentError, setAttachmentError] = useState<string | null>(null);
     const generationIdRef = useRef(0);
     const pendingNewChatIdRef = useRef<string | null>(null);
@@ -124,6 +138,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
     );
     const isEmptyState = messages.length === 0 && !loading && !loadingHistory;
     const isOverLimit = prompt.length > MAX_INPUT_CHARS;
+    const hasPendingAttachments = pendingAttachments.length > 0;
 
     // Compress an image to a max dimension and convert to WebP
     const compressImage = (imgFile: File): Promise<{ blob: Blob; previewUrl: string }> => {
@@ -162,62 +177,98 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
         });
     };
 
-    const handleAttachmentSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-        setAttachmentError(null);
-        const file = e.target.files?.[0];
-        if (!file) return;
-
+    // Validate + process a single file into a PendingAttachment, or return an error.
+    const buildPendingAttachment = useCallback(async (file: File): Promise<PendingAttachment | { error: string }> => {
         const isImage = isImageMimeType(file.type);
 
-        // Validate type
         if (!SUPPORTED_MIME_TYPES.includes(file.type) && !file.type.startsWith('text/')) {
-            setAttachmentError('Unsupported file type. Supported: images, PDF, TXT, MD, CSV, HTML, CSS, JS, JSON, XML, Python, Java, C/C++, TypeScript.');
-            e.target.value = '';
-            return;
+            return { error: `"${file.name}" has an unsupported file type.` };
         }
 
-        // Validate size (stricter for images)
         const sizeLimit = isImage ? MAX_IMAGE_SIZE : MAX_FILE_SIZE;
         if (file.size > sizeLimit) {
-            setAttachmentError(isImage ? 'Image must be under 4 MB.' : 'File must be under 20 MB.');
-            e.target.value = '';
-            return;
+            return {
+                error: isImage
+                    ? `"${file.name}" exceeds the 4 MB image limit.`
+                    : `"${file.name}" exceeds the 20 MB file limit.`,
+            };
         }
 
-        // Clean up any previous preview URL
-        if (pendingAttachment?.previewUrl) URL.revokeObjectURL(pendingAttachment.previewUrl);
+        const id = crypto.randomUUID();
 
         if (isImage) {
-            // Compress images larger than 512KB; preview either way
             const useCompression = file.size > 512 * 1024;
             if (useCompression) {
-                compressImage(file).then(({ blob, previewUrl }) => {
-                    setPendingAttachment({
+                try {
+                    const { blob, previewUrl } = await compressImage(file);
+                    return {
+                        id,
                         file: blob,
                         mimeType: blob.type || 'image/webp',
                         fileName: file.name,
                         previewUrl,
-                    });
-                }).catch(() => {
+                    };
+                } catch {
                     const previewUrl = URL.createObjectURL(file);
-                    setPendingAttachment({ file, mimeType: file.type, fileName: file.name, previewUrl });
-                });
-            } else {
-                const previewUrl = URL.createObjectURL(file);
-                setPendingAttachment({ file, mimeType: file.type, fileName: file.name, previewUrl });
+                    return { id, file, mimeType: file.type, fileName: file.name, previewUrl };
+                }
             }
-        } else {
-            setPendingAttachment({ file, mimeType: file.type, fileName: file.name, previewUrl: null });
+            const previewUrl = URL.createObjectURL(file);
+            return { id, file, mimeType: file.type, fileName: file.name, previewUrl };
         }
 
-        e.target.value = '';
-    }, [pendingAttachment]);
+        return { id, file, mimeType: file.type, fileName: file.name, previewUrl: null };
+    }, []);
 
-    const clearPendingAttachment = useCallback(() => {
-        if (pendingAttachment?.previewUrl) URL.revokeObjectURL(pendingAttachment.previewUrl);
-        setPendingAttachment(null);
+    const handleAttachmentSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files ?? []);
+        e.target.value = '';
+        if (files.length === 0) return;
+
         setAttachmentError(null);
-    }, [pendingAttachment]);
+
+        const remainingSlots = MAX_ATTACHMENTS - pendingAttachments.length;
+        const overflow = files.length > remainingSlots;
+        const accepted = files.slice(0, Math.max(0, remainingSlots));
+
+        const errors: string[] = [];
+        if (overflow) {
+            errors.push(`You can attach up to ${MAX_ATTACHMENTS} files per message.`);
+        }
+
+        const built = await Promise.all(accepted.map(buildPendingAttachment));
+        const newAttachments: PendingAttachment[] = [];
+        for (const result of built) {
+            if ('error' in result) errors.push(result.error);
+            else newAttachments.push(result);
+        }
+
+        if (newAttachments.length > 0) {
+            setPendingAttachments(prev => [...prev, ...newAttachments]);
+        }
+        if (errors.length > 0) {
+            setAttachmentError(errors.join(' '));
+        }
+    }, [pendingAttachments.length, buildPendingAttachment]);
+
+    const removePendingAttachment = useCallback((id: string) => {
+        setPendingAttachments(prev => {
+            const target = prev.find(a => a.id === id);
+            if (target?.previewUrl) URL.revokeObjectURL(target.previewUrl);
+            return prev.filter(a => a.id !== id);
+        });
+        setAttachmentError(null);
+    }, []);
+
+    const clearAllPendingAttachments = useCallback(() => {
+        setPendingAttachments(prev => {
+            for (const a of prev) {
+                if (a.previewUrl) URL.revokeObjectURL(a.previewUrl);
+            }
+            return [];
+        });
+        setAttachmentError(null);
+    }, []);
 
     useEffect(() => {
         setGreeting(greetings[Math.floor(Math.random() * greetings.length)]);
@@ -252,15 +303,19 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                 const mapped: DisplayMessage[] = msgs.map((m) => ({
                     role: m.role,
                     content: m.content,
-                    fileUrl: m.signedFileUrl ?? null,
-                    fileName: m.file_name ?? null,
-                    fileMimeType: m.file_mime_type ?? null,
+                    attachments: m.attachments.map(a => ({
+                        fileUrl: a.signedFileUrl ?? null,
+                        fileName: a.file_name,
+                        fileMimeType: a.file_mime_type,
+                    })),
                 }));
 
                 // Preload images so they don't pop in
-                const imageUrls = mapped
-                    .filter(m => m.fileMimeType && isImageMimeType(m.fileMimeType) && m.fileUrl)
-                    .map(m => m.fileUrl as string);
+                const imageUrls = mapped.flatMap(m =>
+                    m.attachments
+                        .filter(a => isImageMimeType(a.fileMimeType) && a.fileUrl)
+                        .map(a => a.fileUrl as string)
+                );
 
                 if (imageUrls.length > 0) {
                     await Promise.all(
@@ -284,28 +339,27 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
     }, [chatId]);
 
     const sendMessage = useCallback(async (userMessage: string) => {
-        if (!userMessage.trim() && !pendingAttachment) return;
+        if (!userMessage.trim() && pendingAttachments.length === 0) return;
         if (userMessage.length > MAX_INPUT_CHARS) return;
 
         const myGenId = ++generationIdRef.current;
         setLoading(true);
         setPrompt("");
-        const attachmentToSend = pendingAttachment;
-        setPendingAttachment(null);
+        const attachmentsToSend = pendingAttachments;
+        setPendingAttachments([]);
         setAttachmentError(null);
 
         const history = messages.map(({ role, content }) => ({ role, content }));
-        const displayContent = attachmentToSend
-            ? `${userMessage ? '\n\n' + userMessage : ''}`
-            : userMessage;
 
         // Optimistic preview while uploading
         setMessages(prev => [...prev, {
             role: 'user' as const,
-            content: displayContent,
-            fileUrl: attachmentToSend?.previewUrl ?? null,
-            fileName: attachmentToSend?.fileName ?? null,
-            fileMimeType: attachmentToSend?.mimeType ?? null,
+            content: userMessage,
+            attachments: attachmentsToSend.map(a => ({
+                fileUrl: a.previewUrl,
+                fileName: a.fileName,
+                fileMimeType: a.mimeType,
+            })),
         }]);
 
         try {
@@ -313,35 +367,33 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error('Not authenticated');
 
-            // Run chat creation and file upload in parallel
+            // Run chat creation and file uploads in parallel
             let activeChatId = currentChatId;
             const chatCreationPromise = !activeChatId
                 ? createChat(selectedModel)
                 : Promise.resolve(null);
 
-            let uploadPromise: Promise<string | null> = Promise.resolve(null);
-            if (attachmentToSend) {
-                const ext = attachmentToSend.fileName.includes('.')
-                    ? attachmentToSend.fileName.split('.').pop()!
-                    : (attachmentToSend.mimeType.split('/')[1] || 'bin');
-                const fileName = `${crypto.randomUUID()}.${ext}`;
-                const storagePath = `${user.id}/${fileName}`;
+            const uploadPromises: Promise<AttachmentRef>[] = attachmentsToSend.map(async (att) => {
+                const ext = att.fileName.includes('.')
+                    ? att.fileName.split('.').pop()!
+                    : (att.mimeType.split('/')[1] || 'bin');
+                const storedName = `${crypto.randomUUID()}.${ext}`;
+                const storagePath = `${user.id}/${storedName}`;
 
-                uploadPromise = supabase.storage
-                    .from('chat-images')
-                    .upload(storagePath, attachmentToSend.file, {
-                        contentType: attachmentToSend.mimeType,
+                const { error } = await supabase.storage
+                    .from('chat-uploads')
+                    .upload(storagePath, att.file, {
+                        contentType: att.mimeType,
                         upsert: false,
-                    })
-                    .then(({ error }) => {
-                        if (error) throw new Error(`Upload failed: ${error.message}`);
-                        return storagePath;
                     });
-            }
+                if (error) throw new Error(`Upload failed: ${error.message}`);
 
-            const [newChat, fileStoragePath] = await Promise.all([
+                return { storagePath, mimeType: att.mimeType, fileName: att.fileName };
+            });
+
+            const [newChat, uploadedRefs] = await Promise.all([
                 chatCreationPromise,
-                uploadPromise,
+                Promise.all(uploadPromises),
             ]);
 
             if (newChat) {
@@ -349,45 +401,42 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                 pendingNewChatIdRef.current = activeChatId;
                 setCurrentChatId(activeChatId);
 
-                const titleSource = userMessage || (attachmentToSend ? attachmentToSend.fileName : 'New chat');
+                const titleSource = userMessage
+                    || (attachmentsToSend.length === 1
+                        ? attachmentsToSend[0].fileName
+                        : attachmentsToSend.length > 1
+                            ? `${attachmentsToSend.length} files`
+                            : 'New chat');
                 const title = titleSource.length > 50 ? titleSource.slice(0, 50) + '…' : titleSource;
                 await updateChatTitle(activeChatId, title);
                 onChatCreated?.(activeChatId, title);
             }
 
-            await saveMessage(
-                activeChatId!,
-                'user',
-                displayContent,
-                fileStoragePath,
-                attachmentToSend?.mimeType ?? null,
-                attachmentToSend?.fileName ?? null,
-            );
+            await saveMessage(activeChatId!, 'user', userMessage, uploadedRefs);
             onChatActivity?.(activeChatId!);
 
             const result = await generateContent(
                 userMessage,
                 selectedModel,
                 history,
-                fileStoragePath ?? undefined,
-                attachmentToSend?.mimeType ?? undefined,
+                uploadedRefs,
             );
             const assistantContent = result ?? "Sorry, I couldn't generate a response.";
 
             await saveMessage(activeChatId!, 'assistant', assistantContent);
 
             if (generationIdRef.current !== myGenId) return;
-            setMessages(prev => [...prev, { role: 'assistant' as const, content: assistantContent }]);
+            setMessages(prev => [...prev, { role: 'assistant' as const, content: assistantContent, attachments: [] }]);
         } catch (error) {
             console.error(error);
             if (generationIdRef.current !== myGenId) return;
-            setMessages(prev => [...prev, { role: 'assistant' as const, content: "An error occurred while fetching the response." }]);
+            setMessages(prev => [...prev, { role: 'assistant' as const, content: "An error occurred while fetching the response.", attachments: [] }]);
         } finally {
             if (generationIdRef.current === myGenId) {
                 setLoading(false);
             }
         }
-    }, [currentChatId, messages, selectedModel, pendingAttachment, onChatCreated, onChatActivity]);
+    }, [currentChatId, messages, selectedModel, pendingAttachments, onChatCreated, onChatActivity]);
 
     const handleSend = () => sendMessage(prompt.trim());
 
@@ -398,45 +447,68 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
         }
     };
 
-    const isPendingImage = pendingAttachment ? isImageMimeType(pendingAttachment.mimeType) : false;
-
     const inputGroup = useMemo(() => (
         <div>
             <input
                 type="file"
+                multiple
                 accept="image/png,image/jpeg,image/webp,image/heic,image/heif,.pdf,.txt,.md,.csv,.log,.html,.htm,.css,.js,.mjs,.json,.xml,.py,.java,.c,.h,.cpp,.hpp,.cc,.ts,.tsx"
                 ref={fileInputRef}
                 onChange={handleAttachmentSelect}
                 className="hidden"
             />
 
-            {pendingAttachment && (
-                <div className="mb-4 ml-4 flex items-start gap-2">
-                    {isPendingImage && pendingAttachment.previewUrl ? (
-                        <div className="relative group">
-                            <img
-                                src={pendingAttachment.previewUrl}
-                                alt="Upload preview"
-                                className="h-20 w-20 rounded-lg object-cover border"
-                            />
-                            <button
-                                onClick={clearPendingAttachment}
-                                className="absolute -top-2 -right-2 bg-primary text-secondary rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+            {hasPendingAttachments && (
+                <div className="mb-4 ml-4 flex flex-wrap items-start gap-2">
+                    {pendingAttachments.map((att) => {
+                        const isImg = isImageMimeType(att.mimeType);
+                        if (isImg && att.previewUrl) {
+                            return (
+                                <div key={att.id} className="relative group">
+                                    <img
+                                        src={att.previewUrl}
+                                        alt={att.fileName}
+                                        className="h-20 w-20 rounded-lg object-cover border"
+                                    />
+                                    <button
+                                        onClick={() => removePendingAttachment(att.id)}
+                                        className="absolute -top-2 -right-2 bg-primary text-secondary rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                                        aria-label={`Remove ${att.fileName}`}
+                                    >
+                                        <X className="size-3" />
+                                    </button>
+                                </div>
+                            );
+                        }
+                        return (
+                            <div
+                                key={att.id}
+                                className="relative group h-20 w-20"
+                                title={att.fileName}
                             >
-                                <X className="size-3" />
-                            </button>
-                        </div>
-                    ) : (
-                        <div className="relative group flex items-center gap-2 rounded-lg border px-3 py-2 bg-muted/50">
-                            <FileText className="size-5 text-muted-foreground shrink-0" />
-                            <span className="text-sm truncate max-w-[200px]">{pendingAttachment.fileName}</span>
-                            <button
-                                onClick={clearPendingAttachment}
-                                className="absolute -top-2 -right-2 bg-primary text-secondary rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                            >
-                                <X className="size-3" />
-                            </button>
-                        </div>
+                                <div className="h-full w-full rounded-lg border bg-muted/50 flex flex-col items-center justify-center gap-1 px-2 py-1.5 overflow-hidden">
+                                    <FileText className="size-6 text-muted-foreground shrink-0" />
+                                    <span className="text-[10px] leading-tight text-center line-clamp-2 break-all w-full">
+                                        {att.fileName}
+                                    </span>
+                                </div>
+                                <button
+                                    onClick={() => removePendingAttachment(att.id)}
+                                    className="absolute -top-2 -right-2 bg-primary text-secondary rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                                    aria-label={`Remove ${att.fileName}`}
+                                >
+                                    <X className="size-3" />
+                                </button>
+                            </div>
+                        );
+                    })}
+                    {pendingAttachments.length > 1 && (
+                        <button
+                            onClick={clearAllPendingAttachments}
+                            className="text-xs text-muted-foreground hover:text-foreground self-center cursor-pointer"
+                        >
+                            Clear all
+                        </button>
                     )}
                 </div>
             )}
@@ -447,13 +519,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
 
             <InputGroup>
                 <InputGroupTextarea
-                    placeholder={
-                        pendingAttachment
-                            ? isPendingImage
-                                ? "Ask anything about this image..."
-                                : "Ask anything about this file..."
-                            : "Ask anything..."
-                    }
+                    placeholder="Ask anything..."
                     value={prompt}
                     onChange={(e) => setPrompt(e.target.value.slice(0, MAX_INPUT_CHARS))}
                     onKeyDown={handleKeyDown}
@@ -466,11 +532,13 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                         className="rounded-sm cursor-pointer"
                         size="icon-xs"
                         onClick={() => fileInputRef.current?.click()}
-                        title="Attach an image or file"
-                        disabled={loading}
+                        title={pendingAttachments.length >= MAX_ATTACHMENTS
+                            ? `Maximum of ${MAX_ATTACHMENTS} attachments`
+                            : "Attach images or files"}
+                        disabled={loading || pendingAttachments.length >= MAX_ATTACHMENTS}
                     >
                         <Paperclip className="size-4" />
-                        <span className="sr-only">Attach a file</span>
+                        <span className="sr-only">Attach files</span>
                     </InputGroupButton>
 
                     <DropdownMenu>
@@ -527,7 +595,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                         size="icon-xs"
                         onClick={handleSend}
                         title="Send"
-                        disabled={loading || isOverLimit || (!prompt.trim() && !pendingAttachment)}
+                        disabled={loading || isOverLimit || (!prompt.trim() && !hasPendingAttachments)}
                     >
                         <ArrowUpIcon />
                         <span className="sr-only">Send</span>
@@ -535,7 +603,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                 </InputGroupAddon>
             </InputGroup>
         </div>
-    ), [prompt, loading, pendingAttachment, isPendingImage, attachmentError, selectedModelInfo, selectedModel, handleKeyDown, handleSend, handleAttachmentSelect, clearPendingAttachment]);
+    ), [prompt, loading, pendingAttachments, hasPendingAttachments, attachmentError, selectedModelInfo, selectedModel, isOverLimit, handleKeyDown, handleSend, handleAttachmentSelect, removePendingAttachment, clearAllPendingAttachments]);
 
     // New Chat page
     if (isEmptyState) {
@@ -550,7 +618,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
 
                     {inputGroup}
 
-                    {sampleQuery && !pendingAttachment && (
+                    {sampleQuery && !hasPendingAttachments && (
                         <div className="mt-6 flex justify-center px-4">
                             <Button
                                 variant="outline"
@@ -574,50 +642,74 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                 <div className="w-full max-w-3xl mx-auto space-y-6">
                     {loadingHistory ? null : (
                         <>
-                            {messages.map((msg, i) => {
-                                const isImg = msg.fileMimeType ? isImageMimeType(msg.fileMimeType) : false;
-                                return (
-                                    <div key={i} className={`p-4 rounded-lg ${msg.role === 'user' ? 'bg-muted' : ''}`}>
-                                        <p className="text-xs font-medium text-muted-foreground mb-2">
-                                            {msg.role === 'user' ? 'You' : 'Lithium'}
-                                        </p>
-                                        {msg.fileUrl && isImg && (
-                                            <div className="mb-3">
-                                                <img
-                                                    src={msg.fileUrl}
-                                                    alt={msg.fileName ?? 'Attached image'}
-                                                    className="max-h-64 max-w-full rounded-lg border object-contain"
-                                                />
-                                            </div>
-                                        )}
-                                        {msg.fileName && !isImg && (
-                                            <div className="mb-3">
-                                                {msg.fileUrl ? (
-                                                    <a
-                                                        href={msg.fileUrl}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 bg-muted/50 hover:bg-muted transition-colors"
-                                                    >
-                                                        <FileText className="size-4 text-muted-foreground shrink-0" />
-                                                        <span className="text-sm">{msg.fileName}</span>
-                                                    </a>
-                                                ) : (
-                                                    <div className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 bg-muted/50">
-                                                        <FileText className="size-4 text-muted-foreground shrink-0" />
-                                                        <span className="text-sm">{msg.fileName}</span>
+                            {messages.map((msg, i) => (
+                                <div key={i} className={`p-4 rounded-lg ${msg.role === 'user' ? 'bg-muted' : ''}`}>
+                                    <p className="text-xs font-medium text-muted-foreground mb-2">
+                                        {msg.role === 'user' ? 'You' : 'Lithium'}
+                                    </p>
+                                    {msg.attachments.length > 0 && (
+                                        <div className="mb-3 flex flex-wrap gap-2">
+                                            {msg.attachments.map((att, ai) => {
+                                                const isImg = isImageMimeType(att.fileMimeType);
+                                                if (isImg && att.fileUrl) {
+                                                    return (
+                                                        <a
+                                                            key={ai}
+                                                            href={att.fileUrl}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            title={att.fileName ?? 'Attached image'}
+                                                            className="block h-20 w-20 rounded-lg overflow-hidden border"
+                                                        >
+                                                            <img
+                                                                src={att.fileUrl}
+                                                                alt={att.fileName ?? 'Attached image'}
+                                                                className="h-full w-full object-cover"
+                                                            />
+                                                        </a>
+                                                    );
+                                                }
+                                                const inner = (
+                                                    <div className="h-full w-full rounded-lg border bg-muted/50 flex flex-col items-center justify-center gap-1 px-2 py-1.5 overflow-hidden">
+                                                        <FileText className="size-6 text-muted-foreground shrink-0" />
+                                                        <span className="text-[10px] leading-tight text-center line-clamp-2 break-all w-full">
+                                                            {att.fileName}
+                                                        </span>
                                                     </div>
-                                                )}
-                                            </div>
-                                        )}
-                                        <div className="prose prose-md dark:prose-invert max-w-none overflow-x-auto">
-                                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                                {msg.content}
-                                            </ReactMarkdown>
+                                                );
+                                                if (att.fileUrl) {
+                                                    return (
+                                                        <a
+                                                            key={ai}
+                                                            href={att.fileUrl}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            title={att.fileName}
+                                                            className="block h-20 w-20 hover:opacity-80 transition-opacity"
+                                                        >
+                                                            {inner}
+                                                        </a>
+                                                    );
+                                                }
+                                                return (
+                                                    <div
+                                                        key={ai}
+                                                        title={att.fileName}
+                                                        className="h-20 w-20"
+                                                    >
+                                                        {inner}
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
+                                    )}
+                                    <div className="prose prose-md dark:prose-invert max-w-none overflow-x-auto">
+                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                            {msg.content}
+                                        </ReactMarkdown>
                                     </div>
-                                );
-                            })}
+                                </div>
+                            ))}
                             {loading && (
                                 <div className="p-4">
                                     <p className="text-xs font-medium text-muted-foreground mb-2">Lithium</p>
