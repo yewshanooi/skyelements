@@ -20,6 +20,12 @@ export type ImageAttachment = {
   mimeType: string;
 };
 
+export type FileAttachment = {
+  base64: string;
+  mimeType: string;
+  fileName: string;
+};
+
 export type Chat = {
   id: string;
   user_id: string;
@@ -35,6 +41,9 @@ export type Message = {
   role: 'user' | 'assistant';
   content: string;
   image_url?: string | null;
+  file_url?: string | null;
+  file_mime_type?: string | null;
+  file_name?: string | null;
   created_at: string;
 };
 
@@ -46,9 +55,11 @@ export async function generateContent(
   prompt: string,
   model: string = "gemini-3.1-flash-lite",
   history: ChatMessage[] = [],
-  imageStoragePath?: string
+  imageStoragePath?: string,
+  fileStoragePath?: string,
+  fileMimeType?: string,
 ) {
-  await getAuthenticatedClient();
+  const { supabase } = await getAuthenticatedClient();
 
   if (!ALLOWED_MODEL_IDS.has(model)) {
     return "Sorry, the requested model is not available.";
@@ -57,30 +68,57 @@ export async function generateContent(
   const isOpenRouter = model.startsWith("openrouter:");
   const actualModel = isOpenRouter ? model.replace("openrouter:", "") : model;
 
-  if (imageStoragePath && isOpenRouter) {
-    return "Sorry, image upload is not supported for this model.";
+  if ((imageStoragePath || fileStoragePath) && isOpenRouter) {
+    return "Sorry, file upload is not supported for this model.";
   }
 
   // Optimize history to fit within model context budget
   const optimizedHistory = buildOptimizedHistory(history, model);
 
-  // Fetch image data from Supabase Storage if a storage path was provided
+  // Download image and file from storage in parallel
   let image: ImageAttachment | undefined;
+  let file: FileAttachment | undefined;
+
+  const downloadTasks: Promise<void>[] = [];
+
   if (imageStoragePath) {
-    const { supabase } = await getAuthenticatedClient();
-    const { data, error } = await supabase.storage
-      .from(BUCKET)
-      .download(imageStoragePath);
+    downloadTasks.push(
+      supabase.storage.from(BUCKET).download(imageStoragePath).then(async ({ data, error }) => {
+        if (error || !data) {
+          console.error('Failed to download image from storage:', error);
+          return;
+        }
+        const arrayBuffer = await data.arrayBuffer();
+        const base64 = Buffer.from(arrayBuffer).toString('base64');
+        const mimeType = data.type || 'image/png';
+        image = { base64, mimeType };
+      })
+    );
+  }
 
-    if (error || !data) {
-      console.error('Failed to download image from storage:', error);
-      return "Sorry, I couldn't process the attached image.";
-    }
+  if (fileStoragePath && fileMimeType) {
+    downloadTasks.push(
+      supabase.storage.from(BUCKET).download(fileStoragePath).then(async ({ data, error }) => {
+        if (error || !data) {
+          console.error('Failed to download file from storage:', error);
+          return;
+        }
+        const arrayBuffer = await data.arrayBuffer();
+        const base64 = Buffer.from(arrayBuffer).toString('base64');
+        const fileName = fileStoragePath.split('/').pop() || 'file';
+        file = { base64, mimeType: fileMimeType, fileName };
+      })
+    );
+  }
 
-    const arrayBuffer = await data.arrayBuffer();
-    const base64 = Buffer.from(arrayBuffer).toString('base64');
-    const mimeType = data.type || 'image/png';
-    image = { base64, mimeType };
+  await Promise.all(downloadTasks);
+
+  // Bail if downloads failed
+  if (imageStoragePath && !image) {
+    return "Sorry, I couldn't process the attached image.";
+  }
+  if (fileStoragePath && fileMimeType && !file) {
+    return "Sorry, I couldn't process the attached file.";
   }
 
   if (isOpenRouter) {
@@ -149,16 +187,22 @@ export async function generateContent(
       role: msg.role === 'assistant' ? 'model' : 'user',
       parts: [{ text: msg.content }]
     } as Content)),
-    image
-      ? {
-        role: 'user',
-        parts: [
-          { inlineData: { data: image.base64, mimeType: image.mimeType } },
-          { text: prompt || 'What is in this image?' }
-        ]
-      } as Content
-      : { role: 'user', parts: [{ text: prompt }] } as Content
   ];
+
+  // Build the user message parts
+  const userParts: Content['parts'] = [];
+
+  if (image) {
+    userParts.push({ inlineData: { data: image.base64, mimeType: image.mimeType } });
+  }
+
+  if (file) {
+    userParts.push({ inlineData: { data: file.base64, mimeType: file.mimeType } });
+  }
+
+  userParts.push({ text: prompt || (image ? 'What is in this image?' : file ? 'Analyze this file.' : '') });
+
+  contents.push({ role: 'user', parts: userParts } as Content);
 
   try {
     const response = await ai.models.generateContent({
@@ -203,7 +247,7 @@ async function getSignedImageUrl(storagePath: string): Promise<string | null> {
   return data.signedUrl;
 }
 
-/** Remove stored images for the given chat IDs */
+/** Remove stored images and files for the given chat IDs */
 async function removeStorageImages(
   supabase: Awaited<ReturnType<typeof getAuthenticatedClient>>['supabase'],
   chatIds: string[],
@@ -212,11 +256,14 @@ async function removeStorageImages(
 
   const { data: msgs } = await supabase
     .from('messages')
-    .select('image_url')
+    .select('image_url, file_url')
     .in('chat_id', chatIds)
-    .not('image_url', 'is', null);
+    .or('image_url.not.is.null,file_url.not.is.null');
 
-  const paths = (msgs ?? []).map((m: { image_url: string }) => m.image_url).filter(Boolean);
+  const paths = (msgs ?? [])
+    .flatMap((m: { image_url?: string | null; file_url?: string | null }) => [m.image_url, m.file_url])
+    .filter((p): p is string => !!p);
+
   if (paths.length > 0) {
     await supabase.storage.from(BUCKET).remove(paths);
   }
@@ -267,7 +314,7 @@ export async function listChats(): Promise<Chat[]> {
 }
 
 /** Get messages for a chat */
-export async function getMessages(chatId: string): Promise<(Message & { signedImageUrl?: string | null })[]> {
+export async function getMessages(chatId: string): Promise<(Message & { signedImageUrl?: string | null; signedFileUrl?: string | null })[]> {
   const { supabase } = await getAuthenticatedClient();
 
   const { data, error } = await supabase
@@ -283,14 +330,20 @@ export async function getMessages(chatId: string): Promise<(Message & { signedIm
   
   const messages = (data ?? []) as Message[];
 
-  // Generate signed URLs for messages that have images
+  // Generate signed URLs for messages that have images or files
   const enriched = await Promise.all(
     messages.map(async (msg) => {
+      let signedImageUrl: string | null = null;
+      let signedFileUrl: string | null = null;
+
       if (msg.image_url) {
-        const signedImageUrl = await getSignedImageUrl(msg.image_url);
-        return { ...msg, signedImageUrl };
+        signedImageUrl = await getSignedImageUrl(msg.image_url);
       }
-      return { ...msg, signedImageUrl: null };
+      if (msg.file_url) {
+        signedFileUrl = await getSignedImageUrl(msg.file_url); // same bucket, same function
+      }
+
+      return { ...msg, signedImageUrl, signedFileUrl };
     })
   );
 
@@ -303,11 +356,17 @@ export async function saveMessage(
   role: 'user' | 'assistant',
   content: string,
   imageUrl?: string | null,
+  fileUrl?: string | null,
+  fileMimeType?: string | null,
+  fileName?: string | null,
 ): Promise<Message> {
   const { supabase, user } = await getAuthenticatedClient();
 
   const insertData: Record<string, unknown> = { chat_id: chatId, role, content };
   if (imageUrl) insertData.image_url = imageUrl;
+  if (fileUrl) insertData.file_url = fileUrl;
+  if (fileMimeType) insertData.file_mime_type = fileMimeType;
+  if (fileName) insertData.file_name = fileName;
 
   const { data, error } = await supabase
     .from('messages')

@@ -13,7 +13,6 @@ const MODEL_CONTEXT_BUDGETS: Record<string, number> = {
   'gemini-3.1-flash-lite': 16_000,
   'gemini-3.5-flash': 32_000,
   'gemini-3-flash-preview': 32_000,
-  'gemini-2.5-flash': 32_000,
 
   // OpenRouter free models — be conservative
   default: 12_000,

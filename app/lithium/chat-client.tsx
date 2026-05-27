@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { ArrowUpIcon, ChevronDown, ImagePlus, X } from "lucide-react";
+import { ArrowUpIcon, ChevronDown, ImagePlus, Paperclip, FileText, X } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {
@@ -24,6 +24,7 @@ import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner"
 import { LoadingBar } from "@/components/ui/loading-bar"
 import { generateContent, createChat, saveMessage, getMessages, updateChatTitle, type ChatMessage, type Message } from "./chat-actions";
+import { SUPPORTED_MIME_TYPES } from "@/lib/file-types";
 import { createClient } from "@/utils/supabase/client";
 import { MAX_INPUT_CHARS } from "@/lib/chat-context";
 import { MODELS } from "@/lib/models";
@@ -90,17 +91,20 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
     const [greeting, setGreeting] = useState("");
     const [sampleQuery, setSampleQuery] = useState("");
     const [prompt, setPrompt] = useState("");
-    const [messages, setMessages] = useState<(ChatMessage & { imageUrl?: string | null })[]>([]);
+    const [messages, setMessages] = useState<(ChatMessage & { imageUrl?: string | null; fileUrl?: string | null; fileName?: string | null; fileMimeType?: string | null })[]>([]);
     const [loading, setLoading] = useState(false);
     const [loadingHistory, setLoadingHistory] = useState(false);
     const [showLoadingBar, setShowLoadingBar] = useState(false);
     const [selectedModel, setSelectedModel] = useState("gemini-3.1-flash-lite");
     const [currentChatId, setCurrentChatId] = useState<string | null>(chatId ?? null);
-    const [pendingImage, setPendingImage] = useState<{ base64: string; mimeType: string; previewUrl: string } | null>(null);
+    const [pendingImage, setPendingImage] = useState<{ file: Blob; mimeType: string; previewUrl: string } | null>(null);
+    const [pendingFile, setPendingFile] = useState<{ file: File | Blob; mimeType: string; fileName: string } | null>(null);
     const [imageError, setImageError] = useState<string | null>(null);
+    const [fileError, setFileError] = useState<string | null>(null);
     const generationIdRef = useRef(0);
     const pendingNewChatIdRef = useRef<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const docInputRef = useRef<HTMLInputElement>(null);
 
     const selectedModelInfo = useMemo(
         () => MODELS.find(m => m.id === selectedModel) ?? MODELS[0],
@@ -108,16 +112,22 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
     );
     const isEmptyState = messages.length === 0 && !loading && !loadingHistory;
     const supportsVision = !selectedModel.startsWith('openrouter:');
+    const supportsFiles = !selectedModel.startsWith('openrouter:');
     const isOverLimit = prompt.length > MAX_INPUT_CHARS;
     const MAX_IMAGE_SIZE = 4 * 1024 * 1024; // 4 MB
+    const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
 
-    // Clear pending image when switching to a model that doesn't support vision
+    // Clear pending attachments when switching to a model that doesn't support them
     useEffect(() => {
         if (!supportsVision) {
             setPendingImage(null);
             setImageError(null);
         }
-    }, [supportsVision]);
+        if (!supportsFiles) {
+            setPendingFile(null);
+            setFileError(null);
+        }
+    }, [supportsVision, supportsFiles]);
 
     const handleImageSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         setImageError(null);
@@ -136,19 +146,104 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
             return;
         }
 
-        const reader = new FileReader();
-        reader.onload = () => {
-            const dataUrl = reader.result as string;
-            const base64 = dataUrl.split(',')[1];
-            setPendingImage({ base64, mimeType: file.type, previewUrl: dataUrl });
+        // Use canvas-based compression for images to reduce upload size and AI token usage
+        const compressImage = (imgFile: File): Promise<{ blob: Blob; previewUrl: string }> => {
+            return new Promise((resolve, reject) => {
+                const url = URL.createObjectURL(imgFile);
+                const img = new window.Image();
+                img.onload = () => {
+                    // Limit dimensions to 2048px max (Gemini's optimal input size)
+                    const MAX_DIM = 2048;
+                    let { width, height } = img;
+                    if (width > MAX_DIM || height > MAX_DIM) {
+                        const scale = MAX_DIM / Math.max(width, height);
+                        width = Math.round(width * scale);
+                        height = Math.round(height * scale);
+                    }
+
+                    const canvas = document.createElement('canvas');
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    if (!ctx) { reject(new Error('Canvas not supported')); return; }
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    // Use WebP for better compression, fall back to JPEG
+                    const outputType = 'image/webp';
+                    const quality = 0.82;
+                    canvas.toBlob(
+                        (blob) => {
+                            URL.revokeObjectURL(url);
+                            if (!blob) { reject(new Error('Compression failed')); return; }
+                            const previewUrl = URL.createObjectURL(blob);
+                            resolve({ blob, previewUrl });
+                        },
+                        outputType,
+                        quality,
+                    );
+                };
+                img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Failed to load image')); };
+                img.src = url;
+            });
         };
-        reader.readAsDataURL(file);
+
+        // Compress if the image is over 512KB, otherwise use raw file
+        const shouldCompress = file.size > 512 * 1024;
+
+        if (shouldCompress) {
+            compressImage(file).then(({ blob, previewUrl }) => {
+                setPendingImage({ file: blob, mimeType: blob.type || 'image/webp', previewUrl });
+            }).catch(() => {
+                // Fallback: use original file without compression
+                const previewUrl = URL.createObjectURL(file);
+                setPendingImage({ file, mimeType: file.type, previewUrl });
+            });
+        } else {
+            const previewUrl = URL.createObjectURL(file);
+            setPendingImage({ file, mimeType: file.type, previewUrl });
+        }
+
         e.target.value = '';
     }, []);
 
+    const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        setFileError(null);
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (!SUPPORTED_MIME_TYPES.includes(file.type) && !file.type.startsWith('text/')) {
+            setFileError('Unsupported file type. Supported: PDF, TXT, MD, CSV, HTML, CSS, JS, JSON, XML, Python, Java, C/C++, TypeScript.');
+            e.target.value = '';
+            return;
+        }
+
+        if (file.size > MAX_FILE_SIZE) {
+            setFileError('File must be under 20 MB.');
+            e.target.value = '';
+            return;
+        }
+
+        // Don't allow both image and file at the same time
+        if (pendingImage) {
+            setFileError('Remove the attached image first to attach a file instead.');
+            e.target.value = '';
+            return;
+        }
+
+        // Store the File object directly — no base64 conversion needed until upload
+        setPendingFile({ file, mimeType: file.type, fileName: file.name });
+        e.target.value = '';
+    }, [pendingImage]);
+
     const clearPendingImage = useCallback(() => {
+        if (pendingImage?.previewUrl) URL.revokeObjectURL(pendingImage.previewUrl);
         setPendingImage(null);
         setImageError(null);
+    }, [pendingImage]);
+
+    const clearPendingFile = useCallback(() => {
+        setPendingFile(null);
+        setFileError(null);
     }, []);
 
     useEffect(() => {
@@ -188,6 +283,9 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                     role: m.role,
                     content: m.content,
                     imageUrl: m.signedImageUrl ?? null,
+                    fileUrl: m.signedFileUrl ?? null,
+                    fileName: m.file_name ?? null,
+                    fileMimeType: m.file_mime_type ?? null,
                 }));
 
                 // Preload all images before showing messages
@@ -217,82 +315,125 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
     }, [chatId]);
 
     const sendMessage = useCallback(async (userMessage: string) => {
-        if (!userMessage.trim() && !pendingImage) return;
+        if (!userMessage.trim() && !pendingImage && !pendingFile) return;
         if (userMessage.length > MAX_INPUT_CHARS) return;
 
         const myGenId = ++generationIdRef.current;
         setLoading(true);
         setPrompt("");
         const imageToSend = pendingImage;
+        const fileToSend = pendingFile;
         setPendingImage(null);
+        setPendingFile(null);
         setImageError(null);
+        setFileError(null);
 
         const history = [...messages];
         const displayContent = imageToSend
             ? `${userMessage ? '\n\n' + userMessage : ''}`
-            : userMessage;
+            : fileToSend
+                ? `${userMessage ? '\n\n' + userMessage : ''}`
+                : userMessage;
             
         // Show immediate preview while uploading
         setMessages(prev => [...prev, {
             role: 'user' as const,
             content: displayContent,
             imageUrl: imageToSend?.previewUrl ?? null,
+            fileName: fileToSend?.fileName ?? null,
+            fileMimeType: fileToSend?.mimeType ?? null,
         }]);
 
         try {
+            // Get authenticated user once for all operations
+            const supabase = createClient();
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error('Not authenticated');
+
+            // Start chat creation in parallel with file upload if needed
             let activeChatId = currentChatId;
-            if (!activeChatId) {
-                const newChat = await createChat(selectedModel);
+            const chatCreationPromise = !activeChatId
+                ? createChat(selectedModel)
+                : Promise.resolve(null);
+
+            // Upload image/file in parallel with chat creation
+            let uploadPromise: Promise<string | null> = Promise.resolve(null);
+            let fileUploadPromise: Promise<string | null> = Promise.resolve(null);
+
+            if (imageToSend) {
+                const ext = imageToSend.mimeType.split('/')[1]?.replace('webp', 'webp') || 'png';
+                const fileName = `${crypto.randomUUID()}.${ext}`;
+                const storagePath = `${user.id}/${fileName}`;
+
+                uploadPromise = supabase.storage
+                    .from('chat-images')
+                    .upload(storagePath, imageToSend.file, {
+                        contentType: imageToSend.mimeType,
+                        upsert: false,
+                    })
+                    .then(({ error }) => {
+                        if (error) throw new Error(`Image upload failed: ${error.message}`);
+                        return storagePath;
+                    });
+            }
+
+            if (fileToSend) {
+                const ext = fileToSend.fileName.split('.').pop() || 'bin';
+                const fileName = `${crypto.randomUUID()}.${ext}`;
+                const storagePath = `${user.id}/${fileName}`;
+
+                fileUploadPromise = supabase.storage
+                    .from('chat-images')
+                    .upload(storagePath, fileToSend.file, {
+                        contentType: fileToSend.mimeType,
+                        upsert: false,
+                    })
+                    .then(({ error }) => {
+                        if (error) throw new Error(`File upload failed: ${error.message}`);
+                        return storagePath;
+                    });
+            }
+
+            // Await all parallel operations
+            const [newChat, storagePath, fileStoragePath] = await Promise.all([
+                chatCreationPromise,
+                uploadPromise,
+                fileUploadPromise,
+            ]);
+
+            if (newChat) {
                 activeChatId = newChat.id;
                 pendingNewChatIdRef.current = activeChatId;
                 setCurrentChatId(activeChatId);
 
-                const titleSource = userMessage || 'Image analysis';
+                const titleSource = userMessage || (imageToSend ? 'Image analysis' : fileToSend ? fileToSend.fileName : 'New chat');
                 const title = titleSource.length > 50 ? titleSource.slice(0, 50) + '…' : titleSource;
                 await updateChatTitle(activeChatId, title);
                 onChatCreated?.(activeChatId, title);
             }
 
-            // Upload image to Supabase Storage directly from client (bypass server action serialization)
-            let storagePath: string | null = null;
-            if (imageToSend) {
-                const supabase = createClient();
-                const { data: { user } } = await supabase.auth.getUser();
-                if (!user) throw new Error('Not authenticated');
-
-                const ext = imageToSend.mimeType.split('/')[1] || 'png';
-                const fileName = `${crypto.randomUUID()}.${ext}`;
-                storagePath = `${user.id}/${fileName}`;
-
-                // Decode base64 to binary
-                const binaryStr = atob(imageToSend.base64);
-                const bytes = new Uint8Array(binaryStr.length);
-                for (let i = 0; i < binaryStr.length; i++) {
-                    bytes[i] = binaryStr.charCodeAt(i);
-                }
-
-                const { error: uploadError } = await supabase.storage
-                    .from('chat-images')
-                    .upload(storagePath, bytes, {
-                        contentType: imageToSend.mimeType,
-                        upsert: false,
-                    });
-
-                if (uploadError) throw new Error(`Image upload failed: ${uploadError.message}`);
-            }
-
-            await saveMessage(activeChatId, 'user', displayContent, storagePath);
-            onChatActivity?.(activeChatId);
+            await saveMessage(
+                activeChatId!,
+                'user',
+                displayContent,
+                storagePath,
+                fileStoragePath,
+                fileToSend?.mimeType ?? null,
+                fileToSend?.fileName ?? null,
+            );
+            onChatActivity?.(activeChatId!);
 
             let result: string | undefined;
             if (storagePath) {
                 result = await generateContent(userMessage, selectedModel, history, storagePath);
+            } else if (fileStoragePath && fileToSend) {
+                result = await generateContent(userMessage, selectedModel, history, undefined, fileStoragePath, fileToSend.mimeType);
             } else {
                 result = await generateContent(userMessage, selectedModel, history);
             }
             const assistantContent = result ?? "Sorry, I couldn't generate a response.";
 
-            await saveMessage(activeChatId, 'assistant', assistantContent);
+            await saveMessage(activeChatId!, 'assistant', assistantContent);
 
             // Only update UI if user hasn't switched to a different chat
             if (generationIdRef.current !== myGenId) return;
@@ -306,7 +447,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                 setLoading(false);
             }
         }
-    }, [currentChatId, messages, selectedModel, pendingImage, onChatCreated, onChatActivity]);
+    }, [currentChatId, messages, selectedModel, pendingImage, pendingFile, onChatCreated, onChatActivity]);
 
     const handleSend = () => sendMessage(prompt.trim());
 
@@ -321,9 +462,16 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
         <div>
             <input
                 type="file"
-                accept="image/png, image/jpeg"
+                accept="image/png, image/jpeg, image/webp, image/heic, image/heif"
                 ref={fileInputRef}
                 onChange={handleImageSelect}
+                className="hidden"
+            />
+            <input
+                type="file"
+                accept=".pdf,.txt,.md,.csv,.log,.html,.htm,.css,.js,.mjs,.json,.xml,.py,.java,.c,.h,.cpp,.hpp,.cc,.ts,.tsx"
+                ref={docInputRef}
+                onChange={handleFileSelect}
                 className="hidden"
             />
 
@@ -345,13 +493,32 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                 </div>
             )}
 
+            {pendingFile && (
+                <div className="mb-4 ml-4 flex items-start gap-2">
+                    <div className="relative group flex items-center gap-2 rounded-lg border px-3 py-2 bg-muted/50">
+                        <FileText className="size-5 text-muted-foreground shrink-0" />
+                        <span className="text-sm truncate max-w-[200px]">{pendingFile.fileName}</span>
+                        <button
+                            onClick={clearPendingFile}
+                            className="absolute -top-2 -right-2 bg-primary text-secondary rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                        >
+                            <X className="size-3" />
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {imageError && (
                 <p className="mb-4 ml-4 text-sm text-destructive">{imageError}</p>
             )}
 
+            {fileError && (
+                <p className="mb-4 ml-4 text-sm text-destructive">{fileError}</p>
+            )}
+
             <InputGroup>
                 <InputGroupTextarea
-                    placeholder={pendingImage ? "Ask anything about this image..." : "Ask anything..."}
+                    placeholder={pendingImage ? "Ask anything about this image..." : pendingFile ? `Ask anything about ${pendingFile.fileName}...` : "Ask anything..."}
                     value={prompt}
                     onChange={(e) => setPrompt(e.target.value.slice(0, MAX_INPUT_CHARS))}
                     onKeyDown={handleKeyDown}
@@ -360,6 +527,20 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                 // autoFocus
                 />
                 <InputGroupAddon align="block-end">
+                    {supportsFiles && (
+                        <InputGroupButton
+                            variant="secondary"
+                            className="rounded-sm cursor-pointer"
+                            size="icon-xs"
+                            onClick={() => docInputRef.current?.click()}
+                            title="Upload a file (PDF, TXT, code)"
+                            disabled={loading || !!pendingImage}
+                        >
+                            <Paperclip className="size-4" />
+                            <span className="sr-only">Upload a file</span>
+                        </InputGroupButton>
+                    )}
+
                     {supportsVision && (
                         <InputGroupButton
                             variant="secondary"
@@ -367,7 +548,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                             size="icon-xs"
                             onClick={() => fileInputRef.current?.click()}
                             title="Upload an image"
-                            disabled={loading}
+                            disabled={loading || !!pendingFile}
                         >
                             <ImagePlus className="size-4" />
                             <span className="sr-only">Upload an image</span>
@@ -428,7 +609,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                         size="icon-xs"
                         onClick={handleSend}
                         title="Send"
-                        disabled={loading || isOverLimit || (!prompt.trim() && !pendingImage)}
+                        disabled={loading || isOverLimit || (!prompt.trim() && !pendingImage && !pendingFile)}
                     >
                         <ArrowUpIcon />
                         <span className="sr-only">Send</span>
@@ -436,7 +617,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                 </InputGroupAddon>
             </InputGroup>
         </div>
-    ), [prompt, loading, pendingImage, imageError, supportsVision, selectedModelInfo, selectedModel, handleKeyDown, handleSend, handleImageSelect, clearPendingImage]);
+    ), [prompt, loading, pendingImage, pendingFile, imageError, fileError, supportsVision, supportsFiles, selectedModelInfo, selectedModel, handleKeyDown, handleSend, handleImageSelect, handleFileSelect, clearPendingImage, clearPendingFile]);
 
     // New Chat page
     if (isEmptyState) {
@@ -451,7 +632,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
 
                     {inputGroup}
 
-                    {sampleQuery && !pendingImage && (
+                    {sampleQuery && !pendingImage && !pendingFile && (
                         <div className="mt-6 flex justify-center px-4">
                             <Button
                                 variant="outline"
@@ -487,6 +668,26 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                                                 alt="Attached image"
                                                 className="max-h-64 max-w-full rounded-lg border object-contain"
                                             />
+                                        </div>
+                                    )}
+                                    {msg.fileName && (
+                                        <div className="mb-3">
+                                            {msg.fileUrl ? (
+                                                <a
+                                                    href={msg.fileUrl}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 bg-muted/50 hover:bg-muted transition-colors"
+                                                >
+                                                    <FileText className="size-4 text-muted-foreground shrink-0" />
+                                                    <span className="text-sm">{msg.fileName}</span>
+                                                </a>
+                                            ) : (
+                                                <div className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 bg-muted/50">
+                                                    <FileText className="size-4 text-muted-foreground shrink-0" />
+                                                    <span className="text-sm">{msg.fileName}</span>
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                     <div className="prose prose-md dark:prose-invert max-w-none overflow-x-auto">
