@@ -14,11 +14,13 @@ import {
   Sun,
   Moon,
   Shield,
+  X,
 } from "lucide-react"
 import { useTheme } from "next-themes"
 
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogHeader,
@@ -228,12 +230,23 @@ export function SettingsDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="p-0 sm:max-w-[760px] gap-0 overflow-hidden max-h-[92vh] w-[calc(100%-1rem)] flex flex-col">
-          <DialogHeader className="px-4 sm:px-6 pt-4 sm:pt-5 pb-3 sm:pb-4 border-b">
-            <DialogTitle className="text-base sm:text-lg">Settings</DialogTitle>
-            <DialogDescription className="sr-only">
-              Manage your account, appearance, and data preferences.
-            </DialogDescription>
+        <DialogContent
+          showCloseButton={false}
+          className="p-0 sm:max-w-[760px] gap-0 overflow-hidden max-h-[80dvh] sm:max-h-[90vh] w-[calc(100%-1rem)] flex flex-col"
+        >
+          <DialogHeader className="px-4 sm:px-6 pt-4 sm:pt-5 pb-3 sm:pb-4 border-b flex-row items-center justify-between space-y-0">
+            <div className="flex flex-col gap-1">
+              <DialogTitle className="text-base sm:text-lg">Settings</DialogTitle>
+              <DialogDescription className="sr-only">
+                Manage your account, appearance, and data preferences.
+              </DialogDescription>
+            </div>
+            <DialogClose
+              className="cursor-pointer rounded-xs opacity-100 disabled:pointer-events-none"
+            >
+              <X className="size-4" />
+              <span className="sr-only">Close</span>
+            </DialogClose>
           </DialogHeader>
 
           {isMobile ? (
