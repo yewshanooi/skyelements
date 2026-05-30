@@ -135,21 +135,6 @@ export default function CreditsPage() {
         </Card>
         <Card className="w-full">
           <CardHeader>
-            <CardTitle>OpenRouter</CardTitle>
-            <CardDescription>
-             AI models API
-            </CardDescription>
-            <CardAction>
-              <Button asChild variant="secondary">
-                <a href="https://openrouter.ai/" target="_blank" rel="noopener noreferrer">
-                  <ExternalLink />
-                </a>
-              </Button>
-            </CardAction>
-          </CardHeader>
-        </Card>
-        <Card className="w-full">
-          <CardHeader>
             <CardTitle>shadcn</CardTitle>
             <CardDescription>
               UI component library

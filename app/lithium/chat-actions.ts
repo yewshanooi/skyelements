@@ -1,7 +1,6 @@
 'use server';
 
 import { GoogleGenAI, Content } from "@google/genai";
-import { OpenRouter } from "@openrouter/sdk";
 import { ALLOWED_MODEL_IDS } from "@/lib/models";
 import { buildOptimizedHistory } from "@/lib/chat-context";
 import { getAuthenticatedClient } from "./auth";
@@ -15,9 +14,17 @@ export type ChatMessage = {
   content: string;
 };
 
-export type ImageAttachment = {
+export type FileAttachment = {
   base64: string;
   mimeType: string;
+  fileName: string;
+};
+
+/** Stored attachment reference passed from the client */
+export type AttachmentRef = {
+  storagePath: string;
+  mimeType: string;
+  fileName: string;
 };
 
 export type Chat = {
@@ -25,8 +32,19 @@ export type Chat = {
   user_id: string;
   title: string;
   model: string;
+  is_pinned: boolean;
   created_at: string;
   updated_at: string;
+};
+
+export type MessageAttachment = {
+  id: string;
+  message_id: string;
+  file_url: string;
+  file_mime_type: string;
+  file_name: string;
+  position: number;
+  created_at: string;
 };
 
 export type Message = {
@@ -34,8 +52,11 @@ export type Message = {
   chat_id: string;
   role: 'user' | 'assistant';
   content: string;
-  image_url?: string | null;
   created_at: string;
+};
+
+export type MessageWithAttachments = Message & {
+  attachments: (MessageAttachment & { signedFileUrl: string | null })[];
 };
 
 // ---------------------------------------------------------------------------
@@ -46,96 +67,42 @@ export async function generateContent(
   prompt: string,
   model: string = "gemini-3.1-flash-lite",
   history: ChatMessage[] = [],
-  imageStoragePath?: string
+  attachments: AttachmentRef[] = [],
 ) {
-  await getAuthenticatedClient();
+  const { supabase } = await getAuthenticatedClient();
 
   if (!ALLOWED_MODEL_IDS.has(model)) {
     return "Sorry, the requested model is not available.";
   }
 
-  const isOpenRouter = model.startsWith("openrouter:");
-  const actualModel = isOpenRouter ? model.replace("openrouter:", "") : model;
-
-  if (imageStoragePath && isOpenRouter) {
-    return "Sorry, image upload is not supported for this model.";
-  }
-
   // Optimize history to fit within model context budget
   const optimizedHistory = buildOptimizedHistory(history, model);
 
-  // Fetch image data from Supabase Storage if a storage path was provided
-  let image: ImageAttachment | undefined;
-  if (imageStoragePath) {
-    const { supabase } = await getAuthenticatedClient();
-    const { data, error } = await supabase.storage
-      .from(BUCKET)
-      .download(imageStoragePath);
+  // Download attached files from storage (in parallel)
+  const files: FileAttachment[] = [];
+  if (attachments.length > 0) {
+    const downloads = await Promise.all(
+      attachments.map(async (att) => {
+        const { data, error } = await supabase.storage.from(BUCKET).download(att.storagePath);
+        if (error || !data) {
+          console.error('Failed to download file from storage:', att.storagePath, error);
+          return null;
+        }
+        const arrayBuffer = await data.arrayBuffer();
+        const base64 = Buffer.from(arrayBuffer).toString('base64');
+        return { base64, mimeType: att.mimeType, fileName: att.fileName } as FileAttachment;
+      })
+    );
 
-    if (error || !data) {
-      console.error('Failed to download image from storage:', error);
-      return "Sorry, I couldn't process the attached image.";
+    for (const f of downloads) {
+      if (f) files.push(f);
     }
 
-    const arrayBuffer = await data.arrayBuffer();
-    const base64 = Buffer.from(arrayBuffer).toString('base64');
-    const mimeType = data.type || 'image/png';
-    image = { base64, mimeType };
-  }
-
-  if (isOpenRouter) {
-    if (!process.env.OPENROUTER_API_KEY) {
-      console.error("OPENROUTER_API_KEY environment variable is not set.");
-
-      return "Sorry, I couldn't generate a response at this time.";
-    }
-
-    const openrouter = new OpenRouter({
-      apiKey: process.env.OPENROUTER_API_KEY
-    });
-
-    const messages = [
-      ...optimizedHistory.map(msg => ({
-        role: msg.role as 'user' | 'assistant',
-        content: msg.content
-      })),
-      { role: 'user' as const, content: prompt }
-    ];
-
-    try {
-      const stream = await openrouter.chat.send({
-        chatGenerationParams: {
-          model: actualModel,
-          messages: messages,
-          stream: true
-        }
-      });
-
-      let fullResponse = "";
-      for await (const chunk of stream) {
-        const content = chunk.choices[0]?.delta?.content;
-        if (content) {
-          fullResponse += content;
-        }
-      }
-
-      return fullResponse;
-    } catch (error: any) {
-      console.error("Error generating content:", error);
-
-      if (error?.statusCode === 429) {
-        return `⚠️ **Rate Limited**\n\nWe've being rate limited for the ${actualModel} model. Please change to another model or try again later.`;
-      }
-
-      if (error?.statusCode === 500) {
-        return '⚠️ **Service Unavailable**\n\nThe model provider is currently experiencing issues. Please try again later.';
-      }
-
-      return "Sorry, I couldn't generate a response at this time.";
+    if (files.length === 0 && attachments.length > 0) {
+      return "Sorry, I couldn't process the attached files.";
     }
   }
 
-  // Google AI Studio models
   if (!process.env.GOOGLE_API_KEY) {
     console.error("GOOGLE_API_KEY environment variable is not set.");
 
@@ -149,20 +116,45 @@ export async function generateContent(
       role: msg.role === 'assistant' ? 'model' : 'user',
       parts: [{ text: msg.content }]
     } as Content)),
-    image
-      ? {
-        role: 'user',
-        parts: [
-          { inlineData: { data: image.base64, mimeType: image.mimeType } },
-          { text: prompt || 'What is in this image?' }
-        ]
-      } as Content
-      : { role: 'user', parts: [{ text: prompt }] } as Content
   ];
+
+  // Build the user message parts.
+  const userParts: Content['parts'] = [];
+
+  let leadingPrompt = prompt;
+  if (!leadingPrompt && files.length > 0) {
+    const allImages = files.every(f => f.mimeType.startsWith('image/'));
+    if (allImages) {
+      leadingPrompt = files.length > 1
+        ? 'What is in these images?'
+        : 'What is in this image?';
+    } else {
+      leadingPrompt = files.length > 1
+        ? 'Analyze these files.'
+        : 'Analyze this file.';
+    }
+  }
+
+  if (files.length > 1) {
+    userParts.push({
+      text: `${leadingPrompt}\n\n(The user has attached ${files.length} files. Consider all of them in your response.)`,
+    });
+  } else if (leadingPrompt) {
+    userParts.push({ text: leadingPrompt });
+  }
+
+  files.forEach((file, idx) => {
+    if (files.length > 1) {
+      userParts.push({ text: `[Attachment ${idx + 1} of ${files.length}: ${file.fileName}]` });
+    }
+    userParts.push({ inlineData: { data: file.base64, mimeType: file.mimeType } });
+  });
+
+  contents.push({ role: 'user', parts: userParts } as Content);
 
   try {
     const response = await ai.models.generateContent({
-      model: actualModel,
+      model,
       contents,
     });
     return response.text;
@@ -170,7 +162,7 @@ export async function generateContent(
     console.error("Error generating content:", error);
 
     if (error?.status === 429) {
-      return `⚠️ **Free Quota Exceeded**\n\nWe've hit the daily free quota for the ${actualModel} model. Please change to another model or try again tomorrow.`;
+      return `⚠️ **Free Quota Exceeded**\n\nWe've hit the daily free quota for the ${model} model. Please change to another model or try again tomorrow.`;
     }
 
     if (error?.status === 503) {
@@ -182,43 +174,50 @@ export async function generateContent(
 }
 
 // ---------------------------------------------------------------------------
-// Image Storage Helpers
+// File Storage Helpers
 // ---------------------------------------------------------------------------
 
-const BUCKET = 'chat-images';
+const BUCKET = 'chat-uploads';
 const SIGNED_URL_EXPIRY = 3600; // 1 hour
 
-/** Generate a signed URL for a stored image */
-async function getSignedImageUrl(storagePath: string): Promise<string | null> {
-  const { supabase } = await getAuthenticatedClient();
-
-  const { data, error } = await supabase.storage
-    .from(BUCKET)
-    .createSignedUrl(storagePath, SIGNED_URL_EXPIRY);
-
-  if (error || !data?.signedUrl) {
-    console.error('Failed to create signed URL:', error);
-    return null;
-  }
-  return data.signedUrl;
-}
-
-/** Remove stored images for the given chat IDs */
-async function removeStorageImages(
+/** Remove stored files for the given chat IDs */
+async function removeStorageFiles(
   supabase: Awaited<ReturnType<typeof getAuthenticatedClient>>['supabase'],
   chatIds: string[],
 ) {
   if (chatIds.length === 0) return;
 
-  const { data: msgs } = await supabase
+  // Single query: pull every attachment path for messages in these chats
+  const { data, error } = await supabase
     .from('messages')
-    .select('image_url')
-    .in('chat_id', chatIds)
-    .not('image_url', 'is', null);
+    .select('message_attachments(file_url)')
+    .in('chat_id', chatIds);
 
-  const paths = (msgs ?? []).map((m: { image_url: string }) => m.image_url).filter(Boolean);
-  if (paths.length > 0) {
-    await supabase.storage.from(BUCKET).remove(paths);
+  if (error) {
+    console.error('[chat-actions] removeStorageFiles read error:', error);
+    throw new Error('Failed to enumerate chat attachments for deletion.');
+  }
+
+  type Row = { message_attachments: { file_url: string | null }[] | null };
+  const paths = ((data ?? []) as Row[])
+    .flatMap((row) => row.message_attachments ?? [])
+    .map((a) => a.file_url)
+    .filter((p): p is string => !!p);
+
+  if (paths.length === 0) return;
+
+  // Supabase storage limits batch removes; chunk to be safe.
+  const CHUNK = 100;
+  for (let i = 0; i < paths.length; i += CHUNK) {
+    const slice = paths.slice(i, i + CHUNK);
+    const { error: removeErr } = await supabase.storage.from(BUCKET).remove(slice);
+    if (removeErr) {
+      console.error('[chat-actions] removeStorageFiles remove error:', removeErr, {
+        bucket: BUCKET,
+        sample: slice.slice(0, 3),
+      });
+      throw new Error('Failed to delete chat attachments from storage.');
+    }
   }
 }
 
@@ -254,8 +253,9 @@ export async function listChats(): Promise<Chat[]> {
 
   const { data, error } = await supabase
     .from('chats')
-    .select('id, title, model, created_at, updated_at')
+    .select('id, title, model, is_pinned, created_at, updated_at')
     .eq('user_id', user.id)
+    .order('is_pinned', { ascending: false, nullsFirst: false })
     .order('updated_at', { ascending: false });
 
   if (error) {
@@ -266,13 +266,28 @@ export async function listChats(): Promise<Chat[]> {
   return (data ?? []) as Chat[];
 }
 
-/** Get messages for a chat */
-export async function getMessages(chatId: string): Promise<(Message & { signedImageUrl?: string | null })[]> {
+/** Get messages (with attachments) for a chat */
+export async function getMessages(chatId: string): Promise<MessageWithAttachments[]> {
   const { supabase } = await getAuthenticatedClient();
 
   const { data, error } = await supabase
     .from('messages')
-    .select('*')
+    .select(`
+      id,
+      chat_id,
+      role,
+      content,
+      created_at,
+      attachments:message_attachments (
+        id,
+        message_id,
+        file_url,
+        file_mime_type,
+        file_name,
+        position,
+        created_at
+      )
+    `)
     .eq('chat_id', chatId)
     .order('created_at', { ascending: true });
 
@@ -280,42 +295,82 @@ export async function getMessages(chatId: string): Promise<(Message & { signedIm
     console.error('[chat-actions] getMessages DB error:', error);
     throw new Error('Failed to load messages.');
   }
-  
-  const messages = (data ?? []) as Message[];
 
-  // Generate signed URLs for messages that have images
-  const enriched = await Promise.all(
-    messages.map(async (msg) => {
-      if (msg.image_url) {
-        const signedImageUrl = await getSignedImageUrl(msg.image_url);
-        return { ...msg, signedImageUrl };
-      }
-      return { ...msg, signedImageUrl: null };
-    })
+  const rows = (data ?? []) as (Message & { attachments: MessageAttachment[] | null })[];
+
+  // Collect every storage path, then sign them all in a single batched call.
+  const allPaths = Array.from(
+    new Set(
+      rows.flatMap((m) => (m.attachments ?? []).map((a) => a.file_url)).filter(Boolean) as string[]
+    )
   );
 
-  return enriched;
+  const signedMap = new Map<string, string>();
+  if (allPaths.length > 0) {
+    const { data: signedData, error: signErr } = await supabase.storage
+      .from(BUCKET)
+      .createSignedUrls(allPaths, SIGNED_URL_EXPIRY);
+
+    if (signErr) {
+      console.error('[chat-actions] getMessages createSignedUrls error:', signErr);
+    } else {
+      for (const entry of signedData ?? []) {
+        if (entry?.signedUrl && entry.path) {
+          signedMap.set(entry.path, entry.signedUrl);
+        }
+      }
+    }
+  }
+
+  return rows.map((msg) => {
+    const atts = (msg.attachments ?? []).slice().sort((a, b) => a.position - b.position);
+    return {
+      id: msg.id,
+      chat_id: msg.chat_id,
+      role: msg.role,
+      content: msg.content,
+      created_at: msg.created_at,
+      attachments: atts.map((a) => ({
+        ...a,
+        signedFileUrl: signedMap.get(a.file_url) ?? null,
+      })),
+    };
+  });
 }
 
-/** Save a message to a chat */
+/** Save a message, optionally with multiple attachments */
 export async function saveMessage(
   chatId: string,
   role: 'user' | 'assistant',
   content: string,
-  imageUrl?: string | null,
+  attachments: AttachmentRef[] = [],
 ): Promise<Message> {
   const { supabase, user } = await getAuthenticatedClient();
 
-  const insertData: Record<string, unknown> = { chat_id: chatId, role, content };
-  if (imageUrl) insertData.image_url = imageUrl;
-
-  const { data, error } = await supabase
+  const { data: msgData, error: msgErr } = await supabase
     .from('messages')
-    .insert(insertData)
+    .insert({ chat_id: chatId, role, content })
     .select()
     .single();
 
-  if (error) throw new Error(error.message);
+  if (msgErr) throw new Error(msgErr.message);
+  const message = msgData as Message;
+
+  if (attachments.length > 0) {
+    const rows = attachments.map((a, i) => ({
+      message_id: message.id,
+      file_url: a.storagePath,
+      file_mime_type: a.mimeType,
+      file_name: a.fileName,
+      position: i,
+    }));
+
+    const { error: attErr } = await supabase.from('message_attachments').insert(rows);
+    if (attErr) {
+      console.error('[chat-actions] saveMessage attachment insert error:', attErr);
+      throw new Error('Failed to save attachments.');
+    }
+  }
 
   await supabase
     .from('chats')
@@ -323,7 +378,7 @@ export async function saveMessage(
     .eq('id', chatId)
     .eq('user_id', user.id);
 
-  return data as Message;
+  return message;
 }
 
 /** Update chat title */
@@ -342,11 +397,27 @@ export async function updateChatTitle(chatId: string, title: string): Promise<vo
   }
 }
 
+/** Update chat pinned state */
+export async function togglePinChat(chatId: string, isPinned: boolean): Promise<void> {
+  const { supabase, user } = await getAuthenticatedClient();
+
+  const { error } = await supabase
+    .from('chats')
+    .update({ is_pinned: isPinned })
+    .eq('id', chatId)
+    .eq('user_id', user.id);
+
+  if (error) {
+    console.error('[chat-actions] togglePinChat DB error:', error);
+    throw new Error('Failed to update pin state.');
+  }
+}
+
 /** Delete a chat */
 export async function deleteChat(chatId: string): Promise<void> {
   const { supabase, user } = await getAuthenticatedClient();
 
-  await removeStorageImages(supabase, [chatId]);
+  await removeStorageFiles(supabase, [chatId]);
 
   const { error } = await supabase
     .from('chats')
@@ -370,7 +441,7 @@ export async function deleteAllChats(): Promise<void> {
     .eq('user_id', user.id);
 
   const chatIds = (chats ?? []).map((c: { id: string }) => c.id);
-  await removeStorageImages(supabase, chatIds);
+  await removeStorageFiles(supabase, chatIds);
 
   const { error } = await supabase
     .from('chats')

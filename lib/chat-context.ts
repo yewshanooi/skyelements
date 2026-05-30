@@ -9,14 +9,11 @@ const CHARS_PER_TOKEN = 4;
 
 // Per-model token budgets for conversation history (not counting the new prompt).
 const MODEL_CONTEXT_BUDGETS: Record<string, number> = {
-  // Google models — generous context windows
   'gemini-3.1-flash-lite': 16_000,
   'gemini-3.5-flash': 32_000,
   'gemini-3-flash-preview': 32_000,
-  'gemini-2.5-flash': 32_000,
 
-  // OpenRouter free models — be conservative
-  default: 12_000,
+  default: 16_000,
 };
 
 // Maximum characters allowed for a single message in history before truncation.

@@ -19,7 +19,7 @@ import {
 import type { Chat } from "@/app/lithium/chat-actions"
 import type { Note } from "@/app/lithium/note-actions"
 
-export function AppSidebar({ user, signout, onNewChat, chats, activeChatId, onSelectChat, onDeleteChat, onDeleteAllChats, onDeleteAllNotes, notes, activeNoteId, onSelectNote, onDeleteNote, onNewNote, onTogglePinNote, ...props }: React.ComponentProps<typeof Sidebar> & {
+export function AppSidebar({ user, signout, onNewChat, chats, activeChatId, onSelectChat, onDeleteChat, onTogglePinChat, onDeleteAllChats, onDeleteAllNotes, notes, activeNoteId, onSelectNote, onDeleteNote, onNewNote, onTogglePinNote, ...props }: React.ComponentProps<typeof Sidebar> & {
   user: {
     email: string
   }
@@ -29,6 +29,7 @@ export function AppSidebar({ user, signout, onNewChat, chats, activeChatId, onSe
   activeChatId?: string | null
   onSelectChat?: (chatId: string) => void
   onDeleteChat?: (chatId: string) => void
+  onTogglePinChat?: (chatId: string, currentPinStatus: boolean) => void | Promise<void>
   onDeleteAllChats?: () => Promise<void>
   onDeleteAllNotes?: () => Promise<void>
   notes?: Note[]
@@ -41,6 +42,7 @@ export function AppSidebar({ user, signout, onNewChat, chats, activeChatId, onSe
   const chatItems = useMemo(() => (chats ?? []).map(chat => ({
     id: chat.id,
     name: chat.title,
+    isPinned: chat.is_pinned,
     updatedAt: chat.updated_at,
   })), [chats]);
 
@@ -83,6 +85,7 @@ export function AppSidebar({ user, signout, onNewChat, chats, activeChatId, onSe
           activeChatId={activeChatId}
           onSelectChat={onSelectChat}
           onDeleteChat={onDeleteChat}
+          onTogglePinChat={onTogglePinChat}
         />
       </SidebarContent>
       <SidebarFooter>

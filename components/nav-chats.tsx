@@ -5,6 +5,8 @@ import {
   Bot,
   MoreHorizontal,
   Trash2,
+  Pin,
+  PinOff,
 } from "lucide-react"
 
 import {
@@ -41,15 +43,18 @@ export function NavChats({
   activeChatId,
   onSelectChat,
   onDeleteChat,
+  onTogglePinChat,
 }: {
   chats: {
     id: string
     name: string
+    isPinned?: boolean
     updatedAt: string
   }[]
   activeChatId?: string | null
   onSelectChat?: (chatId: string) => void
   onDeleteChat?: (chatId: string) => void
+  onTogglePinChat?: (chatId: string, currentPinStatus: boolean) => void | Promise<void>
 }) {
   const { isMobile } = useSidebar()
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
@@ -86,8 +91,15 @@ export function NavChats({
             </SidebarMenuButton>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <SidebarMenuAction showOnHover>
-                  <MoreHorizontal />
+                <SidebarMenuAction showOnHover={!item.isPinned} className="group/action">
+                  {item.isPinned ? (
+                    <>
+                      <Pin className="h-4 w-4 text-muted-foreground group-hover/menu-item:hidden group-data-[state=open]/action:hidden" />
+                      <MoreHorizontal className="h-4 w-4 hidden group-hover/menu-item:block group-data-[state=open]/action:block" />
+                    </>
+                  ) : (
+                    <MoreHorizontal />
+                  )}
                   <span className="sr-only">More</span>
                 </SidebarMenuAction>
               </DropdownMenuTrigger>
@@ -96,6 +108,12 @@ export function NavChats({
                 side={isMobile ? "bottom" : "right"}
                 align={isMobile ? "end" : "start"}
               >
+                <DropdownMenuItem
+                  onClick={() => onTogglePinChat?.(item.id, item.isPinned || false)}
+                >
+                  {item.isPinned ? <PinOff className="text-muted-foreground" /> : <Pin className="text-muted-foreground" />}
+                  <span>{item.isPinned ? 'Unpin' : 'Pin'}</span>
+                </DropdownMenuItem>
                 <DropdownMenuItem
                   variant="destructive"
                   onClick={() => setPendingDeleteId(item.id)}

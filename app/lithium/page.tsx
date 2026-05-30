@@ -6,7 +6,7 @@ import { createClient } from "@/utils/supabase/server"
 
 export const metadata: Metadata = {
   title: "Lithium",
-  description: "AI chatbot powered by OpenRouter and Google AI Studio models.",
+  description: "AI chatbot powered by Google AI Studio models.",
 };
 
 export default async function Page() {
