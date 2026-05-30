@@ -199,9 +199,11 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
     const [currentChatId, setCurrentChatId] = useState<string | null>(chatId ?? null);
     const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
     const [attachmentError, setAttachmentError] = useState<string | null>(null);
+    const [isDraggingOver, setIsDraggingOver] = useState(false);
     const generationIdRef = useRef(0);
     const pendingNewChatIdRef = useRef<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const dragCounterRef = useRef(0);
 
     const selectedModelInfo = useMemo(
         () => MODELS.find(m => m.id === selectedModel) ?? MODELS[0],
@@ -307,14 +309,12 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
         return { id, file, mimeType: file.type, fileName: file.name, previewUrl: null };
     }, []);
 
-    const handleAttachmentSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const files = Array.from(e.target.files ?? []);
-        e.target.value = '';
+    const addFiles = useCallback(async (files: File[]) => {
         if (files.length === 0) return;
 
         setAttachmentError(null);
 
-        const remainingSlots = MAX_ATTACHMENTS - pendingAttachments.length;
+        const remainingSlots = MAX_ATTACHMENTS - pendingAttachmentsRef.current.length;
         const overflow = files.length > remainingSlots;
         const accepted = files.slice(0, Math.max(0, remainingSlots));
 
@@ -336,7 +336,50 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
         if (errors.length > 0) {
             setAttachmentError(errors.join(' '));
         }
-    }, [pendingAttachments.length, buildPendingAttachment]);
+    }, [buildPendingAttachment]);
+
+    const handleAttachmentSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files ?? []);
+        e.target.value = '';
+        await addFiles(files);
+    }, [addFiles]);
+
+    const handleDragEnter = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+        if (loading) return;
+        if (!e.dataTransfer.types.includes('Files')) return;
+        e.preventDefault();
+        e.stopPropagation();
+        dragCounterRef.current += 1;
+        setIsDraggingOver(true);
+    }, [loading]);
+
+    const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+        if (loading) return;
+        if (!e.dataTransfer.types.includes('Files')) return;
+        e.preventDefault();
+        e.stopPropagation();
+        e.dataTransfer.dropEffect = 'copy';
+    }, [loading]);
+
+    const handleDragLeave = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+        if (loading) return;
+        e.preventDefault();
+        e.stopPropagation();
+        dragCounterRef.current = Math.max(0, dragCounterRef.current - 1);
+        if (dragCounterRef.current === 0) {
+            setIsDraggingOver(false);
+        }
+    }, [loading]);
+
+    const handleDrop = useCallback(async (e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dragCounterRef.current = 0;
+        setIsDraggingOver(false);
+        if (loading) return;
+        const files = Array.from(e.dataTransfer.files ?? []);
+        await addFiles(files);
+    }, [addFiles, loading]);
 
     const removePendingAttachment = useCallback((id: string) => {
         setPendingAttachments(prev => {
@@ -641,7 +684,23 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                 <p className="mb-4 ml-4 text-sm text-destructive">{attachmentError}</p>
             )}
 
-            <InputGroup>
+            <InputGroup
+                className={isDraggingOver ? "ring-ring/50 border-ring ring-[3px]" : undefined}
+                onDragEnter={handleDragEnter}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+            >
+                {isDraggingOver && (
+                    <div
+                        className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-background/90"
+                    >
+                        <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                            <Paperclip className="size-4" />
+                            Drop files to attach
+                        </div>
+                    </div>
+                )}
                 <InputGroupTextarea
                     placeholder="Ask anything..."
                     value={prompt}
@@ -726,7 +785,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                 </InputGroupAddon>
             </InputGroup>
         </div>
-    ), [prompt, loading, pendingAttachments, hasPendingAttachments, attachmentError, selectedModelInfo, selectedModel, isOverLimit, handleKeyDown, handleSend, handleAttachmentSelect, removePendingAttachment, clearAllPendingAttachments]);
+    ), [prompt, loading, pendingAttachments, hasPendingAttachments, attachmentError, selectedModelInfo, selectedModel, isOverLimit, handleKeyDown, handleSend, handleAttachmentSelect, removePendingAttachment, clearAllPendingAttachments, isDraggingOver, handleDragEnter, handleDragOver, handleDragLeave, handleDrop]);
 
     // New Chat page
     if (isEmptyState) {
