@@ -335,10 +335,10 @@ function ListItem({
     <li {...props}>
       <NavigationMenuLink asChild>
         <Link href={href} target={target}>
-          <div className="text-sm leading-none font-medium flex items-center gap-1">{title}</div>
-          <p className="text-muted-foreground line-clamp-2 text-sm leading-snug">
-            {children}
-          </p>
+          <div className="flex flex-col gap-1 text-sm">
+            <div className="leading-none font-medium flex items-center gap-1">{title}</div>
+            <div className="line-clamp-2 text-muted-foreground">{children}</div>
+          </div>
         </Link>
       </NavigationMenuLink>
     </li>

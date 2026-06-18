@@ -770,7 +770,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                             </span>
                         )}
                     </InputGroupText>
-                    <Separator orientation="vertical" className="mx-2 data-[orientation=vertical]:h-4" />
+                    <Separator orientation="vertical" className="mx-2 data-[orientation=vertical]:h-5" />
                     <InputGroupButton
                         variant="default"
                         className="rounded-full cursor-pointer"
@@ -804,7 +804,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                         <div className="mt-6 flex justify-center px-4">
                             <Button
                                 variant="outline"
-                                className="cursor-pointer text-sm text-muted-foreground h-auto whitespace-normal text-center max-w-full"
+                                className="text-muted-foreground h-auto whitespace-normal text-center max-w-full px-2 py-1"
                                 onClick={() => sendMessage(sampleQuery)}
                             >
                                 &quot;{sampleQuery}&quot;
@@ -840,7 +840,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                 </div>
             </div>
 
-            <div className="shrink-0 px-8 pb-6 pt-4 bg-background">
+            <div className="shrink-0 px-8 pb-6 pt-4 bg-background border-t">
                 <div className="w-full max-w-3xl mx-auto">
                     {inputGroup}
                 </div>
