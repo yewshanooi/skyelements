@@ -110,7 +110,7 @@ export function NavNotes({
                     <DropdownMenuItem
                       onClick={() => onTogglePinNote?.(item.id, item.isPinned || false)}
                     >
-                      {item.isPinned ? <PinOff className="text-muted-foreground" /> : <Pin className="text-muted-foreground" />}
+                      {item.isPinned ? <PinOff /> : <Pin />}
                       <span>{item.isPinned ? 'Unpin' : 'Pin'}</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem
@@ -152,7 +152,7 @@ export function NavNotes({
           <AlertDialogFooter>
             <AlertDialogCancel className="cursor-pointer">Cancel</AlertDialogCancel>
             <AlertDialogAction
-              className={buttonVariants({ variant: "outline", className: "text-destructive cursor-pointer hover:text-destructive" })}
+              variant="destructive"
               onClick={() => {
                 onDeleteNote?.(pendingDeleteId!)
                 setPendingDeleteId(null)

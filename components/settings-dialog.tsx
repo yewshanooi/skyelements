@@ -319,11 +319,7 @@ export function SettingsDialog({
           <AlertDialogFooter>
             <AlertDialogCancel className="cursor-pointer">Cancel</AlertDialogCancel>
             <AlertDialogAction
-              className={buttonVariants({
-                variant: "outline",
-                className:
-                  "text-destructive cursor-pointer hover:text-destructive",
-              })}
+              variant="destructive"
               onClick={() => onDeleteAllNotes?.()}
             >
               Delete All
@@ -343,11 +339,7 @@ export function SettingsDialog({
           <AlertDialogFooter>
             <AlertDialogCancel className="cursor-pointer">Cancel</AlertDialogCancel>
             <AlertDialogAction
-              className={buttonVariants({
-                variant: "outline",
-                className:
-                  "text-destructive cursor-pointer hover:text-destructive",
-              })}
+              variant="destructive"
               onClick={() => onDeleteAllChats?.()}
             >
               Delete All

@@ -101,7 +101,7 @@ export function NavigationBar() {
                         <NavigationMenuLink asChild>
                           <Link
                             href="/sodium"
-                            className="from-muted/50 to-muted flex h-full w-full flex-col justify-end rounded-md bg-linear-to-b p-6 no-underline outline-hidden select-none focus:shadow-md"
+                            className="from-muted/50 to-muted flex h-full w-full flex-col justify-end rounded-md bg-linear-to-b p-6 no-underline outline-hidden select-none focus:shadow-md items-start"
                           >
                             <div className="mt-4 mb-2 text-lg font-medium">
                               Sodium

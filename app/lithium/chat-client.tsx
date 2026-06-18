@@ -840,7 +840,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                 </div>
             </div>
 
-            <div className="shrink-0 px-8 pb-6 pt-4 bg-background border-t">
+            <div className="shrink-0 px-8 pb-6 pt-4 bg-background">
                 <div className="w-full max-w-3xl mx-auto">
                     {inputGroup}
                 </div>
