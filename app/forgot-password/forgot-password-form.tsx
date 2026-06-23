@@ -40,7 +40,7 @@ export default function ForgotPasswordForm() {
                         <CardDescription>
                             {state?.success
                                 ? "If an account exists with that email, you will receive a password reset link shortly."
-                                : "Enter your email and we\u2019ll send you a link to reset your password."}
+                                : "Enter your email and we'll send you a link to reset your password."}
                         </CardDescription>
                     </CardHeader>
                     <CardContent>

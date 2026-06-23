@@ -150,17 +150,11 @@ export function NavigationBar() {
                 </NavigationMenuItem>
 
                 <NavigationMenuItem>
-                  <NavigationMenuTrigger>Policies</NavigationMenuTrigger>
-                  <NavigationMenuContent>
-                    <ul className="w-90">
-                      <ListItem href="/cookie-policy" title="Cookie Policy">
-                        How we use cookies to improve your experience
-                      </ListItem>
-                      <ListItem href="/privacy-policy" title="Privacy Policy">
-                        How we collect, use, and protect your personal data
-                      </ListItem>
-                    </ul>
-                  </NavigationMenuContent>
+                  <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
+                    <Link href="/policies">
+                      Policies
+                    </Link>
+                  </NavigationMenuLink>
                 </NavigationMenuItem>
 
                 <NavigationMenuItem>
@@ -262,22 +256,10 @@ export function NavigationBar() {
                 <Link href="/credits" className="text-2xl font-medium transition-colors" onClick={() => setMobileMenuOpen(false)}>
                   Credits
                 </Link>
-                
-                <Accordion type="single" collapsible className="w-full">
-                  <AccordionItem value="policies">
-                    <AccordionTrigger className="justify-between items-center gap-2 text-2xl font-medium hover:no-underline transition-colors [&>svg]:size-5 py-0">
-                      Policies
-                    </AccordionTrigger>
-                    <AccordionContent className="flex flex-col gap-5 pt-4 pb-2 pl-2 [&_a]:no-underline">
-                      <Link href="/cookie-policy" className="text-xl text-muted-foreground hover:text-foreground transition-colors text-left" onClick={() => setMobileMenuOpen(false)}>
-                        Cookie Policy
-                      </Link>
-                      <Link href="/privacy-policy" className="text-xl text-muted-foreground hover:text-foreground transition-colors text-left" onClick={() => setMobileMenuOpen(false)}>
-                        Privacy Policy
-                      </Link>
-                    </AccordionContent>
-                  </AccordionItem>
-                </Accordion>
+
+                <Link href="/policies" className="text-2xl font-medium transition-colors" onClick={() => setMobileMenuOpen(false)}>
+                  Policies
+                </Link>
                 
                 <Accordion type="single" collapsible className="w-full">
                   <AccordionItem value="resources">

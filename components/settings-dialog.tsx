@@ -212,7 +212,7 @@ export function SettingsDialog({
               variant="secondary"
             >
               <Link
-                href="/privacy-policy"
+                href="/policies"
                 rel="noopener noreferrer"
                 onClick={() => onOpenChange(false)}
               >
