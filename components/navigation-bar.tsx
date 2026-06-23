@@ -207,7 +207,7 @@ export function NavigationBar() {
             <SheetContent 
               side="top" 
               showCloseButton={false}
-              className="h-[100dvh] w-full flex flex-col border-none pt-[130px] pb-8 bg-background"
+              className="h-screen w-screen max-w-none flex flex-col border-none rounded-none m-0 p-0 pt-[130px] pb-8 px-4 bg-background [&~[data-slot=sheet-overlay]]:bg-transparent [&~[data-slot=sheet-overlay]]:backdrop-blur-none fixed inset-0"
             >
               <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
               <SheetDescription className="sr-only">Access all sections of the site.</SheetDescription>
@@ -219,10 +219,10 @@ export function NavigationBar() {
                 
                 <Accordion type="single" collapsible className="w-full">
                   <AccordionItem value="sodium">
-                    <AccordionTrigger className="justify-between gap-2 text-2xl font-medium hover:no-underline transition-colors [&>svg]:size-5 py-0">
+                    <AccordionTrigger className="justify-between items-center gap-2 text-2xl font-medium hover:no-underline transition-colors [&>svg]:size-5 py-0">
                       Sodium
                     </AccordionTrigger>
-                    <AccordionContent className="flex flex-col gap-5 pt-4 pb-2 pl-2">
+                    <AccordionContent className="flex flex-col gap-5 pt-4 pb-2 pl-2 [&_a]:no-underline">
                       <Link href="/sodium" className="text-xl text-muted-foreground hover:text-foreground transition-colors text-left" onClick={() => setMobileMenuOpen(false)}>
                         About
                       </Link>
@@ -265,10 +265,10 @@ export function NavigationBar() {
                 
                 <Accordion type="single" collapsible className="w-full">
                   <AccordionItem value="policies">
-                    <AccordionTrigger className="justify-between gap-2 text-2xl font-medium hover:no-underline transition-colors [&>svg]:size-5 py-0">
+                    <AccordionTrigger className="justify-between items-center gap-2 text-2xl font-medium hover:no-underline transition-colors [&>svg]:size-5 py-0">
                       Policies
                     </AccordionTrigger>
-                    <AccordionContent className="flex flex-col gap-5 pt-4 pb-2 pl-2">
+                    <AccordionContent className="flex flex-col gap-5 pt-4 pb-2 pl-2 [&_a]:no-underline">
                       <Link href="/cookie-policy" className="text-xl text-muted-foreground hover:text-foreground transition-colors text-left" onClick={() => setMobileMenuOpen(false)}>
                         Cookie Policy
                       </Link>
@@ -281,10 +281,10 @@ export function NavigationBar() {
                 
                 <Accordion type="single" collapsible className="w-full">
                   <AccordionItem value="resources">
-                    <AccordionTrigger className="justify-between gap-2 text-2xl font-medium hover:no-underline transition-colors [&>svg]:size-5 py-0">
+                    <AccordionTrigger className="justify-between items-center gap-2 text-2xl font-medium hover:no-underline transition-colors [&>svg]:size-5 py-0">
                       Resources
                     </AccordionTrigger>
-                    <AccordionContent className="flex flex-col gap-5 pt-4 pb-2 pl-2">
+                    <AccordionContent className="flex flex-col gap-5 pt-4 pb-2 pl-2 [&_a]:no-underline">
                       <a 
                         href="https://skyelements.betteruptime.com/"
                         className="text-xl text-muted-foreground hover:text-foreground transition-colors flex items-center justify-start gap-2"
