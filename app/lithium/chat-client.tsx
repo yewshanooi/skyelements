@@ -703,6 +703,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                 )}
                 <InputGroupTextarea
                     placeholder="Ask anything..."
+                    className="pl-4"
                     value={prompt}
                     onChange={(e) => setPrompt(e.target.value.slice(0, MAX_INPUT_CHARS))}
                     onKeyDown={handleKeyDown}
