@@ -35,8 +35,8 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogMedia,
 } from "@/components/ui/alert-dialog"
-import { buttonVariants } from "@/components/ui/button"
 
 export function NavChats({
   chats,
@@ -84,7 +84,6 @@ export function NavChats({
             <SidebarMenuButton
               isActive={activeChatId === item.id}
               onClick={() => onSelectChat?.(item.id)}
-              className="cursor-pointer"
             >
               <Bot />
               <span>{item.name}</span>
@@ -109,12 +108,14 @@ export function NavChats({
                 align={isMobile ? "end" : "start"}
               >
                 <DropdownMenuItem
+                  className="cursor-pointer"
                   onClick={() => onTogglePinChat?.(item.id, item.isPinned || false)}
                 >
-                  {item.isPinned ? <PinOff className="text-muted-foreground" /> : <Pin className="text-muted-foreground" />}
+                  {item.isPinned ? <PinOff /> : <Pin />}
                   <span>{item.isPinned ? 'Unpin' : 'Pin'}</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem
+                  className="cursor-pointer"
                   variant="destructive"
                   onClick={() => setPendingDeleteId(item.id)}
                 >
@@ -136,17 +137,20 @@ export function NavChats({
       open={pendingDeleteId !== null}
       onOpenChange={(open) => { if (!open) setPendingDeleteId(null) }}
     >
-      <AlertDialogContent>
+      <AlertDialogContent size="sm">
         <AlertDialogHeader>
+          <AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive">
+            <Trash2 />
+          </AlertDialogMedia>
           <AlertDialogTitle>Delete chat?</AlertDialogTitle>
           <AlertDialogDescription>
             Once you delete a chat, it&apos;s gone forever.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel className="cursor-pointer">Cancel</AlertDialogCancel>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
           <AlertDialogAction
-            className={buttonVariants({ variant: "outline", className: "text-destructive cursor-pointer hover:text-destructive" })}
+            variant="destructive"
             onClick={() => {
               onDeleteChat?.(pendingDeleteId!)
               setPendingDeleteId(null)

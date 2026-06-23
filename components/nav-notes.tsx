@@ -37,8 +37,8 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogMedia,
 } from "@/components/ui/alert-dialog"
-import { buttonVariants } from "@/components/ui/button"
 
 export function NavNotes({
   notes,
@@ -67,7 +67,7 @@ export function NavNotes({
     <>
       <SidebarGroup className="group-data-[collapsible=icon]:hidden">
         <SidebarGroupLabel>Notes</SidebarGroupLabel>
-        <SidebarGroupAction title="Add a note" onClick={onNewNote} className="cursor-pointer">
+        <SidebarGroupAction title="Add a note" onClick={onNewNote}>
           <Plus /> <span className="sr-only">Add a note</span>
         </SidebarGroupAction>
         <SidebarMenu>
@@ -83,7 +83,6 @@ export function NavNotes({
                 <SidebarMenuButton
                   isActive={activeNoteId === item.id}
                   onClick={() => onSelectNote?.(item.id)}
-                  className="cursor-pointer"
                 >
                   <StickyNote className="h-4 w-4" />
                   <span>{item.name}</span>
@@ -108,12 +107,14 @@ export function NavNotes({
                     align={isMobile ? "end" : "start"}
                   >
                     <DropdownMenuItem
+                      className="cursor-pointer"
                       onClick={() => onTogglePinNote?.(item.id, item.isPinned || false)}
                     >
-                      {item.isPinned ? <PinOff className="text-muted-foreground" /> : <Pin className="text-muted-foreground" />}
+                      {item.isPinned ? <PinOff /> : <Pin />}
                       <span>{item.isPinned ? 'Unpin' : 'Pin'}</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem
+                      className="cursor-pointer"
                       variant="destructive"
                       onClick={() => setPendingDeleteId(item.id)}
                     >
@@ -142,17 +143,20 @@ export function NavNotes({
         open={pendingDeleteId !== null}
         onOpenChange={(open) => { if (!open) setPendingDeleteId(null) }}
       >
-        <AlertDialogContent>
+        <AlertDialogContent size="sm">
           <AlertDialogHeader>
+            <AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive">
+              <Trash2 />
+            </AlertDialogMedia>
             <AlertDialogTitle>Delete note?</AlertDialogTitle>
             <AlertDialogDescription>
               Once you delete a note, it&apos;s gone forever.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="cursor-pointer">Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              className={buttonVariants({ variant: "outline", className: "text-destructive cursor-pointer hover:text-destructive" })}
+              variant="destructive"
               onClick={() => {
                 onDeleteNote?.(pendingDeleteId!)
                 setPendingDeleteId(null)

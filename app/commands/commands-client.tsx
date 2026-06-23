@@ -1,6 +1,6 @@
 'use client';
 
-import { Terminal } from "lucide-react"
+import { Terminal, Cat, Lightbulb } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -19,6 +19,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogMedia,
 } from "@/components/ui/alert-dialog"
 import { useState } from 'react';
 
@@ -103,19 +104,21 @@ export function CommandsClient() {
                   onClick={runCatFact}
                   variant="secondary"
                   disabled={loading.cat}
-                  className="cursor-pointer disabled:cursor-not-allowed"
                 >
                   {!loading.cat && <Terminal />}
                   {loading.cat ? 'Loading...' : 'Run Command'}
                 </Button>
-                <AlertDialogContent>
+                <AlertDialogContent size="sm">
                   <AlertDialogHeader>
+                    <AlertDialogMedia>
+                      <Cat />
+                    </AlertDialogMedia>
                     <AlertDialogTitle>Cat Fact</AlertDialogTitle>
                     <AlertDialogDescription>
                       {catFactResult}
                     </AlertDialogDescription>
                   </AlertDialogHeader>
-                  <AlertDialogFooter>
+                  <AlertDialogFooter className="!grid-cols-1">
                     <AlertDialogCancel>Close</AlertDialogCancel>
                   </AlertDialogFooter>
                 </AlertDialogContent>
@@ -146,19 +149,21 @@ export function CommandsClient() {
                   onClick={runGeneralFact}
                   variant="secondary"
                   disabled={loading.general}
-                  className="cursor-pointer disabled:cursor-not-allowed"
                 >
                   {!loading.general && <Terminal />}
                   {loading.general ? 'Loading...' : 'Run Command'}
                 </Button>
-                <AlertDialogContent>
+                <AlertDialogContent size="sm">
                   <AlertDialogHeader>
+                    <AlertDialogMedia>
+                      <Lightbulb />
+                    </AlertDialogMedia>
                     <AlertDialogTitle>General Fact</AlertDialogTitle>
                     <AlertDialogDescription>
                       {generalFactResult}
                     </AlertDialogDescription>
                   </AlertDialogHeader>
-                  <AlertDialogFooter>
+                  <AlertDialogFooter className="!grid-cols-1">
                     <AlertDialogCancel>Close</AlertDialogCancel>
                   </AlertDialogFooter>
                 </AlertDialogContent>

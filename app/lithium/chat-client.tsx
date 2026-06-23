@@ -703,6 +703,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                 )}
                 <InputGroupTextarea
                     placeholder="Ask anything..."
+                    className="pl-4"
                     value={prompt}
                     onChange={(e) => setPrompt(e.target.value.slice(0, MAX_INPUT_CHARS))}
                     onKeyDown={handleKeyDown}
@@ -712,7 +713,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                 <InputGroupAddon align="block-end">
                     <InputGroupButton
                         variant="secondary"
-                        className="rounded-sm cursor-pointer"
+                        className="rounded-sm"
                         size="icon-xs"
                         onClick={() => fileInputRef.current?.click()}
                         title={pendingAttachments.length >= MAX_ATTACHMENTS
@@ -721,12 +722,12 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                         disabled={loading || pendingAttachments.length >= MAX_ATTACHMENTS}
                     >
                         <Paperclip className="size-4" />
-                        <span className="sr-only">Attach files</span>
+                        <span className="sr-only">Attach images or files</span>
                     </InputGroupButton>
 
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <InputGroupButton variant="secondary" className="cursor-pointer" disabled={loading}>
+                            <InputGroupButton variant="secondary" disabled={loading}>
                                 <Image
                                     src={selectedModelInfo.icon}
                                     alt={selectedModelInfo.label}
@@ -770,10 +771,10 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                             </span>
                         )}
                     </InputGroupText>
-                    <Separator orientation="vertical" className="mx-2 data-[orientation=vertical]:h-4" />
+                    <Separator orientation="vertical" className="mx-2 data-[orientation=vertical]:h-5" />
                     <InputGroupButton
                         variant="default"
-                        className="rounded-full cursor-pointer"
+                        className="rounded-full"
                         size="icon-xs"
                         onClick={handleSend}
                         title="Send"
@@ -804,7 +805,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                         <div className="mt-6 flex justify-center px-4">
                             <Button
                                 variant="outline"
-                                className="cursor-pointer text-sm text-muted-foreground h-auto whitespace-normal text-center max-w-full"
+                                className="text-muted-foreground h-auto whitespace-normal text-center max-w-full px-2 py-1"
                                 onClick={() => sendMessage(sampleQuery)}
                             >
                                 &quot;{sampleQuery}&quot;

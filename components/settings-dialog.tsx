@@ -38,6 +38,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogMedia,
 } from "@/components/ui/alert-dialog"
 import { useIsMobile } from "@/hooks/use-mobile"
 
@@ -100,7 +101,6 @@ export function SettingsDialog({
             <Button
               size="sm"
               variant="secondary"
-              className="cursor-pointer"
               onClick={handleResetPassword}
             >
               <KeyRound className="size-4" />
@@ -122,7 +122,7 @@ export function SettingsDialog({
             <Button
               size="sm"
               variant="secondary"
-              className="cursor-pointer text-destructive hover:text-destructive"
+              className="text-destructive hover:text-destructive"
               onClick={() => signout?.()}
             >
               <LogOut className="size-4" />
@@ -148,7 +148,7 @@ export function SettingsDialog({
               type="button"
               variant="secondary"
               onClick={() => setTheme(value)}
-              className={`h-auto flex-col gap-1.5 py-3 sm:py-4 cursor-pointer border-2 ${
+              className={`h-auto flex-col gap-1.5 py-3 sm:py-4 border-2 ${
                 isActive ? "border-foreground" : "border-transparent"
               }`}
             >
@@ -173,7 +173,7 @@ export function SettingsDialog({
             <Button
               size="sm"
               variant="secondary"
-              className="cursor-pointer text-destructive hover:text-destructive"
+              className="text-destructive hover:text-destructive"
               onClick={() => setDeleteAllNotesOpen(true)}
             >
               <Trash2 className="size-4" />
@@ -187,7 +187,7 @@ export function SettingsDialog({
             <Button
               size="sm"
               variant="secondary"
-              className="cursor-pointer text-destructive hover:text-destructive"
+              className="text-destructive hover:text-destructive"
               onClick={() => setDeleteAllChatsOpen(true)}
             >
               <Trash2 className="size-4" />
@@ -210,10 +210,9 @@ export function SettingsDialog({
               asChild
               size="sm"
               variant="secondary"
-              className="cursor-pointer"
             >
               <Link
-                href="/privacy-policy"
+                href="/policies"
                 rel="noopener noreferrer"
                 onClick={() => onOpenChange(false)}
               >
@@ -242,7 +241,7 @@ export function SettingsDialog({
               </DialogDescription>
             </div>
             <DialogClose
-              className="cursor-pointer rounded-xs opacity-100 disabled:pointer-events-none"
+              className="rounded-xs opacity-100 disabled:pointer-events-none"
             >
               <X className="size-4" />
               <span className="sr-only">Close</span>
@@ -309,21 +308,20 @@ export function SettingsDialog({
       </Dialog>
 
       <AlertDialog open={deleteAllNotesOpen} onOpenChange={setDeleteAllNotesOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent size="sm">
           <AlertDialogHeader>
+            <AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive">
+              <Trash2 />
+            </AlertDialogMedia>
             <AlertDialogTitle>Clear your note history?</AlertDialogTitle>
             <AlertDialogDescription>
               This will delete all your Lithium notes. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="cursor-pointer">Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              className={buttonVariants({
-                variant: "outline",
-                className:
-                  "text-destructive cursor-pointer hover:text-destructive",
-              })}
+              variant="destructive"
               onClick={() => onDeleteAllNotes?.()}
             >
               Delete All
@@ -333,21 +331,20 @@ export function SettingsDialog({
       </AlertDialog>
 
       <AlertDialog open={deleteAllChatsOpen} onOpenChange={setDeleteAllChatsOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent size="sm">
           <AlertDialogHeader>
+            <AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive">
+              <Trash2 />
+            </AlertDialogMedia>
             <AlertDialogTitle>Clear your chat history?</AlertDialogTitle>
             <AlertDialogDescription>
               This will delete all your Lithium chats. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="cursor-pointer">Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              className={buttonVariants({
-                variant: "outline",
-                className:
-                  "text-destructive cursor-pointer hover:text-destructive",
-              })}
+              variant="destructive"
               onClick={() => onDeleteAllChats?.()}
             >
               Delete All

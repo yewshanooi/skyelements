@@ -125,7 +125,7 @@ export default function BrandingPage() {
         <div className="flex-1 flex flex-col items-center">
           <h2 className="text-xl font-semibold text-center text-primary mb-6">Media Kit</h2>
           <Card className="w-full max-w-sm">
-            <CardContent className="mt-4 mb-3">
+            <CardContent className="mt-5 mb-4">
               <CardDescription className="text-center mb-4">
                 Click here to download the latest media kit.
               </CardDescription>

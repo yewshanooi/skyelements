@@ -232,7 +232,7 @@ export function PageClient({ user, signout }: PageClientProps) {
   const breadcrumbTitle = activeView.type === 'chat' ? chatTitle : noteTitle;
 
   return (
-    <SidebarProvider>
+    <SidebarProvider className="h-svh overflow-hidden">
       <AppSidebar
         user={user}
         signout={signout}
@@ -253,11 +253,11 @@ export function PageClient({ user, signout }: PageClientProps) {
       />
       <SidebarInset className="overflow-hidden">
         <header className="flex h-16 shrink-0 items-center gap-2 bg-background">
-          <div className="flex items-center gap-2 px-4">
+          <div className="flex h-5 items-center gap-2 px-4">
             <SidebarTrigger className="-ml-1" />
             <Separator
               orientation="vertical"
-              className="mr-2 data-[orientation=vertical]:h-4"
+              className="mr-2"
             />
             <Breadcrumb>
               <BreadcrumbList>

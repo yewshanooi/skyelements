@@ -58,7 +58,7 @@ export function AppSidebar({ user, signout, onNewChat, chats, activeChatId, onSe
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" onClick={onNewChat} className="cursor-pointer">
+            <SidebarMenuButton size="lg" onClick={onNewChat}>
               <Image 
                 src="/logo/lithium.png" 
                 alt="Lithium Logo" 

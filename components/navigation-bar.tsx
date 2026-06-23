@@ -94,14 +94,14 @@ export function NavigationBar() {
               <NavigationMenuList>
 
                 <NavigationMenuItem>
-                  <NavigationMenuTrigger className="cursor-pointer">Sodium</NavigationMenuTrigger>
+                  <NavigationMenuTrigger>Sodium</NavigationMenuTrigger>
                   <NavigationMenuContent>
                     <ul className="grid gap-2 md:w-[400px] lg:w-[500px] lg:grid-cols-[.75fr_1fr]">
                       <li className="row-span-3">
                         <NavigationMenuLink asChild>
                           <Link
                             href="/sodium"
-                            className="from-muted/50 to-muted flex h-full w-full flex-col justify-end rounded-md bg-linear-to-b p-6 no-underline outline-hidden select-none focus:shadow-md"
+                            className="from-muted/50 to-muted flex h-full w-full flex-col justify-end rounded-md bg-linear-to-b p-6 no-underline outline-hidden select-none focus:shadow-md items-start"
                           >
                             <div className="mt-4 mb-2 text-lg font-medium">
                               Sodium
@@ -150,21 +150,15 @@ export function NavigationBar() {
                 </NavigationMenuItem>
 
                 <NavigationMenuItem>
-                  <NavigationMenuTrigger className="cursor-pointer">Policies</NavigationMenuTrigger>
-                  <NavigationMenuContent>
-                    <ul className="w-90">
-                      <ListItem href="/cookie-policy" title="Cookie Policy">
-                        How we use cookies to improve your experience
-                      </ListItem>
-                      <ListItem href="/privacy-policy" title="Privacy Policy">
-                        How we collect, use, and protect your personal data
-                      </ListItem>
-                    </ul>
-                  </NavigationMenuContent>
+                  <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
+                    <Link href="/policies">
+                      Policies
+                    </Link>
+                  </NavigationMenuLink>
                 </NavigationMenuItem>
 
                 <NavigationMenuItem>
-                  <NavigationMenuTrigger className="cursor-pointer">Resources</NavigationMenuTrigger>
+                  <NavigationMenuTrigger>Resources</NavigationMenuTrigger>
                   <NavigationMenuContent>
                     <ul className="w-60">
                       <ListItem href="https://skyelements.betteruptime.com/" title={<>Uptime <ExternalLink className="ml-1 h-4 w-4" /></>} target="_blank">
@@ -200,14 +194,14 @@ export function NavigationBar() {
         </Link>
         
         <div className="ml-auto flex items-center gap-2">
-          <Button variant="outline" size="icon" className="cursor-pointer" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+          <Button variant="outline" size="icon" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
             {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
           <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen} modal={false}>
             <SheetContent 
               side="top" 
               showCloseButton={false}
-              className="h-[100dvh] w-full flex flex-col border-none pt-[130px] pb-8 bg-background"
+              className="h-screen w-screen max-w-none flex flex-col border-none rounded-none m-0 p-0 pt-[130px] pb-8 px-4 bg-background [&~[data-slot=sheet-overlay]]:bg-transparent [&~[data-slot=sheet-overlay]]:backdrop-blur-none fixed inset-0"
             >
               <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
               <SheetDescription className="sr-only">Access all sections of the site.</SheetDescription>
@@ -219,10 +213,10 @@ export function NavigationBar() {
                 
                 <Accordion type="single" collapsible className="w-full">
                   <AccordionItem value="sodium">
-                    <AccordionTrigger className="justify-between gap-2 text-2xl font-medium hover:no-underline transition-colors [&>svg]:size-5 py-0">
+                    <AccordionTrigger className="justify-between items-center gap-2 text-2xl font-medium hover:no-underline transition-colors [&>svg]:size-5 py-0">
                       Sodium
                     </AccordionTrigger>
-                    <AccordionContent className="flex flex-col gap-5 pt-4 pb-2 pl-2">
+                    <AccordionContent className="flex flex-col gap-5 pt-4 pb-2 pl-2 [&_a]:no-underline">
                       <Link href="/sodium" className="text-xl text-muted-foreground hover:text-foreground transition-colors text-left" onClick={() => setMobileMenuOpen(false)}>
                         About
                       </Link>
@@ -262,29 +256,17 @@ export function NavigationBar() {
                 <Link href="/credits" className="text-2xl font-medium transition-colors" onClick={() => setMobileMenuOpen(false)}>
                   Credits
                 </Link>
-                
-                <Accordion type="single" collapsible className="w-full">
-                  <AccordionItem value="policies">
-                    <AccordionTrigger className="justify-between gap-2 text-2xl font-medium hover:no-underline transition-colors [&>svg]:size-5 py-0">
-                      Policies
-                    </AccordionTrigger>
-                    <AccordionContent className="flex flex-col gap-5 pt-4 pb-2 pl-2">
-                      <Link href="/cookie-policy" className="text-xl text-muted-foreground hover:text-foreground transition-colors text-left" onClick={() => setMobileMenuOpen(false)}>
-                        Cookie Policy
-                      </Link>
-                      <Link href="/privacy-policy" className="text-xl text-muted-foreground hover:text-foreground transition-colors text-left" onClick={() => setMobileMenuOpen(false)}>
-                        Privacy Policy
-                      </Link>
-                    </AccordionContent>
-                  </AccordionItem>
-                </Accordion>
+
+                <Link href="/policies" className="text-2xl font-medium transition-colors" onClick={() => setMobileMenuOpen(false)}>
+                  Policies
+                </Link>
                 
                 <Accordion type="single" collapsible className="w-full">
                   <AccordionItem value="resources">
-                    <AccordionTrigger className="justify-between gap-2 text-2xl font-medium hover:no-underline transition-colors [&>svg]:size-5 py-0">
+                    <AccordionTrigger className="justify-between items-center gap-2 text-2xl font-medium hover:no-underline transition-colors [&>svg]:size-5 py-0">
                       Resources
                     </AccordionTrigger>
-                    <AccordionContent className="flex flex-col gap-5 pt-4 pb-2 pl-2">
+                    <AccordionContent className="flex flex-col gap-5 pt-4 pb-2 pl-2 [&_a]:no-underline">
                       <a 
                         href="https://skyelements.betteruptime.com/"
                         className="text-xl text-muted-foreground hover:text-foreground transition-colors flex items-center justify-start gap-2"
@@ -335,10 +317,10 @@ function ListItem({
     <li {...props}>
       <NavigationMenuLink asChild>
         <Link href={href} target={target}>
-          <div className="text-sm leading-none font-medium flex items-center gap-1">{title}</div>
-          <p className="text-muted-foreground line-clamp-2 text-sm leading-snug">
-            {children}
-          </p>
+          <div className="flex flex-col gap-1 text-sm">
+            <div className="leading-none font-medium flex items-center gap-1">{title}</div>
+            <div className="line-clamp-2 text-muted-foreground">{children}</div>
+          </div>
         </Link>
       </NavigationMenuLink>
     </li>
