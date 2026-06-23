@@ -67,7 +67,7 @@ export function NavNotes({
     <>
       <SidebarGroup className="group-data-[collapsible=icon]:hidden">
         <SidebarGroupLabel>Notes</SidebarGroupLabel>
-        <SidebarGroupAction title="Add a note" onClick={onNewNote} className="cursor-pointer">
+        <SidebarGroupAction title="Add a note" onClick={onNewNote}>
           <Plus /> <span className="sr-only">Add a note</span>
         </SidebarGroupAction>
         <SidebarMenu>
@@ -83,7 +83,6 @@ export function NavNotes({
                 <SidebarMenuButton
                   isActive={activeNoteId === item.id}
                   onClick={() => onSelectNote?.(item.id)}
-                  className="cursor-pointer"
                 >
                   <StickyNote className="h-4 w-4" />
                   <span>{item.name}</span>
@@ -108,12 +107,14 @@ export function NavNotes({
                     align={isMobile ? "end" : "start"}
                   >
                     <DropdownMenuItem
+                      className="cursor-pointer"
                       onClick={() => onTogglePinNote?.(item.id, item.isPinned || false)}
                     >
                       {item.isPinned ? <PinOff /> : <Pin />}
                       <span>{item.isPinned ? 'Unpin' : 'Pin'}</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem
+                      className="cursor-pointer"
                       variant="destructive"
                       onClick={() => setPendingDeleteId(item.id)}
                     >
@@ -153,7 +154,7 @@ export function NavNotes({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="cursor-pointer">Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
               onClick={() => {

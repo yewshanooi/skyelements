@@ -84,7 +84,6 @@ export function NavChats({
             <SidebarMenuButton
               isActive={activeChatId === item.id}
               onClick={() => onSelectChat?.(item.id)}
-              className="cursor-pointer"
             >
               <Bot />
               <span>{item.name}</span>
@@ -109,12 +108,14 @@ export function NavChats({
                 align={isMobile ? "end" : "start"}
               >
                 <DropdownMenuItem
+                  className="cursor-pointer"
                   onClick={() => onTogglePinChat?.(item.id, item.isPinned || false)}
                 >
                   {item.isPinned ? <PinOff /> : <Pin />}
                   <span>{item.isPinned ? 'Unpin' : 'Pin'}</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem
+                  className="cursor-pointer"
                   variant="destructive"
                   onClick={() => setPendingDeleteId(item.id)}
                 >
@@ -147,7 +148,7 @@ export function NavChats({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel className="cursor-pointer">Cancel</AlertDialogCancel>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
           <AlertDialogAction
             variant="destructive"
             onClick={() => {

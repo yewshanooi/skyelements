@@ -33,7 +33,6 @@ export function NavUser({
           <SidebarMenuButton
             size="lg"
             onClick={() => setSettingsOpen(true)}
-            className="cursor-pointer"
           >
             <Avatar className="h-8 w-8 rounded-lg">
               <AvatarFallback className="rounded-lg">

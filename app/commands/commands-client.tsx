@@ -104,7 +104,6 @@ export function CommandsClient() {
                   onClick={runCatFact}
                   variant="secondary"
                   disabled={loading.cat}
-                  className="cursor-pointer disabled:cursor-not-allowed"
                 >
                   {!loading.cat && <Terminal />}
                   {loading.cat ? 'Loading...' : 'Run Command'}
@@ -150,7 +149,6 @@ export function CommandsClient() {
                   onClick={runGeneralFact}
                   variant="secondary"
                   disabled={loading.general}
-                  className="cursor-pointer disabled:cursor-not-allowed"
                 >
                   {!loading.general && <Terminal />}
                   {loading.general ? 'Loading...' : 'Run Command'}

@@ -94,7 +94,7 @@ export function NavigationBar() {
               <NavigationMenuList>
 
                 <NavigationMenuItem>
-                  <NavigationMenuTrigger className="cursor-pointer">Sodium</NavigationMenuTrigger>
+                  <NavigationMenuTrigger>Sodium</NavigationMenuTrigger>
                   <NavigationMenuContent>
                     <ul className="grid gap-2 md:w-[400px] lg:w-[500px] lg:grid-cols-[.75fr_1fr]">
                       <li className="row-span-3">
@@ -150,7 +150,7 @@ export function NavigationBar() {
                 </NavigationMenuItem>
 
                 <NavigationMenuItem>
-                  <NavigationMenuTrigger className="cursor-pointer">Policies</NavigationMenuTrigger>
+                  <NavigationMenuTrigger>Policies</NavigationMenuTrigger>
                   <NavigationMenuContent>
                     <ul className="w-90">
                       <ListItem href="/cookie-policy" title="Cookie Policy">
@@ -164,7 +164,7 @@ export function NavigationBar() {
                 </NavigationMenuItem>
 
                 <NavigationMenuItem>
-                  <NavigationMenuTrigger className="cursor-pointer">Resources</NavigationMenuTrigger>
+                  <NavigationMenuTrigger>Resources</NavigationMenuTrigger>
                   <NavigationMenuContent>
                     <ul className="w-60">
                       <ListItem href="https://skyelements.betteruptime.com/" title={<>Uptime <ExternalLink className="ml-1 h-4 w-4" /></>} target="_blank">
@@ -200,7 +200,7 @@ export function NavigationBar() {
         </Link>
         
         <div className="ml-auto flex items-center gap-2">
-          <Button variant="outline" size="icon" className="cursor-pointer" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+          <Button variant="outline" size="icon" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
             {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
           <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen} modal={false}>

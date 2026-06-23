@@ -101,7 +101,6 @@ export function SettingsDialog({
             <Button
               size="sm"
               variant="secondary"
-              className="cursor-pointer"
               onClick={handleResetPassword}
             >
               <KeyRound className="size-4" />
@@ -123,7 +122,7 @@ export function SettingsDialog({
             <Button
               size="sm"
               variant="secondary"
-              className="cursor-pointer text-destructive hover:text-destructive"
+              className="text-destructive hover:text-destructive"
               onClick={() => signout?.()}
             >
               <LogOut className="size-4" />
@@ -149,7 +148,7 @@ export function SettingsDialog({
               type="button"
               variant="secondary"
               onClick={() => setTheme(value)}
-              className={`h-auto flex-col gap-1.5 py-3 sm:py-4 cursor-pointer border-2 ${
+              className={`h-auto flex-col gap-1.5 py-3 sm:py-4 border-2 ${
                 isActive ? "border-foreground" : "border-transparent"
               }`}
             >
@@ -174,7 +173,7 @@ export function SettingsDialog({
             <Button
               size="sm"
               variant="secondary"
-              className="cursor-pointer text-destructive hover:text-destructive"
+              className="text-destructive hover:text-destructive"
               onClick={() => setDeleteAllNotesOpen(true)}
             >
               <Trash2 className="size-4" />
@@ -188,7 +187,7 @@ export function SettingsDialog({
             <Button
               size="sm"
               variant="secondary"
-              className="cursor-pointer text-destructive hover:text-destructive"
+              className="text-destructive hover:text-destructive"
               onClick={() => setDeleteAllChatsOpen(true)}
             >
               <Trash2 className="size-4" />
@@ -211,7 +210,6 @@ export function SettingsDialog({
               asChild
               size="sm"
               variant="secondary"
-              className="cursor-pointer"
             >
               <Link
                 href="/privacy-policy"
@@ -243,7 +241,7 @@ export function SettingsDialog({
               </DialogDescription>
             </div>
             <DialogClose
-              className="cursor-pointer rounded-xs opacity-100 disabled:pointer-events-none"
+              className="rounded-xs opacity-100 disabled:pointer-events-none"
             >
               <X className="size-4" />
               <span className="sr-only">Close</span>
@@ -321,7 +319,7 @@ export function SettingsDialog({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="cursor-pointer">Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
               onClick={() => onDeleteAllNotes?.()}
@@ -344,7 +342,7 @@ export function SettingsDialog({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="cursor-pointer">Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
               onClick={() => onDeleteAllChats?.()}
