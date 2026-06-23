@@ -22,14 +22,23 @@ import { SquarePlay } from "lucide-react"
 
 import { useEditorModal } from "@/components/editor/editor-hooks/use-modal"
 import { INSERT_YOUTUBE_COMMAND } from "@/components/editor/plugins/embeds/youtube-plugin"
-import { Button } from "@/components/ui/button"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import {
   Command,
   CommandGroup,
   CommandItem,
   CommandList,
 } from "@/components/ui/command"
-import { DialogFooter } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import {
   Popover,
@@ -57,7 +66,7 @@ export interface CustomEmbedConfig extends EmbedConfig {
 export const YoutubeEmbedConfig: CustomEmbedConfig = {
   contentName: "YouTube Video",
 
-  exampleUrl: "https://www.youtube.com/watch?v=M4E_uvV5SsM",
+  exampleUrl: "i.e. https://www.youtube.com/watch?v=M4E_uvV5SsM",
 
   icon: <SquarePlay className="size-4" />,
 
@@ -135,31 +144,42 @@ export function AutoEmbedDialog({
   }
 
   return (
-    <div className="">
-      <div className="space-y-4">
-        <Input
-          type="text"
-          placeholder={embedConfig.exampleUrl}
-          value={text}
-          data-test-id={`${embedConfig.type}-embed-modal-url`}
-          onChange={(e) => {
-            const { value } = e.target
-            setText(value)
-            validateText(value)
-          }}
-        />
-        <DialogFooter>
-          <Button
+    <AlertDialog open={true} onOpenChange={onClose}>
+      <AlertDialogContent size="sm">
+        <AlertDialogHeader>
+          <AlertDialogMedia className="bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary">
+            <SquarePlay />
+          </AlertDialogMedia>
+          <AlertDialogTitle>Embed {embedConfig.contentName}</AlertDialogTitle>
+          <AlertDialogDescription>
+            Paste a YouTube video URL to embed it in your content.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <div className="grid gap-4">
+          <Input
+            type="text"
+            placeholder={embedConfig.exampleUrl}
+            value={text}
+            data-test-id={`${embedConfig.type}-embed-modal-url`}
+            onChange={(e) => {
+              const { value } = e.target
+              setText(value)
+              validateText(value)
+            }}
+          />
+        </div>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction
             disabled={!embedResult}
             onClick={onClick}
             data-test-id={`${embedConfig.type}-embed-modal-submit-btn`}
-            className="cursor-pointer"
           >
-            Confirm
-          </Button>
-        </DialogFooter>
-      </div>
-    </div>
+            Embed
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   )
 }
 

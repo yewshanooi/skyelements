@@ -41,7 +41,17 @@ import {
   $isLayoutItemNode,
   LayoutItemNode,
 } from "@/components/editor/nodes/layout-item-node"
-import { Button } from "@/components/ui/button"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import {
   Select,
   SelectContent,
@@ -49,7 +59,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { DialogFooter } from "@/components/ui/dialog"
+import { Columns3Icon } from "lucide-react"
 
 const LAYOUTS = [
   { label: "2 columns (equal width)", value: "1fr 1fr" },
@@ -75,23 +85,37 @@ export function InsertLayoutDialog({
   }
 
   return (
-    <>
-      <Select onValueChange={setLayout} defaultValue={layout}>
-        <SelectTrigger className="w-full">
-          <SelectValue placeholder={buttonLabel} />
-        </SelectTrigger>
-        <SelectContent className="w-full">
-          {LAYOUTS.map(({ label, value }) => (
-            <SelectItem key={value} value={value}>
-              {label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <DialogFooter>
-        <Button onClick={onClick} className="cursor-pointer">Confirm</Button>
-      </DialogFooter>
-    </>
+    <AlertDialog open={true} onOpenChange={onClose}>
+      <AlertDialogContent size="sm">
+        <AlertDialogHeader>
+          <AlertDialogMedia className="bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary">
+            <Columns3Icon />
+          </AlertDialogMedia>
+          <AlertDialogTitle>Insert Columns Layout</AlertDialogTitle>
+          <AlertDialogDescription>
+            Choose a column layout for organizing content.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <div className="grid gap-4">
+          <Select onValueChange={setLayout} defaultValue={layout}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder={buttonLabel} />
+            </SelectTrigger>
+            <SelectContent className="w-full">
+              {LAYOUTS.map(({ label, value }) => (
+                <SelectItem key={value} value={value}>
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={onClick}>Insert</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   )
 }
 

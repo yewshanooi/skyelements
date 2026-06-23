@@ -34,10 +34,20 @@ import {
 } from "lexical"
 
 import { invariant } from "@/components/editor/shared/invariant"
-import { Button } from "@/components/ui/button"
-import { DialogFooter } from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Table } from "lucide-react"
 
 export type InsertTableCommandPayload = Readonly<{
   columns: string
@@ -131,37 +141,49 @@ export function InsertTableDialog({
   }
 
   return (
-    <>
-      <div className="grid gap-4">
-        <div className="grid gap-2">
-          <Label htmlFor="rows">Number of rows</Label>
-          <Input
-            id="rows"
-            placeholder={"# of rows (1-500)"}
-            onChange={(e) => setRows(e.target.value)}
-            value={rows}
-            data-test-id="table-modal-rows"
-            type="number"
-          />
+    <AlertDialog open={true} onOpenChange={onClose}>
+      <AlertDialogContent size="sm">
+        <AlertDialogHeader>
+          <AlertDialogMedia className="bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary">
+            <Table />
+          </AlertDialogMedia>
+          <AlertDialogTitle>Insert Table</AlertDialogTitle>
+          <AlertDialogDescription>
+            Create a table with custom rows and columns.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <div className="grid gap-4">
+          <div className="grid gap-2">
+            <Label htmlFor="rows">Number of rows</Label>
+            <Input
+              id="rows"
+              placeholder={"# of rows (1-500)"}
+              onChange={(e) => setRows(e.target.value)}
+              value={rows}
+              data-test-id="table-modal-rows"
+              type="number"
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="columns">Number of columns</Label>
+            <Input
+              id="columns"
+              placeholder={"# of columns (1-50)"}
+              onChange={(e) => setColumns(e.target.value)}
+              value={columns}
+              data-test-id="table-modal-columns"
+              type="number"
+            />
+          </div>
         </div>
-        <div className="grid gap-2">
-          <Label htmlFor="columns">Number of columns</Label>
-          <Input
-            id="columns"
-            placeholder={"# of columns (1-50)"}
-            onChange={(e) => setColumns(e.target.value)}
-            value={columns}
-            data-test-id="table-modal-columns"
-            type="number"
-          />
-        </div>
-      </div>
-      <DialogFooter data-test-id="table-model-confirm-insert">
-        <Button disabled={isDisabled} onClick={onClick} className="cursor-pointer">
-          Confirm
-        </Button>
-      </DialogFooter>
-    </>
+        <AlertDialogFooter data-test-id="table-model-confirm-insert">
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction disabled={isDisabled} onClick={onClick}>
+            Insert
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   )
 }
 

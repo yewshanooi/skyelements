@@ -37,8 +37,17 @@ import {
   ImagePayload,
 } from "@/components/editor/nodes/image-node"
 import { CAN_USE_DOM } from "@/components/editor/shared/can-use-dom"
-import { Button } from "@/components/ui/button"
-import { DialogFooter } from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -47,6 +56,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs"
+import { ImageIcon } from "lucide-react"
 
 export type InsertImagePayload = Readonly<ImagePayload>
 
@@ -67,7 +77,7 @@ export function InsertImageUriDialogBody({
   const isDisabled = src === ""
 
   return (
-    <div className="grid gap-4 py-4">
+    <div className="grid gap-4">
       <div className="grid gap-2">
         <Label htmlFor="image-url">Image URL</Label>
         <Input
@@ -88,17 +98,6 @@ export function InsertImageUriDialogBody({
           data-test-id="image-modal-alt-text-input"
         />
       </div>
-      <DialogFooter>
-        <Button
-          type="submit"
-          disabled={isDisabled}
-          onClick={() => onClick({ altText, src })}
-          data-test-id="image-modal-confirm-btn"
-          className="cursor-pointer"
-        >
-          Confirm
-        </Button>
-      </DialogFooter>
     </div>
   )
 }
@@ -127,7 +126,7 @@ export function InsertImageUploadedDialogBody({
   }
 
   return (
-    <div className="grid gap-4 py-4">
+    <div className="grid gap-4">
       <div className="grid gap-2">
         <Label htmlFor="image-upload">Image Upload</Label>
         <Input
@@ -149,17 +148,6 @@ export function InsertImageUploadedDialogBody({
           data-test-id="image-modal-alt-text-input"
         />
       </div>
-      <DialogFooter>
-        <Button
-          type="submit"
-          disabled={isDisabled}
-          onClick={() => onClick({ altText, src })}
-          data-test-id="image-modal-file-upload-btn"
-          className="cursor-pointer"
-        >
-          Confirm
-        </Button>
-      </DialogFooter>
     </div>
   )
 }
@@ -172,6 +160,9 @@ export function InsertImageDialog({
   onClose: () => void
 }): JSX.Element {
   const hasModifier = useRef(false)
+  const [activeTab, setActiveTab] = useState("url")
+  const [src, setSrc] = useState("")
+  const [altText, setAltText] = useState("")
 
   useEffect(() => {
     hasModifier.current = false
@@ -189,23 +180,104 @@ export function InsertImageDialog({
     onClose()
   }
 
+  const isDisabled = src === ""
+
+  const loadImage = (files: FileList | null) => {
+    const reader = new FileReader()
+    reader.onload = function () {
+      if (typeof reader.result === "string") {
+        setSrc(reader.result)
+      }
+      return ""
+    }
+    if (files !== null) {
+      reader.readAsDataURL(files[0])
+    }
+  }
+
   return (
-    <Tabs defaultValue="url">
-      <TabsList className="w-full">
-        <TabsTrigger value="url" className="w-full">
-          URL
-        </TabsTrigger>
-        <TabsTrigger value="file" className="w-full">
-          File
-        </TabsTrigger>
-      </TabsList>
-      <TabsContent value="url">
-        <InsertImageUriDialogBody onClick={onClick} />
-      </TabsContent>
-      <TabsContent value="file">
-        <InsertImageUploadedDialogBody onClick={onClick} />
-      </TabsContent>
-    </Tabs>
+    <AlertDialog open={true} onOpenChange={onClose}>
+      <AlertDialogContent size="sm">
+        <AlertDialogHeader>
+          <AlertDialogMedia className="bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary">
+            <ImageIcon />
+          </AlertDialogMedia>
+          <AlertDialogTitle>Insert Image</AlertDialogTitle>
+          <AlertDialogDescription>
+            Add an image from a URL or upload from your device.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="w-full">
+            <TabsTrigger value="url" className="w-full">
+              URL
+            </TabsTrigger>
+            <TabsTrigger value="file" className="w-full">
+              File
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="url" className="mt-4">
+            <div className="grid gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="image-url">Image URL</Label>
+                <Input
+                  id="image-url"
+                  placeholder="i.e. https://source.unsplash.com/random"
+                  onChange={(e) => setSrc(e.target.value)}
+                  value={src}
+                  data-test-id="image-modal-url-input"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="alt-text-url">Alt Text</Label>
+                <Input
+                  id="alt-text-url"
+                  placeholder="Random unsplash image"
+                  onChange={(e) => setAltText(e.target.value)}
+                  value={altText}
+                  data-test-id="image-modal-alt-text-input"
+                />
+              </div>
+            </div>
+          </TabsContent>
+          <TabsContent value="file" className="mt-4">
+            <div className="grid gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="image-upload">Image Upload</Label>
+                <Input
+                  id="image-upload"
+                  type="file"
+                  onChange={(e) => loadImage(e.target.files)}
+                  accept="image/*"
+                  data-test-id="image-modal-file-upload"
+                  className="cursor-pointer"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="alt-text-file">Alt Text</Label>
+                <Input
+                  id="alt-text-file"
+                  placeholder="Descriptive alternative text"
+                  onChange={(e) => setAltText(e.target.value)}
+                  value={altText}
+                  data-test-id="image-modal-alt-text-input"
+                />
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            disabled={isDisabled}
+            onClick={() => onClick({ altText, src })}
+            data-test-id="image-modal-confirm-btn"
+          >
+            Insert
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   )
 }
 
