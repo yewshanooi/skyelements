@@ -38,6 +38,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogMedia,
 } from "@/components/ui/alert-dialog"
 import { useIsMobile } from "@/hooks/use-mobile"
 
@@ -309,8 +310,11 @@ export function SettingsDialog({
       </Dialog>
 
       <AlertDialog open={deleteAllNotesOpen} onOpenChange={setDeleteAllNotesOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent size="sm">
           <AlertDialogHeader>
+            <AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive">
+              <Trash2 />
+            </AlertDialogMedia>
             <AlertDialogTitle>Clear your note history?</AlertDialogTitle>
             <AlertDialogDescription>
               This will delete all your Lithium notes. This action cannot be undone.
@@ -329,8 +333,11 @@ export function SettingsDialog({
       </AlertDialog>
 
       <AlertDialog open={deleteAllChatsOpen} onOpenChange={setDeleteAllChatsOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent size="sm">
           <AlertDialogHeader>
+            <AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive">
+              <Trash2 />
+            </AlertDialogMedia>
             <AlertDialogTitle>Clear your chat history?</AlertDialogTitle>
             <AlertDialogDescription>
               This will delete all your Lithium chats. This action cannot be undone.

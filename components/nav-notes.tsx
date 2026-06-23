@@ -37,8 +37,8 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogMedia,
 } from "@/components/ui/alert-dialog"
-import { buttonVariants } from "@/components/ui/button"
 
 export function NavNotes({
   notes,
@@ -142,8 +142,11 @@ export function NavNotes({
         open={pendingDeleteId !== null}
         onOpenChange={(open) => { if (!open) setPendingDeleteId(null) }}
       >
-        <AlertDialogContent>
+        <AlertDialogContent size="sm">
           <AlertDialogHeader>
+            <AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive">
+              <Trash2 />
+            </AlertDialogMedia>
             <AlertDialogTitle>Delete note?</AlertDialogTitle>
             <AlertDialogDescription>
               Once you delete a note, it&apos;s gone forever.
