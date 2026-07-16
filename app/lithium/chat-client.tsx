@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef, memo } from "react";
-import { ArrowUpIcon, ChevronDown, Paperclip, FileText, X } from "lucide-react";
+import { ArrowUpIcon, ChevronDown, ChevronDownIcon, Paperclip, FileText, X, SearchIcon, FileWarning } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {
@@ -19,10 +19,16 @@ import {
     InputGroupText,
     InputGroupTextarea,
 } from "@/components/ui/input-group";
+import { Bubble, BubbleContent } from "@/components/ui/bubble";
 import { Button } from "@/components/ui/button";
+import {
+    Collapsible,
+    CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner"
 import { LoadingBar } from "@/components/ui/loading-bar"
+import { Marker, MarkerContent, MarkerIcon } from "@/components/ui/marker";
 import {
     generateContent,
     createChat,
@@ -36,7 +42,72 @@ import { SUPPORTED_MIME_TYPES, isImageMimeType } from "@/lib/file-types";
 import { createClient } from "@/utils/supabase/client";
 import { MAX_INPUT_CHARS } from "@/lib/chat-context";
 import { MODELS } from "@/lib/models";
-import Image from 'next/image'
+import Image from 'next/image';
+import {
+    Attachment,
+    AttachmentAction,
+    AttachmentActions,
+    AttachmentContent,
+    AttachmentDescription,
+    AttachmentGroup,
+    AttachmentMedia,
+    AttachmentTitle,
+    AttachmentTrigger,
+} from "@/components/ui/attachment";
+
+const formatBytes = (bytes: number, decimals = 1) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+};
+
+const getFileMetaLabel = (fileName: string, mimeType: string, size?: number) => {
+    const ext = fileName.split('.').pop()?.toUpperCase() || 'FILE';
+    const sizeStr = size !== undefined ? formatBytes(size) : '';
+    return sizeStr ? `${ext} · ${sizeStr}` : ext;
+};
+
+// Hoisted outside component — pure function, no state deps.
+const compressImage = (imgFile: File): Promise<{ blob: Blob; previewUrl: string }> => {
+    return new Promise((resolve, reject) => {
+        const url = URL.createObjectURL(imgFile);
+        const img = new window.Image();
+        img.onload = () => {
+            const MAX_DIM = 2048;
+            let { width, height } = img;
+            if (width > MAX_DIM || height > MAX_DIM) {
+                const scale = MAX_DIM / Math.max(width, height);
+                width = Math.round(width * scale);
+                height = Math.round(height * scale);
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) { reject(new Error('Canvas not supported')); return; }
+            ctx.drawImage(img, 0, 0, width, height);
+
+            canvas.toBlob(
+                (blob) => {
+                    canvas.width = 0;
+                    canvas.height = 0;
+                    URL.revokeObjectURL(url);
+                    if (!blob) { reject(new Error('Compression failed')); return; }
+                    const previewUrl = URL.createObjectURL(blob);
+                    resolve({ blob, previewUrl });
+                },
+                'image/webp',
+                0.82,
+            );
+        };
+        img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Failed to load image')); };
+        img.src = url;
+    });
+};
 
 
 const greetings = [
@@ -65,7 +136,7 @@ const greetings = [
 ];
 
 const sampleQueries = [
-    // What..? questions
+
     'What is the meaning of life?',
     'What are the latest advancements in AI?',
     'What are some tips for improving mental health?',
@@ -76,13 +147,13 @@ const sampleQueries = [
     'What are the benefits of space exploration?',
     'What are the key principles of effective leadership?',
 
-    // Can..? questions
+
     'Can you explain quantum mechanics in simple terms?',
     'Can you explain the theory of relativity?',
     'Can you explain how the internet works?',
     'Can you explain the concept of quantum computing?',
 
-    // How..? questions
+
     'How does blockchain technology work?',
     'How do black holes work?',
     'How can we combat climate change effectively?',
@@ -95,7 +166,9 @@ type PendingAttachment = {
     file: File | Blob;
     mimeType: string;
     fileName: string;
-    previewUrl: string | null; // only set for images
+    previewUrl: string | null;
+    state?: "idle" | "uploading" | "processing" | "error" | "done";
+    errorMessage?: string;
 };
 
 type DisplayAttachment = {
@@ -107,6 +180,8 @@ type DisplayAttachment = {
 type DisplayMessage = ChatMessage & {
     id: string;
     attachments: DisplayAttachment[];
+    isOptimistic?: boolean;
+    hasUploadError?: boolean;
 };
 
 const MAX_IMAGE_SIZE = 4 * 1024 * 1024; // 4 MB
@@ -114,71 +189,353 @@ const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
 const MAX_ATTACHMENTS = 5;
 
 const REMARK_PLUGINS = [remarkGfm];
+const PREVIEW_LENGTH = 200;
 
-// Memoized so old messages don't re-parse markdown when a new one is appended.
+function useLatestRef<T>(value: T) {
+    const ref = useRef(value);
+    useEffect(() => { ref.current = value; }, [value]);
+    return ref;
+}
+
+
+
+// Memoized to avoid re-parsing markdown on sibling updates.
 const MessageItem = memo(function MessageItem({ msg }: { msg: DisplayMessage }) {
+    const isUser = msg.role === 'user';
+    const [open, setOpen] = useState(false);
+    const isLong = isUser && msg.content.length > PREVIEW_LENGTH;
+    const preview = isLong ? `${msg.content.slice(0, PREVIEW_LENGTH)}…` : msg.content;
+
+
+
     return (
-        <div className={`p-4 rounded-lg ${msg.role === 'user' ? 'bg-muted' : ''}`}>
-            <p className="text-xs font-medium text-muted-foreground mb-2">
-                {msg.role === 'user' ? 'You' : 'Lithium'}
+        <div className="flex flex-col">
+            <p className={`text-xs font-medium text-muted-foreground mb-1.5 ${isUser ? 'self-end' : ''}`}>
+                {isUser ? 'You' : 'Lithium'}
             </p>
             {msg.attachments.length > 0 && (
-                <div className="mb-3 flex flex-wrap gap-2">
-                    {msg.attachments.map((att, ai) => {
-                        const isImg = isImageMimeType(att.fileMimeType);
-                        if (isImg && att.fileUrl) {
+                <div className={`mb-2 max-w-full w-fit ${isUser ? 'self-end' : 'self-start'}`}>
+                    <AttachmentGroup>
+                        {msg.attachments.map((att, ai) => {
+                            const isImg = isImageMimeType(att.fileMimeType);
+                            const metaLabel = msg.hasUploadError
+                                ? "Upload failed"
+                                : msg.isOptimistic
+                                    ? "Uploading..."
+                                    : getFileMetaLabel(att.fileName, att.fileMimeType);
+                            const attState = msg.hasUploadError
+                                ? "error"
+                                : msg.isOptimistic
+                                    ? "uploading"
+                                    : "done";
                             return (
-                                <a
-                                    key={ai}
-                                    href={att.fileUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    title={att.fileName ?? 'Attached image'}
-                                    className="block h-20 w-20 rounded-lg overflow-hidden border"
-                                >
-                                    <img
-                                        src={att.fileUrl}
-                                        alt={att.fileName ?? 'Attached image'}
-                                        className="h-full w-full object-cover"
-                                    />
-                                </a>
+                                <Attachment key={ai} size="sm" className="w-60 max-w-full" state={attState}>
+                                    {attState === "error" ? (
+                                        <AttachmentMedia>
+                                            <FileWarning className="size-4 text-destructive" />
+                                        </AttachmentMedia>
+                                    ) : attState === "uploading" ? (
+                                        <AttachmentMedia>
+                                            <Spinner className="size-4" />
+                                        </AttachmentMedia>
+                                    ) : isImg && att.fileUrl ? (
+                                        <AttachmentMedia variant="image">
+                                            <img src={att.fileUrl} alt={att.fileName} />
+                                        </AttachmentMedia>
+                                    ) : (
+                                        <AttachmentMedia>
+                                            <FileText className="size-4" />
+                                        </AttachmentMedia>
+                                    )}
+                                    <AttachmentContent>
+                                        <AttachmentTitle>{att.fileName}</AttachmentTitle>
+                                        <AttachmentDescription>{metaLabel}</AttachmentDescription>
+                                    </AttachmentContent>
+                                    {attState === "done" && att.fileUrl && (
+                                        <AttachmentTrigger asChild>
+                                            <a
+                                                href={att.fileUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                aria-label={`Open ${att.fileName}`}
+                                            />
+                                        </AttachmentTrigger>
+                                    )}
+                                </Attachment>
                             );
-                        }
-                        const inner = (
-                            <div className="h-full w-full rounded-lg border bg-muted/50 flex flex-col items-center justify-center gap-1 px-2 py-1.5 overflow-hidden">
-                                <FileText className="size-6 text-muted-foreground shrink-0" />
-                                <span className="text-[10px] leading-tight text-center line-clamp-2 break-all w-full">
-                                    {att.fileName}
-                                </span>
-                            </div>
-                        );
-                        if (att.fileUrl) {
-                            return (
-                                <a
-                                    key={ai}
-                                    href={att.fileUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    title={att.fileName}
-                                    className="block h-20 w-20 hover:opacity-80 transition-opacity"
-                                >
-                                    {inner}
-                                </a>
-                            );
-                        }
-                        return (
-                            <div key={ai} title={att.fileName} className="h-20 w-20">
-                                {inner}
-                            </div>
-                        );
-                    })}
+                        })}
+                    </AttachmentGroup>
                 </div>
             )}
-            <div className="prose prose-md dark:prose-invert max-w-none overflow-x-auto">
-                <ReactMarkdown remarkPlugins={REMARK_PLUGINS}>
-                    {msg.content}
-                </ReactMarkdown>
-            </div>
+            {msg.content.trim().length > 0 && (
+                <Bubble
+                    variant={isUser ? 'tinted' : 'ghost'}
+                    align={isUser ? 'end' : 'start'}
+                >
+                    <BubbleContent className={`text-base rounded-2xl${isLong ? ' whitespace-pre-line' : ''}`}>
+                        {isUser ? (
+                            isLong ? (
+                                <Collapsible open={open} onOpenChange={setOpen}>
+                                    <div>
+                                        <ReactMarkdown remarkPlugins={REMARK_PLUGINS}>
+                                            {open ? msg.content : preview}
+                                        </ReactMarkdown>
+                                    </div>
+                                    <CollapsibleTrigger asChild>
+                                        <Button variant="link" className="gap-1 p-0 text-muted-foreground">
+                                            {open ? 'Show less' : 'Show more'}
+                                            <ChevronDownIcon
+                                                data-icon="inline-end"
+                                                className={`transition-transform ${open ? 'rotate-180' : ''}`}
+                                            />
+                                        </Button>
+                                    </CollapsibleTrigger>
+                                </Collapsible>
+                            ) : (
+                                <ReactMarkdown remarkPlugins={REMARK_PLUGINS}>
+                                    {msg.content}
+                                </ReactMarkdown>
+                            )
+                        ) : (
+                            <div className="prose dark:prose-invert max-w-none overflow-x-auto">
+                                <ReactMarkdown remarkPlugins={REMARK_PLUGINS}>
+                                    {msg.content}
+                                </ReactMarkdown>
+                            </div>
+                        )}
+                    </BubbleContent>
+                </Bubble>
+            )}
+        </div>
+    );
+});
+
+// Memo'd input area component.
+const InputArea = memo(function InputArea({
+    prompt,
+    loading,
+    pendingAttachments,
+    attachmentError,
+    selectedModelInfo,
+    setSelectedModel,
+    isOverLimit,
+    isDraggingOver,
+    fileInputRef,
+    onPromptChange,
+    onKeyDown,
+    onSend,
+    onAttachmentSelect,
+    onRemoveAttachment,
+    onClearAllAttachments,
+    onDragEnter,
+    onDragOver,
+    onDragLeave,
+    onDrop,
+}: {
+    prompt: string;
+    loading: boolean;
+    pendingAttachments: PendingAttachment[];
+    attachmentError: string | null;
+    selectedModelInfo: (typeof MODELS)[number];
+    setSelectedModel: (id: string) => void;
+    isOverLimit: boolean;
+    isDraggingOver: boolean;
+    fileInputRef: React.RefObject<HTMLInputElement | null>;
+    onPromptChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
+    onKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
+    onSend: () => void;
+    onAttachmentSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    onRemoveAttachment: (id: string) => void;
+    onClearAllAttachments: () => void;
+    onDragEnter: (e: React.DragEvent<HTMLDivElement>) => void;
+    onDragOver: (e: React.DragEvent<HTMLDivElement>) => void;
+    onDragLeave: (e: React.DragEvent<HTMLDivElement>) => void;
+    onDrop: (e: React.DragEvent<HTMLDivElement>) => void;
+}) {
+
+
+    const hasPendingAttachments = pendingAttachments.length > 0;
+    const hasErrorAttachments = pendingAttachments.some(a => a.state === "error");
+    const isInputDisabled = loading || hasErrorAttachments;
+
+    return (
+        <div>
+            <input
+                type="file"
+                multiple
+                accept="image/png,image/jpeg,image/webp,image/heic,image/heif,.pdf,.txt,.md,.csv,.log,.html,.htm,.css,.js,.mjs,.json,.xml,.py,.java,.c,.h,.cpp,.hpp,.cc,.ts,.tsx"
+                ref={fileInputRef}
+                onChange={onAttachmentSelect}
+                className="hidden"
+            />
+
+            {hasPendingAttachments && (
+                <div className="mb-2 ml-4 flex items-center gap-3 w-full max-w-[calc(100%-2rem)]">
+                    <div className="flex-1 min-w-0">
+                        <AttachmentGroup className="w-full">
+                            {pendingAttachments.map((att) => {
+                                const isImg = isImageMimeType(att.mimeType);
+                                const metaLabel = att.state === "error" && att.errorMessage
+                                    ? att.errorMessage
+                                    : getFileMetaLabel(att.fileName, att.mimeType, att.file.size);
+                                return (
+                                    <Attachment key={att.id} size="sm" className="w-60 max-w-full" state={att.state}>
+                                        {att.state === "error" ? (
+                                            <AttachmentMedia>
+                                                <FileWarning className="size-4 text-destructive" />
+                                            </AttachmentMedia>
+                                        ) : isImg && att.previewUrl ? (
+                                            <AttachmentMedia variant="image">
+                                                <img src={att.previewUrl} alt={att.fileName} />
+                                            </AttachmentMedia>
+                                        ) : (
+                                            <AttachmentMedia>
+                                                <FileText className="size-4" />
+                                            </AttachmentMedia>
+                                        )}
+                                        <AttachmentContent>
+                                            <AttachmentTitle>{att.fileName}</AttachmentTitle>
+                                            <AttachmentDescription>{metaLabel}</AttachmentDescription>
+                                        </AttachmentContent>
+                                        <AttachmentActions>
+                                            <AttachmentAction
+                                                aria-label={`Remove ${att.fileName}`}
+                                                onClick={() => onRemoveAttachment(att.id)}
+                                            >
+                                                <X />
+                                            </AttachmentAction>
+                                        </AttachmentActions>
+                                        {att.state !== "error" && att.previewUrl && (
+                                            <AttachmentTrigger asChild>
+                                                <a
+                                                    href={att.previewUrl}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    aria-label={`Open ${att.fileName}`}
+                                                />
+                                            </AttachmentTrigger>
+                                        )}
+                                    </Attachment>
+                                );
+                            })}
+                        </AttachmentGroup>
+                    </div>
+                    {pendingAttachments.length > 1 && (
+                        <button
+                            onClick={onClearAllAttachments}
+                            className="text-xs text-muted-foreground hover:text-foreground cursor-pointer shrink-0 pr-4"
+                        >
+                            Clear all
+                        </button>
+                    )}
+                </div>
+            )}
+
+            {attachmentError && (
+                <p className="mb-4 ml-4 text-sm text-destructive">{attachmentError}</p>
+            )}
+
+            <InputGroup
+                className={isDraggingOver ? "ring-ring/50 border-ring ring-[3px]" : undefined}
+                onDragEnter={onDragEnter}
+                onDragOver={onDragOver}
+                onDragLeave={onDragLeave}
+                onDrop={onDrop}
+            >
+                {isDraggingOver && (
+                    <div
+                        className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-background/90"
+                    >
+                        <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                            <Paperclip className="size-4" />
+                            Drop files to attach
+                        </div>
+                    </div>
+                )}
+                <InputGroupTextarea
+                    placeholder="Ask anything..."
+                    className="pl-4"
+                    value={prompt}
+                    onChange={onPromptChange}
+                    onKeyDown={onKeyDown}
+                    disabled={isInputDisabled}
+                    maxLength={MAX_INPUT_CHARS}
+                />
+                <InputGroupAddon align="block-end">
+                    <InputGroupButton
+                        variant="secondary"
+                        className="rounded-sm"
+                        size="icon-xs"
+                        onClick={() => fileInputRef.current?.click()}
+                        title={pendingAttachments.length >= MAX_ATTACHMENTS
+                            ? `Maximum of ${MAX_ATTACHMENTS} attachments`
+                            : "Attach images or files"}
+                        disabled={isInputDisabled || pendingAttachments.length >= MAX_ATTACHMENTS}
+                    >
+                        <Paperclip className="size-4" />
+                        <span className="sr-only">Attach images or files</span>
+                    </InputGroupButton>
+ 
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <InputGroupButton variant="secondary" disabled={isInputDisabled}>
+                                <Image
+                                    src={selectedModelInfo.icon}
+                                    alt={selectedModelInfo.label}
+                                    width={16}
+                                    height={16}
+                                    className="mr-1"
+                                    priority
+                                />
+                                {selectedModelInfo.label}
+                                <ChevronDown />
+                            </InputGroupButton>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent side="bottom" align="start">
+                            <DropdownMenuLabel>Models</DropdownMenuLabel>
+ 
+                            {MODELS.map((model) => (
+                                <DropdownMenuItem
+                                    key={model.id}
+                                    onSelect={() => setSelectedModel(model.id)}
+                                    className="cursor-pointer flex items-center gap-2"
+                                >
+                                    <Image
+                                        src={model.icon}
+                                        alt={model.label}
+                                        width={16}
+                                        height={16}
+                                    />
+                                    {model.label}
+                                    <DropdownMenuShortcut>
+                                        {model.shortcut}
+                                    </DropdownMenuShortcut>
+                                </DropdownMenuItem>
+                            ))}
+                        </DropdownMenuContent>
+ 
+                    </DropdownMenu>
+                    <InputGroupText className="ml-auto">
+                        {prompt.length > 0 && (
+                            <span className={`hidden lg:inline ${prompt.length >= MAX_INPUT_CHARS * 0.9 ? 'text-destructive' : prompt.length >= MAX_INPUT_CHARS * 0.75 ? 'text-yellow-500' : ''}`}>
+                                {prompt.length.toLocaleString()} / {MAX_INPUT_CHARS.toLocaleString()}
+                            </span>
+                        )}
+                    </InputGroupText>
+                    <Separator orientation="vertical" className="mx-2 data-[orientation=vertical]:h-5" />
+                    <InputGroupButton
+                        variant="default"
+                        className="rounded-full"
+                        size="icon-xs"
+                        onClick={onSend}
+                        title="Send"
+                        disabled={isInputDisabled || isOverLimit || (!prompt.trim() && !hasPendingAttachments)}
+                    >
+                        <ArrowUpIcon />
+                        <span className="sr-only">Send</span>
+                    </InputGroupButton>
+                </InputGroupAddon>
+            </InputGroup>
         </div>
     );
 });
@@ -204,6 +561,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
     const pendingNewChatIdRef = useRef<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const dragCounterRef = useRef(0);
+    const supabaseRef = useRef<ReturnType<typeof createClient> | null>(null);
 
     const selectedModelInfo = useMemo(
         () => MODELS.find(m => m.id === selectedModel) ?? MODELS[0],
@@ -213,77 +571,47 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
     const isOverLimit = prompt.length > MAX_INPUT_CHARS;
     const hasPendingAttachments = pendingAttachments.length > 0;
 
-    // Refs that mirror state used inside `sendMessage` so the callback
-    // can stay referentially stable across renders.
-    const messagesRef = useRef<DisplayMessage[]>(messages);
-    const pendingAttachmentsRef = useRef<PendingAttachment[]>(pendingAttachments);
-    const currentChatIdRef = useRef<string | null>(currentChatId);
-    const selectedModelRef = useRef<string>(selectedModel);
-    const onChatCreatedRef = useRef(onChatCreated);
-    const onChatActivityRef = useRef(onChatActivity);
+    // Refs for stable `sendMessage` callback.
+    const messagesRef = useLatestRef(messages);
+    const pendingAttachmentsRef = useLatestRef(pendingAttachments);
+    const currentChatIdRef = useLatestRef(currentChatId);
+    const selectedModelRef = useLatestRef(selectedModel);
+    const promptRef = useLatestRef(prompt);
+    const loadingRef = useLatestRef(loading);
+    const onChatCreatedRef = useLatestRef(onChatCreated);
+    const onChatActivityRef = useLatestRef(onChatActivity);
 
-    useEffect(() => { messagesRef.current = messages; }, [messages]);
-    useEffect(() => { pendingAttachmentsRef.current = pendingAttachments; }, [pendingAttachments]);
-    useEffect(() => { currentChatIdRef.current = currentChatId; }, [currentChatId]);
-    useEffect(() => { selectedModelRef.current = selectedModel; }, [selectedModel]);
-    useEffect(() => { onChatCreatedRef.current = onChatCreated; }, [onChatCreated]);
-    useEffect(() => { onChatActivityRef.current = onChatActivity; }, [onChatActivity]);
 
-    // Compress an image to a max dimension and convert to WebP
-    const compressImage = (imgFile: File): Promise<{ blob: Blob; previewUrl: string }> => {
-        return new Promise((resolve, reject) => {
-            const url = URL.createObjectURL(imgFile);
-            const img = new window.Image();
-            img.onload = () => {
-                const MAX_DIM = 2048;
-                let { width, height } = img;
-                if (width > MAX_DIM || height > MAX_DIM) {
-                    const scale = MAX_DIM / Math.max(width, height);
-                    width = Math.round(width * scale);
-                    height = Math.round(height * scale);
-                }
 
-                const canvas = document.createElement('canvas');
-                canvas.width = width;
-                canvas.height = height;
-                const ctx = canvas.getContext('2d');
-                if (!ctx) { reject(new Error('Canvas not supported')); return; }
-                ctx.drawImage(img, 0, 0, width, height);
-
-                canvas.toBlob(
-                    (blob) => {
-                        URL.revokeObjectURL(url);
-                        if (!blob) { reject(new Error('Compression failed')); return; }
-                        const previewUrl = URL.createObjectURL(blob);
-                        resolve({ blob, previewUrl });
-                    },
-                    'image/webp',
-                    0.82,
-                );
-            };
-            img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Failed to load image')); };
-            img.src = url;
-        });
-    };
-
-    // Validate + process a single file into a PendingAttachment, or return an error.
-    const buildPendingAttachment = useCallback(async (file: File): Promise<PendingAttachment | { error: string }> => {
+    // Validate + process a file into a PendingAttachment.
+    const buildPendingAttachment = useCallback(async (file: File): Promise<PendingAttachment> => {
         const isImage = isImageMimeType(file.type);
+        const id = crypto.randomUUID();
 
         if (!SUPPORTED_MIME_TYPES.includes(file.type) && !file.type.startsWith('text/')) {
-            return { error: `"${file.name}" has an unsupported file type.` };
+            return {
+                id,
+                file,
+                mimeType: file.type,
+                fileName: file.name,
+                previewUrl: null,
+                state: "error",
+                errorMessage: "Unsupported file type",
+            };
         }
 
         const sizeLimit = isImage ? MAX_IMAGE_SIZE : MAX_FILE_SIZE;
         if (file.size > sizeLimit) {
             return {
-                error: isImage
-                    ? `"${file.name}" exceeds the 4 MB image limit.`
-                    : `"${file.name}" exceeds the 20 MB file limit.`,
+                id,
+                file,
+                mimeType: file.type,
+                fileName: file.name,
+                previewUrl: null,
+                state: "error",
+                errorMessage: isImage ? "Exceeds 4 MB limit" : "Exceeds 20 MB limit",
             };
         }
-
-        const id = crypto.randomUUID();
 
         if (isImage) {
             const useCompression = file.size > 512 * 1024;
@@ -296,17 +624,19 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                         mimeType: blob.type || 'image/webp',
                         fileName: file.name,
                         previewUrl,
+                        state: "done",
                     };
                 } catch {
                     const previewUrl = URL.createObjectURL(file);
-                    return { id, file, mimeType: file.type, fileName: file.name, previewUrl };
+                    return { id, file, mimeType: file.type, fileName: file.name, previewUrl, state: "done" };
                 }
             }
             const previewUrl = URL.createObjectURL(file);
-            return { id, file, mimeType: file.type, fileName: file.name, previewUrl };
+            return { id, file, mimeType: file.type, fileName: file.name, previewUrl, state: "done" };
         }
 
-        return { id, file, mimeType: file.type, fileName: file.name, previewUrl: null };
+        const previewUrl = URL.createObjectURL(file);
+        return { id, file, mimeType: file.type, fileName: file.name, previewUrl, state: "done" };
     }, []);
 
     const addFiles = useCallback(async (files: File[]) => {
@@ -323,12 +653,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
             errors.push(`You can attach up to ${MAX_ATTACHMENTS} files per message.`);
         }
 
-        const built = await Promise.all(accepted.map(buildPendingAttachment));
-        const newAttachments: PendingAttachment[] = [];
-        for (const result of built) {
-            if ('error' in result) errors.push(result.error);
-            else newAttachments.push(result);
-        }
+        const newAttachments = await Promise.all(accepted.map(buildPendingAttachment));
 
         if (newAttachments.length > 0) {
             setPendingAttachments(prev => [...prev, ...newAttachments]);
@@ -415,7 +740,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
         return () => clearTimeout(timer);
     }, [loadingHistory]);
 
-    // Load messages when chatId changes (switching chats)
+    // Load messages on chat switch.
     useEffect(() => {
         if (chatId && chatId === pendingNewChatIdRef.current) {
             pendingNewChatIdRef.current = null;
@@ -441,26 +766,19 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                     })),
                 }));
 
-                // Preload images so they don't pop in
+                setMessages(mapped);
+                setLoadingHistory(false);
+
+                // Preload images in background (non-blocking).
                 const imageUrls = mapped.flatMap(m =>
                     m.attachments
                         .filter(a => isImageMimeType(a.fileMimeType) && a.fileUrl)
                         .map(a => a.fileUrl as string)
                 );
-
-                if (imageUrls.length > 0) {
-                    await Promise.all(
-                        imageUrls.map(url => new Promise<void>((resolve) => {
-                            const img = new window.Image();
-                            img.onload = () => resolve();
-                            img.onerror = () => resolve();
-                            img.src = url;
-                        }))
-                    );
+                for (const url of imageUrls) {
+                    const img = new window.Image();
+                    img.src = url;
                 }
-
-                setMessages(mapped);
-                setLoadingHistory(false);
             }).catch(() => {
                 setLoadingHistory(false);
             });
@@ -469,7 +787,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
         }
     }, [chatId]);
 
-    // Revoke any pending blob URLs on unmount to prevent memory leaks.
+    // Revoke blob URLs on unmount.
     useEffect(() => {
         return () => {
             for (const a of pendingAttachmentsRef.current) {
@@ -480,6 +798,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
 
     const sendMessage = useCallback(async (userMessage: string) => {
         const pendingNow = pendingAttachmentsRef.current;
+        if (pendingNow.some(a => a.state === "error")) return;
         if (!userMessage.trim() && pendingNow.length === 0) return;
         if (userMessage.length > MAX_INPUT_CHARS) return;
 
@@ -494,7 +813,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
         setPendingAttachments([]);
         setAttachmentError(null);
 
-        // Optimistic preview while uploading
+        // Optimistic UI.
         const optimisticId = crypto.randomUUID();
         setMessages(prev => [...prev, {
             id: optimisticId,
@@ -505,14 +824,16 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                 fileName: a.fileName,
                 fileMimeType: a.mimeType,
             })),
+            isOptimistic: true,
         }]);
 
         try {
-            const supabase = createClient();
+            if (!supabaseRef.current) supabaseRef.current = createClient();
+            const supabase = supabaseRef.current;
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error('Not authenticated');
 
-            // Run chat creation and file uploads in parallel
+            // Chat creation + uploads in parallel.
             let activeChatId = startingChatId;
             const chatCreationPromise = !activeChatId
                 ? createChat(model)
@@ -541,7 +862,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                 Promise.all(uploadPromises),
             ]);
 
-            // Title side-effect runs in parallel with the user-save + generation below.
+            // Title update (non-blocking).
             let titlePromise: Promise<unknown> = Promise.resolve();
             if (newChat) {
                 activeChatId = newChat.id;
@@ -563,9 +884,24 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
 
             onChatActivityRef.current?.(activeChatId!);
 
-            // Save the user message and start generation in parallel.
+            // Save user message + generate in parallel.
             const userSavePromise = saveMessage(activeChatId!, 'user', userMessage, uploadedRefs)
-                .catch((e) => { console.error('saveMessage(user) failed:', e); });
+                .then((savedMsg) => {
+                    setMessages(prev => prev.map(m => m.id === optimisticId ? {
+                        ...m,
+                        isOptimistic: false,
+                    } : m));
+                    return savedMsg;
+                })
+                .catch((e) => {
+                    console.error('saveMessage(user) failed:', e);
+                    setMessages(prev => prev.map(m => m.id === optimisticId ? {
+                        ...m,
+                        isOptimistic: false,
+                        hasUploadError: true,
+                    } : m));
+                    throw e;
+                });
 
             const result = await generateContent(
                 userMessage,
@@ -575,7 +911,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
             );
             const assistantContent = result ?? "Sorry, I couldn't generate a response.";
 
-            // Persist the assistant message in the background; don't block UI.
+            // Persist assistant message in background.
             Promise.all([userSavePromise, titlePromise])
                 .then(() => saveMessage(activeChatId!, 'assistant', assistantContent))
                 .catch((e) => { console.error('saveMessage(assistant) failed:', e); });
@@ -589,6 +925,12 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
             }]);
         } catch (error) {
             console.error(error);
+            setMessages(prev => prev.map(m => m.id === optimisticId ? {
+                ...m,
+                isOptimistic: false,
+                hasUploadError: true,
+            } : m));
+
             if (generationIdRef.current !== myGenId) return;
             setMessages(prev => [...prev, {
                 id: crypto.randomUUID(),
@@ -603,195 +945,51 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
         }
     }, []);
 
+    // Read prompt from ref to keep callbacks stable across keystrokes.
     const handleSend = useCallback(() => {
-        sendMessage(prompt.trim());
-    }, [prompt, sendMessage]);
+        sendMessage(promptRef.current.trim());
+    }, [sendMessage]);
 
     const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            sendMessage(prompt.trim());
+            if (loadingRef.current || pendingAttachmentsRef.current.some(a => a.state === "error")) return;
+            sendMessage(promptRef.current.trim());
         }
-    }, [prompt, sendMessage]);
+    }, [sendMessage]);
 
-    const inputGroup = useMemo(() => (
-        <div>
-            <input
-                type="file"
-                multiple
-                accept="image/png,image/jpeg,image/webp,image/heic,image/heif,.pdf,.txt,.md,.csv,.log,.html,.htm,.css,.js,.mjs,.json,.xml,.py,.java,.c,.h,.cpp,.hpp,.cc,.ts,.tsx"
-                ref={fileInputRef}
-                onChange={handleAttachmentSelect}
-                className="hidden"
-            />
+    const handlePromptChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        setPrompt(e.target.value.slice(0, MAX_INPUT_CHARS));
+    }, []);
 
-            {hasPendingAttachments && (
-                <div className="mb-4 ml-4 flex flex-wrap items-start gap-2">
-                    {pendingAttachments.map((att) => {
-                        const isImg = isImageMimeType(att.mimeType);
-                        if (isImg && att.previewUrl) {
-                            return (
-                                <div key={att.id} className="relative group">
-                                    <img
-                                        src={att.previewUrl}
-                                        alt={att.fileName}
-                                        className="h-20 w-20 rounded-lg object-cover border"
-                                    />
-                                    <button
-                                        onClick={() => removePendingAttachment(att.id)}
-                                        className="absolute -top-2 -right-2 bg-primary text-secondary rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                                        aria-label={`Remove ${att.fileName}`}
-                                    >
-                                        <X className="size-3" />
-                                    </button>
-                                </div>
-                            );
-                        }
-                        return (
-                            <div
-                                key={att.id}
-                                className="relative group h-20 w-20"
-                                title={att.fileName}
-                            >
-                                <div className="h-full w-full rounded-lg border bg-muted/50 flex flex-col items-center justify-center gap-1 px-2 py-1.5 overflow-hidden">
-                                    <FileText className="size-6 text-muted-foreground shrink-0" />
-                                    <span className="text-[10px] leading-tight text-center line-clamp-2 break-all w-full">
-                                        {att.fileName}
-                                    </span>
-                                </div>
-                                <button
-                                    onClick={() => removePendingAttachment(att.id)}
-                                    className="absolute -top-2 -right-2 bg-primary text-secondary rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                                    aria-label={`Remove ${att.fileName}`}
-                                >
-                                    <X className="size-3" />
-                                </button>
-                            </div>
-                        );
-                    })}
-                    {pendingAttachments.length > 1 && (
-                        <button
-                            onClick={clearAllPendingAttachments}
-                            className="text-xs text-muted-foreground hover:text-foreground self-center cursor-pointer"
-                        >
-                            Clear all
-                        </button>
-                    )}
-                </div>
-            )}
+    const inputArea = (
+        <InputArea
+            prompt={prompt}
+            loading={loading}
+            pendingAttachments={pendingAttachments}
+            attachmentError={attachmentError}
+            selectedModelInfo={selectedModelInfo}
+            setSelectedModel={setSelectedModel}
+            isOverLimit={isOverLimit}
+            isDraggingOver={isDraggingOver}
+            fileInputRef={fileInputRef}
+            onPromptChange={handlePromptChange}
+            onKeyDown={handleKeyDown}
+            onSend={handleSend}
+            onAttachmentSelect={handleAttachmentSelect}
+            onRemoveAttachment={removePendingAttachment}
+            onClearAllAttachments={clearAllPendingAttachments}
+            onDragEnter={handleDragEnter}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+        />
+    );
 
-            {attachmentError && (
-                <p className="mb-4 ml-4 text-sm text-destructive">{attachmentError}</p>
-            )}
-
-            <InputGroup
-                className={isDraggingOver ? "ring-ring/50 border-ring ring-[3px]" : undefined}
-                onDragEnter={handleDragEnter}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-            >
-                {isDraggingOver && (
-                    <div
-                        className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-background/90"
-                    >
-                        <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                            <Paperclip className="size-4" />
-                            Drop files to attach
-                        </div>
-                    </div>
-                )}
-                <InputGroupTextarea
-                    placeholder="Ask anything..."
-                    className="pl-4"
-                    value={prompt}
-                    onChange={(e) => setPrompt(e.target.value.slice(0, MAX_INPUT_CHARS))}
-                    onKeyDown={handleKeyDown}
-                    disabled={loading}
-                    maxLength={MAX_INPUT_CHARS}
-                />
-                <InputGroupAddon align="block-end">
-                    <InputGroupButton
-                        variant="secondary"
-                        className="rounded-sm"
-                        size="icon-xs"
-                        onClick={() => fileInputRef.current?.click()}
-                        title={pendingAttachments.length >= MAX_ATTACHMENTS
-                            ? `Maximum of ${MAX_ATTACHMENTS} attachments`
-                            : "Attach images or files"}
-                        disabled={loading || pendingAttachments.length >= MAX_ATTACHMENTS}
-                    >
-                        <Paperclip className="size-4" />
-                        <span className="sr-only">Attach images or files</span>
-                    </InputGroupButton>
-
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <InputGroupButton variant="secondary" disabled={loading}>
-                                <Image
-                                    src={selectedModelInfo.icon}
-                                    alt={selectedModelInfo.label}
-                                    width={16}
-                                    height={16}
-                                    className="mr-1"
-                                    priority
-                                />
-                                {selectedModelInfo.label}
-                                <ChevronDown />
-                            </InputGroupButton>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent side="bottom" align="start">
-                            <DropdownMenuLabel>Models</DropdownMenuLabel>
-
-                            {MODELS.map((model) => (
-                                <DropdownMenuItem
-                                    key={model.id}
-                                    onSelect={() => setSelectedModel(model.id)}
-                                    className="cursor-pointer flex items-center gap-2"
-                                >
-                                    <Image
-                                        src={model.icon}
-                                        alt={model.label}
-                                        width={16}
-                                        height={16}
-                                    />
-                                    {model.label}
-                                    <DropdownMenuShortcut>
-                                        {model.shortcut}
-                                    </DropdownMenuShortcut>
-                                </DropdownMenuItem>
-                            ))}
-                        </DropdownMenuContent>
-
-                    </DropdownMenu>
-                    <InputGroupText className="ml-auto">
-                        {prompt.length > 0 && (
-                            <span className={`hidden lg:inline ${prompt.length >= MAX_INPUT_CHARS * 0.9 ? 'text-destructive' : prompt.length >= MAX_INPUT_CHARS * 0.75 ? 'text-yellow-500' : ''}`}>
-                                {prompt.length.toLocaleString()} / {MAX_INPUT_CHARS.toLocaleString()}
-                            </span>
-                        )}
-                    </InputGroupText>
-                    <Separator orientation="vertical" className="mx-2 data-[orientation=vertical]:h-5" />
-                    <InputGroupButton
-                        variant="default"
-                        className="rounded-full"
-                        size="icon-xs"
-                        onClick={handleSend}
-                        title="Send"
-                        disabled={loading || isOverLimit || (!prompt.trim() && !hasPendingAttachments)}
-                    >
-                        <ArrowUpIcon />
-                        <span className="sr-only">Send</span>
-                    </InputGroupButton>
-                </InputGroupAddon>
-            </InputGroup>
-        </div>
-    ), [prompt, loading, pendingAttachments, hasPendingAttachments, attachmentError, selectedModelInfo, selectedModel, isOverLimit, handleKeyDown, handleSend, handleAttachmentSelect, removePendingAttachment, clearAllPendingAttachments, isDraggingOver, handleDragEnter, handleDragOver, handleDragLeave, handleDrop]);
-
-    // New Chat page
+    // Empty state.
     if (isEmptyState) {
         return (
-            <div className="h-full overflow-y-auto flex items-center justify-center p-8 pb-[10%]">
+            <div className="h-full overflow-y-auto flex items-center justify-center p-8 pb-[10%] [scrollbar-gutter:stable]">
                 <div className="w-full max-w-3xl mx-auto">
                     <div className="flex flex-row gap-4 w-full max-w-3xl mb-6">
                         <h1 className="ml-4 scroll-m-20 text-3xl font-semibold text-balance flex">
@@ -799,7 +997,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                         </h1>
                     </div>
 
-                    {inputGroup}
+                    {inputArea}
 
                     {sampleQuery && !hasPendingAttachments && (
                         <div className="mt-6 flex justify-center px-4">
@@ -817,33 +1015,45 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
         );
     }
 
-    // Active chat
+    // Active chat.
     return (
         <div className="flex flex-col h-full relative">
             {showLoadingBar && <LoadingBar />}
-            <div className="flex-1 overflow-y-auto p-8 pt-12">
-                <div className="w-full max-w-3xl mx-auto space-y-6">
+            <div className="flex-1 overflow-y-auto p-8 pt-12 [scrollbar-gutter:stable]">
+                <div className="w-full max-w-3xl mx-auto space-y-6 px-4">
                     {loadingHistory ? null : (
                         <>
                             {messages.map((msg) => (
-                                <MessageItem key={msg.id} msg={msg} />
+                                <div key={msg.id} className="flex flex-col gap-3">
+                                    <MessageItem msg={msg} />
+                                    {msg.role === 'user' && msg.attachments.length > 0 && (
+                                        <Marker>
+                                            <MarkerIcon>
+                                                <SearchIcon />
+                                            </MarkerIcon>
+                                            <MarkerContent>
+                                                Explored {msg.attachments.length} {msg.attachments.length === 1 ? 'file' : 'files'}
+                                            </MarkerContent>
+                                        </Marker>
+                                    )}
+                                </div>
                             ))}
                             {loading && (
-                                <div className="p-4">
-                                    <p className="text-xs font-medium text-muted-foreground mb-2">Lithium</p>
-                                    <p className="text-muted-foreground italic flex items-center gap-2">
-                                        <Spinner /> Thinking...
-                                    </p>
-                                </div>
+                                <Marker role="status">
+                                    <MarkerIcon>
+                                        <Spinner />
+                                    </MarkerIcon>
+                                    <MarkerContent className="shimmer">Thinking...</MarkerContent>
+                                </Marker>
                             )}
                         </>
                     )}
                 </div>
             </div>
 
-            <div className="shrink-0 px-8 pb-6 pt-4 bg-background">
+            <div className="shrink-0 px-8 pb-6 pt-2 bg-background overflow-y-hidden [scrollbar-gutter:stable]">
                 <div className="w-full max-w-3xl mx-auto">
-                    {inputGroup}
+                    {inputArea}
                 </div>
             </div>
         </div>
