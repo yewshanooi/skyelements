@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef, memo } from "react";
-import { ArrowUpIcon, ChevronDown, ChevronDownIcon, ChevronLeft, ChevronRight, Paperclip, FileText, X, SearchIcon, FileWarning } from "lucide-react";
+import { ArrowUpIcon, ChevronDown, ChevronDownIcon, Paperclip, FileText, X, SearchIcon, FileWarning } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {
@@ -197,39 +197,7 @@ function useLatestRef<T>(value: T) {
     return ref;
 }
 
-function useHorizontalScroll() {
-    const scrollRef = useRef<HTMLDivElement>(null);
-    const [canScrollLeft, setCanScrollLeft] = useState(false);
-    const [canScrollRight, setCanScrollRight] = useState(false);
 
-    const refresh = useCallback(() => {
-        const el = scrollRef.current;
-        if (!el) return;
-        setCanScrollLeft(el.scrollLeft > 1);
-        setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 1);
-    }, []);
-
-    useEffect(() => {
-        const el = scrollRef.current;
-        if (!el) return;
-        refresh();
-        el.addEventListener('scroll', refresh, { passive: true });
-        const observer = new ResizeObserver(refresh);
-        observer.observe(el);
-        return () => {
-            el.removeEventListener('scroll', refresh);
-            observer.disconnect();
-        };
-    }, [refresh]);
-
-    const scrollBy = useCallback((direction: 'left' | 'right') => {
-        const el = scrollRef.current;
-        if (!el) return;
-        el.scrollBy({ left: direction === 'left' ? -252 : 252, behavior: 'smooth' });
-    }, []);
-
-    return { scrollRef, canScrollLeft, canScrollRight, scrollBy, refresh };
-}
 
 // Memoized to avoid re-parsing markdown on sibling updates.
 const MessageItem = memo(function MessageItem({ msg }: { msg: DisplayMessage }) {
@@ -238,7 +206,7 @@ const MessageItem = memo(function MessageItem({ msg }: { msg: DisplayMessage }) 
     const isLong = isUser && msg.content.length > PREVIEW_LENGTH;
     const preview = isLong ? `${msg.content.slice(0, PREVIEW_LENGTH)}…` : msg.content;
 
-    const { scrollRef: msgScrollRef, canScrollLeft, canScrollRight, scrollBy } = useHorizontalScroll();
+
 
     return (
         <div className="flex flex-col">
@@ -246,18 +214,8 @@ const MessageItem = memo(function MessageItem({ msg }: { msg: DisplayMessage }) 
                 {isUser ? 'You' : 'Lithium'}
             </p>
             {msg.attachments.length > 0 && (
-                <div className={`relative mb-2 max-w-full w-fit ${isUser ? 'self-end' : 'self-start'}`}>
-                    {canScrollLeft && (
-                        <button
-                            type="button"
-                            onClick={() => scrollBy('left')}
-                            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 hidden md:flex items-center justify-center size-7 rounded-full bg-background/90 border border-border shadow-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-colors cursor-pointer"
-                            aria-label="Scroll attachments left"
-                        >
-                            <ChevronLeft className="size-4" />
-                        </button>
-                    )}
-                    <AttachmentGroup ref={msgScrollRef}>
+                <div className={`mb-2 max-w-full w-fit ${isUser ? 'self-end' : 'self-start'}`}>
+                    <AttachmentGroup>
                         {msg.attachments.map((att, ai) => {
                             const isImg = isImageMimeType(att.fileMimeType);
                             const metaLabel = msg.hasUploadError
@@ -307,16 +265,6 @@ const MessageItem = memo(function MessageItem({ msg }: { msg: DisplayMessage }) 
                             );
                         })}
                     </AttachmentGroup>
-                    {canScrollRight && (
-                        <button
-                            type="button"
-                            onClick={() => scrollBy('right')}
-                            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 hidden md:flex items-center justify-center size-7 rounded-full bg-background/90 border border-border shadow-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-colors cursor-pointer"
-                            aria-label="Scroll attachments right"
-                        >
-                            <ChevronRight className="size-4" />
-                        </button>
-                    )}
                 </div>
             )}
             {msg.content.trim().length > 0 && (
@@ -404,10 +352,7 @@ const InputArea = memo(function InputArea({
     onDragLeave: (e: React.DragEvent<HTMLDivElement>) => void;
     onDrop: (e: React.DragEvent<HTMLDivElement>) => void;
 }) {
-    const { scrollRef: scrollContainerRef, canScrollLeft, canScrollRight, scrollBy, refresh } = useHorizontalScroll();
 
-    // Re-check scroll state when attachments change.
-    useEffect(() => { refresh(); }, [pendingAttachments.length, refresh]);
 
     const hasPendingAttachments = pendingAttachments.length > 0;
     const hasErrorAttachments = pendingAttachments.some(a => a.state === "error");
@@ -426,18 +371,8 @@ const InputArea = memo(function InputArea({
 
             {hasPendingAttachments && (
                 <div className="mb-2 ml-4 flex items-center gap-3 w-full max-w-[calc(100%-2rem)]">
-                    <div className="relative flex-1 min-w-0">
-                        {canScrollLeft && (
-                            <button
-                                type="button"
-                                onClick={() => scrollBy('left')}
-                                className="absolute left-0 top-1/2 -translate-y-1/2 z-10 hidden md:flex items-center justify-center size-7 rounded-full bg-background/90 border border-border shadow-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-colors cursor-pointer"
-                                aria-label="Scroll attachments left"
-                            >
-                                <ChevronLeft className="size-4" />
-                            </button>
-                        )}
-                        <AttachmentGroup ref={scrollContainerRef} className="w-full">
+                    <div className="flex-1 min-w-0">
+                        <AttachmentGroup className="w-full">
                             {pendingAttachments.map((att) => {
                                 const isImg = isImageMimeType(att.mimeType);
                                 const metaLabel = att.state === "error" && att.errorMessage
@@ -484,16 +419,6 @@ const InputArea = memo(function InputArea({
                                 );
                             })}
                         </AttachmentGroup>
-                        {canScrollRight && (
-                            <button
-                                type="button"
-                                onClick={() => scrollBy('right')}
-                                className="absolute right-0 top-1/2 -translate-y-1/2 z-10 hidden md:flex items-center justify-center size-7 rounded-full bg-background/90 border border-border shadow-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-colors cursor-pointer"
-                                aria-label="Scroll attachments right"
-                            >
-                                <ChevronRight className="size-4" />
-                            </button>
-                        )}
                     </div>
                     {pendingAttachments.length > 1 && (
                         <button
