@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef, memo } from "react";
-import { ArrowUpIcon, ChevronDown, ChevronDownIcon, Paperclip, FileText, X, SearchIcon, FileWarning } from "lucide-react";
+import { ArrowUpIcon, CheckIcon, ChevronDown, ChevronDownIcon, CopyIcon, Paperclip, FileText, X, SearchIcon, FileWarning } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {
@@ -19,7 +19,7 @@ import {
     InputGroupText,
     InputGroupTextarea,
 } from "@/components/ui/input-group";
-import { Bubble, BubbleContent } from "@/components/ui/bubble";
+import { Bubble, BubbleContent, BubbleReactions } from "@/components/ui/bubble";
 import { Button } from "@/components/ui/button";
 import {
     Collapsible,
@@ -203,9 +203,20 @@ function useLatestRef<T>(value: T) {
 const MessageItem = memo(function MessageItem({ msg }: { msg: DisplayMessage }) {
     const isUser = msg.role === 'user';
     const [open, setOpen] = useState(false);
+    const [copied, setCopied] = useState(false);
     const isLong = isUser && msg.content.length > PREVIEW_LENGTH;
     const preview = isLong ? `${msg.content.slice(0, PREVIEW_LENGTH)}…` : msg.content;
 
+
+    const handleCopy = async () => {
+        try {
+            await navigator.clipboard.writeText(msg.content);
+            setCopied(true);
+            window.setTimeout(() => setCopied(false), 2000);
+        } catch (error) {
+            console.error(`Failed to copy ${isUser ? 'prompt' : 'response'}:`, error);
+        }
+    };
 
 
     return (
@@ -271,6 +282,7 @@ const MessageItem = memo(function MessageItem({ msg }: { msg: DisplayMessage }) 
                 <Bubble
                     variant={isUser ? 'tinted' : 'ghost'}
                     align={isUser ? 'end' : 'start'}
+                    className="pb-3"
                 >
                     <BubbleContent className={`text-base rounded-2xl${isLong ? ' whitespace-pre-line' : ''}`}>
                         {isUser ? (
@@ -304,6 +316,23 @@ const MessageItem = memo(function MessageItem({ msg }: { msg: DisplayMessage }) 
                             </div>
                         )}
                     </BubbleContent>
+                    <BubbleReactions
+                        align={isUser ? 'end' : 'start'}
+                        aria-label="Copy actions"
+                        className={isUser
+                            ? 'transition-opacity sm:pointer-events-none sm:opacity-0 sm:group-hover/bubble:pointer-events-auto sm:group-hover/bubble:opacity-100 sm:group-focus-within/bubble:pointer-events-auto sm:group-focus-within/bubble:opacity-100'
+                            : undefined}
+                    >
+                        <Button
+                            variant="ghost"
+                            size="xs"
+                            onClick={handleCopy}
+                            aria-label={copied ? 'Copied' : 'Copy'}
+                            title="Copy"
+                        >
+                            {copied ? <CheckIcon /> : <CopyIcon />}
+                        </Button>
+                    </BubbleReactions>
                 </Bubble>
             )}
         </div>
