@@ -58,7 +58,7 @@ export const editorTheme: EditorThemeClasses = {
   inlineImage:
     "relative inline-block user-select-none cursor-default inline-editor-image",
   keyword: "text-purple-900 font-bold",
-  code: "EditorTheme__code",
+  code: "EditorTheme__code scrollbar-thin",
   codeHighlight: {
     atrule: "EditorTheme__tokenAttr",
     attr: "EditorTheme__tokenAttr",
@@ -92,7 +92,7 @@ export const editorTheme: EditorThemeClasses = {
     variable: "EditorTheme__tokenVariable",
   },
   characterLimit: "!bg-destructive/50",
-  table: "EditorTheme__table w-fit overflow-scroll border-collapse",
+  table: "EditorTheme__table w-fit overflow-scroll scrollbar-thin border-collapse",
   tableCell:
     'EditorTheme__tableCell w-24 relative border px-4 py-2 text-left [&[align=center]]:text-center [&[align=right]]:text-right"',
   tableCellActionButton:

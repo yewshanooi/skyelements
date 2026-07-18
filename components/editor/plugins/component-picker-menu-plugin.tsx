@@ -50,7 +50,7 @@ function ComponentPickerMenu({
 
   return (
     <div className="absolute z-10 h-min w-[250px] rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
-      <div className="max-h-[300px] overflow-y-auto">
+      <div className="max-h-[300px] overflow-y-auto scrollbar-thin">
         {options.map((option, index) => (
           <div
             key={option.key}

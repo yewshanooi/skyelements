@@ -9,6 +9,7 @@
   margin-top: 8px;
   margin-bottom: 8px;
   overflow-x: auto;
+  white-space: pre;
   border: 1px solid #ccc;
   position: relative;
   border-radius: 8px;

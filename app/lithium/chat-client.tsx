@@ -297,7 +297,7 @@ const MessageItem = memo(function MessageItem({ msg }: { msg: DisplayMessage }) 
                                 </ReactMarkdown>
                             )
                         ) : (
-                            <div className="prose dark:prose-invert max-w-none overflow-x-auto">
+                            <div className="prose dark:prose-invert max-w-none overflow-x-auto scrollbar-thin">
                                 <ReactMarkdown remarkPlugins={REMARK_PLUGINS}>
                                     {msg.content}
                                 </ReactMarkdown>
@@ -454,7 +454,7 @@ const InputArea = memo(function InputArea({
                 )}
                 <InputGroupTextarea
                     placeholder="Ask anything..."
-                    className="pl-4"
+                    className="pl-4 scrollbar-thin"
                     value={prompt}
                     onChange={onPromptChange}
                     onKeyDown={onKeyDown}
@@ -491,7 +491,7 @@ const InputArea = memo(function InputArea({
                                 <ChevronDown />
                             </InputGroupButton>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent side="bottom" align="start">
+                        <DropdownMenuContent side="bottom" align="start" className="scrollbar-thin">
                             <DropdownMenuLabel>Models</DropdownMenuLabel>
  
                             {MODELS.map((model) => (
@@ -989,7 +989,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
     // Empty state.
     if (isEmptyState) {
         return (
-            <div className="h-full overflow-y-auto flex items-center justify-center p-8 pb-[10%] [scrollbar-gutter:stable]">
+            <div className="h-full overflow-y-auto scrollbar-thin flex items-center justify-center p-8 pb-[10%] scrollbar-gutter-stable">
                 <div className="w-full max-w-3xl mx-auto">
                     <div className="flex flex-row gap-4 w-full max-w-3xl mb-6">
                         <h1 className="ml-4 scroll-m-20 text-3xl font-semibold text-balance flex">
@@ -1019,7 +1019,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
     return (
         <div className="flex flex-col h-full relative">
             {showLoadingBar && <LoadingBar />}
-            <div className="flex-1 overflow-y-auto p-8 pt-12 [scrollbar-gutter:stable]">
+            <div className="flex-1 overflow-y-auto scrollbar-thin p-8 pt-12 scrollbar-gutter-stable">
                 <div className="w-full max-w-3xl mx-auto space-y-6 px-4">
                     {loadingHistory ? null : (
                         <>
@@ -1051,7 +1051,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                 </div>
             </div>
 
-            <div className="shrink-0 px-8 pb-6 pt-2 bg-background overflow-y-hidden [scrollbar-gutter:stable]">
+            <div className="shrink-0 px-8 pb-6 pt-2 bg-background overflow-y-hidden scrollbar-gutter-stable">
                 <div className="w-full max-w-3xl mx-auto">
                     {inputArea}
                 </div>

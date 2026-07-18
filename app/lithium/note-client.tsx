@@ -95,7 +95,7 @@ export function NoteClient({ noteId, onNoteActivity }: NoteClientProps) {
     return (
       <div className="flex flex-col h-full relative">
         {showLoadingBar && <LoadingBar />}
-        <div className="flex-1 overflow-y-auto pt-12 pb-0 flex flex-col [scrollbar-gutter:stable]">
+        <div className="flex-1 overflow-y-auto scrollbar-thin pt-12 pb-0 flex flex-col scrollbar-gutter-stable">
           <div className="px-8 pb-12 flex-1">
             <div className="w-full max-w-3xl mx-auto">
             </div>
@@ -107,7 +107,7 @@ export function NoteClient({ noteId, onNoteActivity }: NoteClientProps) {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-y-auto pt-12 pb-0 flex flex-col [scrollbar-gutter:stable]">
+      <div className="flex-1 overflow-y-auto scrollbar-thin pt-12 pb-0 flex flex-col scrollbar-gutter-stable">
         <div className="px-8 pb-12 flex-1">
           <div className="w-full max-w-3xl mx-auto space-y-4">
             <input
