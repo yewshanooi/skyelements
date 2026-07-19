@@ -1048,7 +1048,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
     return (
         <div className="flex flex-col h-full relative">
             {showLoadingBar && <LoadingBar />}
-            <div className="flex-1 overflow-y-auto scrollbar-thin p-8 pt-12 scrollbar-gutter-stable">
+            <div className="flex-1 overflow-y-auto scrollbar-thin p-8 pt-12 pb-20 scrollbar-gutter-stable">
                 <div className="w-full max-w-3xl mx-auto space-y-6 px-4">
                     {loadingHistory ? null : (
                         <>
