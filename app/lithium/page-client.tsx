@@ -1,7 +1,11 @@
 'use client';
 
 import { useState, useEffect, useCallback } from "react";
-import type { ThinkingEffort } from "@/lib/models";
+import {
+  isThinkingEffort,
+  THINKING_EFFORT_PREFERENCE_KEY,
+  type ThinkingEffort,
+} from "@/lib/models";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -49,6 +53,23 @@ export function PageClient({ user, signout, initialThinkingEffort }: PageClientP
   const [notes, setNotes] = useState<Note[]>([]);
   const [chatKey, setChatKey] = useState(0);
   const [noteKey, setNoteKey] = useState(0);
+  const [thinkingEffort, setThinkingEffort] = useState<ThinkingEffort>(initialThinkingEffort ?? 'auto');
+
+  // The server cookie supplies the initial value. Once hydrated, keep the
+  // client preference in this stable parent so chat remounts do not reset it.
+  useEffect(() => {
+    if (initialThinkingEffort !== null) return;
+
+    try {
+      const storedEffort = window.localStorage.getItem(THINKING_EFFORT_PREFERENCE_KEY);
+      if (isThinkingEffort(storedEffort)) {
+        setThinkingEffort(storedEffort);
+        document.cookie = `${THINKING_EFFORT_PREFERENCE_KEY}=${storedEffort}; Path=/; Max-Age=31536000; SameSite=Lax`;
+      }
+    } catch {
+      // Ignore unavailable browser storage and keep the default effort.
+    }
+  }, [initialThinkingEffort]);
 
   // Load chats and notes on mount
   useEffect(() => {
@@ -278,7 +299,8 @@ export function PageClient({ user, signout, initialThinkingEffort }: PageClientP
               chatId={activeView.id}
               onChatCreated={handleChatCreated}
               onChatActivity={handleChatActivity}
-              initialThinkingEffort={initialThinkingEffort}
+              thinkingEffort={thinkingEffort}
+              onThinkingEffortChange={setThinkingEffort}
             />
           ) : (
             <NoteClient

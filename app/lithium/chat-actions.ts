@@ -3,6 +3,8 @@
 import { GoogleGenAI, Content, ThinkingLevel, type ThinkingConfig } from "@google/genai";
 import {
   ALLOWED_MODEL_IDS,
+  getThinkingSupport,
+  normalizeThinkingEffort,
   type ThinkingEffort,
 } from "@/lib/models";
 import { buildOptimizedHistory } from "@/lib/chat-context";
@@ -62,15 +64,22 @@ export type MessageWithAttachments = Message & {
   attachments: (MessageAttachment & { signedFileUrl: string | null })[];
 };
 
-function buildThinkingConfig(effort: ThinkingEffort): ThinkingConfig | undefined {
-  if (effort === 'auto') return undefined;
+function buildThinkingConfig(model: string, effort: unknown): ThinkingConfig | undefined {
+  const support = getThinkingSupport(model);
+  const normalizedEffort = normalizeThinkingEffort(model, effort);
+
+  // Auto uses the selected model's default. Models with another thinking
+  // mechanism can be added here without sending an invalid thinkingLevel.
+  if (!support || support.kind !== 'level' || normalizedEffort === 'auto') {
+    return undefined;
+  }
 
   const thinkingLevel = {
     minimal: ThinkingLevel.MINIMAL,
     low: ThinkingLevel.LOW,
     medium: ThinkingLevel.MEDIUM,
     high: ThinkingLevel.HIGH,
-  }[effort];
+  }[normalizedEffort];
 
   return thinkingLevel ? { thinkingLevel } : undefined;
 }
@@ -170,7 +179,7 @@ export async function generateContent(
   contents.push({ role: 'user', parts: userParts } as Content);
 
   try {
-    const thinkingConfig = buildThinkingConfig(effort);
+    const thinkingConfig = buildThinkingConfig(model, effort);
     const response = await ai.models.generateContent({
       model,
       contents,

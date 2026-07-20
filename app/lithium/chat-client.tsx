@@ -49,7 +49,6 @@ import { createClient } from "@/utils/supabase/client";
 import { MAX_INPUT_CHARS } from "@/lib/chat-context";
 import {
     getThinkingOptions,
-    isThinkingEffort,
     MODELS,
     THINKING_EFFORT_PREFERENCE_KEY,
     type ThinkingEffort,
@@ -382,7 +381,10 @@ const InputArea = memo(function InputArea({
     const hasPendingAttachments = pendingAttachments.length > 0;
     const hasErrorAttachments = pendingAttachments.some(a => a.state === "error");
     const isInputDisabled = loading || hasErrorAttachments;
-    const thinkingOptions = getThinkingOptions();
+    const thinkingOptions = useMemo(
+        () => getThinkingOptions(selectedModelInfo.id),
+        [selectedModelInfo.id]
+    );
     const selectedEffort = thinkingOptions.find(option => option.value === effort) ?? thinkingOptions[0];
 
     return (
@@ -624,11 +626,18 @@ const InputArea = memo(function InputArea({
     );
 });
 
-export function ChatClient({ chatId, onChatCreated, onChatActivity, initialThinkingEffort }: {
+export function ChatClient({
+    chatId,
+    onChatCreated,
+    onChatActivity,
+    thinkingEffort,
+    onThinkingEffortChange,
+}: {
     chatId?: string | null;
     onChatCreated?: (chatId: string, title: string) => void;
     onChatActivity?: (chatId: string) => void;
-    initialThinkingEffort: ThinkingEffort | null;
+    thinkingEffort: ThinkingEffort;
+    onThinkingEffortChange?: (effort: ThinkingEffort) => void;
 }) {
     const [greeting, setGreeting] = useState("");
     const [prompt, setPrompt] = useState("");
@@ -637,8 +646,8 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity, initialThink
     const [loadingHistory, setLoadingHistory] = useState(false);
     const [showLoadingBar, setShowLoadingBar] = useState(false);
     const [selectedModel, setSelectedModel] = useState("gemini-3.1-flash-lite");
-    const [effort, setEffort] = useState<ThinkingEffort>(initialThinkingEffort ?? 'auto');
-    const [effortReady, setEffortReady] = useState(initialThinkingEffort !== null);
+    const [effort, setEffort] = useState<ThinkingEffort>(thinkingEffort);
+    const effortReady = true;
     const [currentChatId, setCurrentChatId] = useState<string | null>(chatId ?? null);
     const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
     const [attachmentError, setAttachmentError] = useState<string | null>(null);
@@ -666,6 +675,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity, initialThink
     const loadingRef = useLatestRef(loading);
     const onChatCreatedRef = useLatestRef(onChatCreated);
     const onChatActivityRef = useLatestRef(onChatActivity);
+    const onThinkingEffortChangeRef = useLatestRef(onThinkingEffortChange);
 
 
 
@@ -813,26 +823,11 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity, initialThink
 
     useEffect(() => {
         setGreeting(greetings[Math.floor(Math.random() * greetings.length)]);
-
-        // Migrate the previous localStorage-only preference to a cookie so it
-        // can be restored during the server render on future reloads.
-        if (initialThinkingEffort !== null) return;
-
-        try {
-            const storedEffort = window.localStorage.getItem(THINKING_EFFORT_PREFERENCE_KEY);
-            if (isThinkingEffort(storedEffort)) {
-                setEffort(storedEffort);
-                document.cookie = `${THINKING_EFFORT_PREFERENCE_KEY}=${storedEffort}; Path=/; Max-Age=31536000; SameSite=Lax`;
-            }
-        } catch {
-            // Ignore unavailable browser storage and keep the default effort.
-        } finally {
-            setEffortReady(true);
-        }
-    }, [initialThinkingEffort]);
+    }, []);
 
     const handleEffortChange = useCallback((nextEffort: ThinkingEffort) => {
         setEffort(nextEffort);
+        onThinkingEffortChangeRef.current?.(nextEffort);
 
         try {
             window.localStorage.setItem(THINKING_EFFORT_PREFERENCE_KEY, nextEffort);
