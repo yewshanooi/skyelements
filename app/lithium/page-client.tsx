@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from "react";
+import type { ThinkingEffort } from "@/lib/models";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -37,9 +38,10 @@ interface PageClientProps {
     email: string;
   };
   signout?: () => Promise<void>;
+  initialThinkingEffort: ThinkingEffort | null;
 }
 
-export function PageClient({ user, signout }: PageClientProps) {
+export function PageClient({ user, signout, initialThinkingEffort }: PageClientProps) {
   const [activeView, setActiveView] = useState<ActiveView>({ type: 'chat', id: null });
   const [chatTitle, setChatTitle] = useState("New chat");
   const [noteTitle, setNoteTitle] = useState("New note");
@@ -276,6 +278,7 @@ export function PageClient({ user, signout }: PageClientProps) {
               chatId={activeView.id}
               onChatCreated={handleChatCreated}
               onChatActivity={handleChatActivity}
+              initialThinkingEffort={initialThinkingEffort}
             />
           ) : (
             <NoteClient

@@ -1,16 +1,22 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef, memo } from "react";
-import { ArrowUpIcon, CheckIcon, ChevronDown, ChevronDownIcon, CopyIcon, Paperclip, FileText, X, SearchIcon, FileWarning } from "lucide-react";
+import { ArrowUpIcon, Gauge, CheckIcon, ChevronDown, ChevronDownIcon, CopyIcon, Paperclip, FileText, X, SearchIcon, FileWarning } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
+    DropdownMenuRadioGroup,
+    DropdownMenuRadioItem,
     DropdownMenuTrigger,
     DropdownMenuShortcut,
     DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuSub,
+    DropdownMenuSubContent,
+    DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
     InputGroup,
@@ -41,7 +47,13 @@ import {
 import { SUPPORTED_MIME_TYPES, isImageMimeType } from "@/lib/file-types";
 import { createClient } from "@/utils/supabase/client";
 import { MAX_INPUT_CHARS } from "@/lib/chat-context";
-import { MODELS } from "@/lib/models";
+import {
+    getThinkingOptions,
+    isThinkingEffort,
+    MODELS,
+    THINKING_EFFORT_PREFERENCE_KEY,
+    type ThinkingEffort,
+} from "@/lib/models";
 import Image from 'next/image';
 import {
     Attachment,
@@ -54,6 +66,8 @@ import {
     AttachmentTitle,
     AttachmentTrigger,
 } from "@/components/ui/attachment";
+
+
 
 const formatBytes = (bytes: number, decimals = 1) => {
     if (bytes === 0) return '0 Bytes';
@@ -133,32 +147,6 @@ const greetings = [
 
     "How can I help?",
     "How can I help you right now?",
-];
-
-const sampleQueries = [
-
-    'What is the meaning of life?',
-    'What are the latest advancements in AI?',
-    'What are some tips for improving mental health?',
-    'What is the future of renewable energy?',
-    'What are the benefits of meditation?',
-    'What are the top trends in technology for the next decade?',
-    'What are the best practices for personal productivity?',
-    'What are the benefits of space exploration?',
-    'What are the key principles of effective leadership?',
-
-
-    'Can you explain quantum mechanics in simple terms?',
-    'Can you explain the theory of relativity?',
-    'Can you explain how the internet works?',
-    'Can you explain the concept of quantum computing?',
-
-
-    'How does blockchain technology work?',
-    'How do black holes work?',
-    'How can we combat climate change effectively?',
-    'How do vaccines work?',
-    'How does the human immune system function?'
 ];
 
 type PendingAttachment = {
@@ -347,11 +335,15 @@ const InputArea = memo(function InputArea({
     attachmentError,
     selectedModelInfo,
     setSelectedModel,
+    effort,
+    setEffort,
+    effortReady,
     isOverLimit,
     isDraggingOver,
     fileInputRef,
     onPromptChange,
     onKeyDown,
+    onPaste,
     onSend,
     onAttachmentSelect,
     onRemoveAttachment,
@@ -367,11 +359,15 @@ const InputArea = memo(function InputArea({
     attachmentError: string | null;
     selectedModelInfo: (typeof MODELS)[number];
     setSelectedModel: (id: string) => void;
+    effort: ThinkingEffort;
+    setEffort: (effort: ThinkingEffort) => void;
+    effortReady: boolean;
     isOverLimit: boolean;
     isDraggingOver: boolean;
     fileInputRef: React.RefObject<HTMLInputElement | null>;
     onPromptChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
     onKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
+    onPaste: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
     onSend: () => void;
     onAttachmentSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
     onRemoveAttachment: (id: string) => void;
@@ -386,6 +382,8 @@ const InputArea = memo(function InputArea({
     const hasPendingAttachments = pendingAttachments.length > 0;
     const hasErrorAttachments = pendingAttachments.some(a => a.state === "error");
     const isInputDisabled = loading || hasErrorAttachments;
+    const thinkingOptions = getThinkingOptions();
+    const selectedEffort = thinkingOptions.find(option => option.value === effort) ?? thinkingOptions[0];
 
     return (
         <div>
@@ -487,6 +485,7 @@ const InputArea = memo(function InputArea({
                     value={prompt}
                     onChange={onPromptChange}
                     onKeyDown={onKeyDown}
+                    onPaste={onPaste}
                     disabled={isInputDisabled}
                     maxLength={MAX_INPUT_CHARS}
                 />
@@ -504,10 +503,15 @@ const InputArea = memo(function InputArea({
                         <Paperclip className="size-4" />
                         <span className="sr-only">Attach images or files</span>
                     </InputGroupButton>
- 
+
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <InputGroupButton variant="secondary" disabled={isInputDisabled}>
+                            <InputGroupButton
+                                variant="secondary"
+                                disabled={isInputDisabled}
+                                title={`${selectedModelInfo.label} (${selectedEffort.label})`}
+                                aria-label={`${selectedModelInfo.label} (${selectedEffort.label})`}
+                            >
                                 <Image
                                     src={selectedModelInfo.icon}
                                     alt={selectedModelInfo.label}
@@ -516,13 +520,14 @@ const InputArea = memo(function InputArea({
                                     className="mr-1"
                                     priority
                                 />
-                                {selectedModelInfo.label}
+                                <span>{selectedModelInfo.label}</span>
+                                <span className="hidden text-muted-foreground sm:inline">{selectedEffort.label}</span>
                                 <ChevronDown />
                             </InputGroupButton>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent side="bottom" align="start" className="scrollbar-thin">
                             <DropdownMenuLabel>Models</DropdownMenuLabel>
- 
+
                             {MODELS.map((model) => (
                                 <DropdownMenuItem
                                     key={model.id}
@@ -541,9 +546,59 @@ const InputArea = memo(function InputArea({
                                     </DropdownMenuShortcut>
                                 </DropdownMenuItem>
                             ))}
+
+                            <DropdownMenuSeparator />
+
+                            <DropdownMenuSub>
+                                <DropdownMenuSubTrigger className="hidden cursor-pointer sm:flex">
+                                    <Gauge />
+                                    <span>Thinking</span>
+                                    <span
+                                        className={`ml-auto mr-1 text-xs text-muted-foreground ${effortReady ? '' : 'invisible'}`}
+                                        aria-hidden={!effortReady}
+                                    >
+                                        {selectedEffort.label}
+                                    </span>
+                                </DropdownMenuSubTrigger>
+                                <DropdownMenuSubContent sideOffset={2} collisionPadding={8} align="end" className="w-50 min-w-0">
+                                    <DropdownMenuLabel>Thinking</DropdownMenuLabel>
+                                    <DropdownMenuRadioGroup
+                                        value={effort}
+                                        onValueChange={(value) => setEffort(value as ThinkingEffort)}
+                                    >
+                                        {thinkingOptions.map((option) => (
+                                            <DropdownMenuRadioItem
+                                                key={option.value}
+                                                value={option.value}
+                                                className="cursor-pointer"
+                                            >
+                                                <span>{option.label}</span>
+                                            </DropdownMenuRadioItem>
+                                        ))}
+                                    </DropdownMenuRadioGroup>
+                                </DropdownMenuSubContent>
+                            </DropdownMenuSub>
+
+                            <div className="sm:hidden">
+                                <DropdownMenuLabel>Thinking</DropdownMenuLabel>
+                                <DropdownMenuRadioGroup
+                                    value={effort}
+                                    onValueChange={(value) => setEffort(value as ThinkingEffort)}
+                                >
+                                    {thinkingOptions.map((option) => (
+                                        <DropdownMenuRadioItem
+                                            key={option.value}
+                                            value={option.value}
+                                            className="cursor-pointer"
+                                        >
+                                            <span>{option.label}</span>
+                                        </DropdownMenuRadioItem>
+                                    ))}
+                                </DropdownMenuRadioGroup>
+                            </div>
                         </DropdownMenuContent>
- 
                     </DropdownMenu>
+
                     <InputGroupText className="ml-auto">
                         {prompt.length > 0 && (
                             <span className={`hidden lg:inline ${prompt.length >= MAX_INPUT_CHARS * 0.9 ? 'text-destructive' : prompt.length >= MAX_INPUT_CHARS * 0.75 ? 'text-yellow-500' : ''}`}>
@@ -569,19 +624,21 @@ const InputArea = memo(function InputArea({
     );
 });
 
-export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
+export function ChatClient({ chatId, onChatCreated, onChatActivity, initialThinkingEffort }: {
     chatId?: string | null;
     onChatCreated?: (chatId: string, title: string) => void;
     onChatActivity?: (chatId: string) => void;
+    initialThinkingEffort: ThinkingEffort | null;
 }) {
     const [greeting, setGreeting] = useState("");
-    const [sampleQuery, setSampleQuery] = useState("");
     const [prompt, setPrompt] = useState("");
     const [messages, setMessages] = useState<DisplayMessage[]>([]);
     const [loading, setLoading] = useState(false);
     const [loadingHistory, setLoadingHistory] = useState(false);
     const [showLoadingBar, setShowLoadingBar] = useState(false);
     const [selectedModel, setSelectedModel] = useState("gemini-3.1-flash-lite");
+    const [effort, setEffort] = useState<ThinkingEffort>(initialThinkingEffort ?? 'auto');
+    const [effortReady, setEffortReady] = useState(initialThinkingEffort !== null);
     const [currentChatId, setCurrentChatId] = useState<string | null>(chatId ?? null);
     const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
     const [attachmentError, setAttachmentError] = useState<string | null>(null);
@@ -598,13 +655,13 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
     );
     const isEmptyState = messages.length === 0 && !loading && !loadingHistory;
     const isOverLimit = prompt.length > MAX_INPUT_CHARS;
-    const hasPendingAttachments = pendingAttachments.length > 0;
 
     // Refs for stable `sendMessage` callback.
     const messagesRef = useLatestRef(messages);
     const pendingAttachmentsRef = useLatestRef(pendingAttachments);
     const currentChatIdRef = useLatestRef(currentChatId);
     const selectedModelRef = useLatestRef(selectedModel);
+    const effortRef = useLatestRef(effort);
     const promptRef = useLatestRef(prompt);
     const loadingRef = useLatestRef(loading);
     const onChatCreatedRef = useLatestRef(onChatCreated);
@@ -756,7 +813,33 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
 
     useEffect(() => {
         setGreeting(greetings[Math.floor(Math.random() * greetings.length)]);
-        setSampleQuery(sampleQueries[Math.floor(Math.random() * sampleQueries.length)]);
+
+        // Migrate the previous localStorage-only preference to a cookie so it
+        // can be restored during the server render on future reloads.
+        if (initialThinkingEffort !== null) return;
+
+        try {
+            const storedEffort = window.localStorage.getItem(THINKING_EFFORT_PREFERENCE_KEY);
+            if (isThinkingEffort(storedEffort)) {
+                setEffort(storedEffort);
+                document.cookie = `${THINKING_EFFORT_PREFERENCE_KEY}=${storedEffort}; Path=/; Max-Age=31536000; SameSite=Lax`;
+            }
+        } catch {
+            // Ignore unavailable browser storage and keep the default effort.
+        } finally {
+            setEffortReady(true);
+        }
+    }, [initialThinkingEffort]);
+
+    const handleEffortChange = useCallback((nextEffort: ThinkingEffort) => {
+        setEffort(nextEffort);
+
+        try {
+            window.localStorage.setItem(THINKING_EFFORT_PREFERENCE_KEY, nextEffort);
+            document.cookie = `${THINKING_EFFORT_PREFERENCE_KEY}=${nextEffort}; Path=/; Max-Age=31536000; SameSite=Lax`;
+        } catch {
+            // Ignore unavailable browser storage; the current selection still works.
+        }
     }, []);
 
     useEffect(() => {
@@ -833,6 +916,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
 
         const myGenId = ++generationIdRef.current;
         const model = selectedModelRef.current;
+        const selectedEffort = effortRef.current;
         const startingChatId = currentChatIdRef.current;
         const history = messagesRef.current.map(({ role, content }) => ({ role, content }));
 
@@ -937,6 +1021,7 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                 model,
                 history,
                 uploadedRefs,
+                selectedEffort,
             );
             const assistantContent = result ?? "Sorry, I couldn't generate a response.";
 
@@ -987,8 +1072,46 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
         }
     }, [sendMessage]);
 
+    const handlePaste = useCallback(async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+        if (loadingRef.current) return;
+
+        const clipboardImageFiles = Array.from(e.clipboardData.items)
+            .filter(item => item.kind === 'file' && item.type.startsWith('image/'))
+            .map(item => item.getAsFile())
+            .filter((file): file is File => file !== null);
+
+        // Some browsers expose clipboard images through `files` instead of `items`.
+        const imageFiles = clipboardImageFiles.length > 0
+            ? clipboardImageFiles
+            : Array.from(e.clipboardData.files).filter(file => file.type.startsWith('image/'));
+
+        if (imageFiles.length === 0) return;
+
+        e.preventDefault();
+        const pastedAt = Date.now();
+        const files = imageFiles.map((file, index) => {
+            const mimeType = file.type || 'image/png';
+            const extension = mimeType === 'image/jpeg'
+                ? 'jpg'
+                : mimeType.split('/')[1]?.split('+')[0] || 'png';
+            const fileName = file.name && file.name !== 'blob'
+                ? file.name
+                : `pasted-image-${pastedAt}${imageFiles.length > 1 ? `-${index + 1}` : ''}.${extension}`;
+
+            return file.name === fileName
+                ? file
+                : new File([file], fileName, { type: mimeType });
+        });
+
+        await addFiles(files);
+    }, [addFiles]);
+
     const handlePromptChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
         setPrompt(e.target.value.slice(0, MAX_INPUT_CHARS));
+    }, []);
+
+    const handleModelChange = useCallback((id: string) => {
+        setSelectedModel(id);
     }, []);
 
     const inputArea = (
@@ -998,12 +1121,16 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
             pendingAttachments={pendingAttachments}
             attachmentError={attachmentError}
             selectedModelInfo={selectedModelInfo}
-            setSelectedModel={setSelectedModel}
+            setSelectedModel={handleModelChange}
+            effort={effort}
+            setEffort={handleEffortChange}
+            effortReady={effortReady}
             isOverLimit={isOverLimit}
             isDraggingOver={isDraggingOver}
             fileInputRef={fileInputRef}
             onPromptChange={handlePromptChange}
             onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
             onSend={handleSend}
             onAttachmentSelect={handleAttachmentSelect}
             onRemoveAttachment={removePendingAttachment}
@@ -1027,18 +1154,6 @@ export function ChatClient({ chatId, onChatCreated, onChatActivity }: {
                     </div>
 
                     {inputArea}
-
-                    {sampleQuery && !hasPendingAttachments && (
-                        <div className="mt-6 flex justify-center px-4">
-                            <Button
-                                variant="outline"
-                                className="text-muted-foreground h-auto whitespace-normal text-center max-w-full px-2 py-1"
-                                onClick={() => sendMessage(sampleQuery)}
-                            >
-                                &quot;{sampleQuery}&quot;
-                            </Button>
-                        </div>
-                    )}
                 </div>
             </div>
         );

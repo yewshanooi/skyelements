@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { redirectIfNotAuthenticated } from "@/utils/redirectIfNotAuthenticated";
 import { PageClient } from "./page-client";
 import { signout } from "../(auth)/actions"
 import { createClient } from "@/utils/supabase/server"
+import { isThinkingEffort, THINKING_EFFORT_PREFERENCE_KEY } from "@/lib/models";
 
 export const metadata: Metadata = {
   title: "Lithium",
@@ -20,5 +22,14 @@ export default async function Page() {
     email: userEmail,
   };
 
-  return <PageClient user={user} signout={signout} />
+  const storedEffort = (await cookies()).get(THINKING_EFFORT_PREFERENCE_KEY)?.value;
+  const initialThinkingEffort = isThinkingEffort(storedEffort) ? storedEffort : null;
+
+  return (
+    <PageClient
+      user={user}
+      signout={signout}
+      initialThinkingEffort={initialThinkingEffort}
+    />
+  )
 }

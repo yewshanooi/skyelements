@@ -1,7 +1,10 @@
 'use server';
 
-import { GoogleGenAI, Content } from "@google/genai";
-import { ALLOWED_MODEL_IDS } from "@/lib/models";
+import { GoogleGenAI, Content, ThinkingLevel, type ThinkingConfig } from "@google/genai";
+import {
+  ALLOWED_MODEL_IDS,
+  type ThinkingEffort,
+} from "@/lib/models";
 import { buildOptimizedHistory } from "@/lib/chat-context";
 import { getAuthenticatedClient } from "./auth";
 
@@ -59,6 +62,19 @@ export type MessageWithAttachments = Message & {
   attachments: (MessageAttachment & { signedFileUrl: string | null })[];
 };
 
+function buildThinkingConfig(effort: ThinkingEffort): ThinkingConfig | undefined {
+  if (effort === 'auto') return undefined;
+
+  const thinkingLevel = {
+    minimal: ThinkingLevel.MINIMAL,
+    low: ThinkingLevel.LOW,
+    medium: ThinkingLevel.MEDIUM,
+    high: ThinkingLevel.HIGH,
+  }[effort];
+
+  return thinkingLevel ? { thinkingLevel } : undefined;
+}
+
 // ---------------------------------------------------------------------------
 // AI Generation
 // ---------------------------------------------------------------------------
@@ -68,6 +84,7 @@ export async function generateContent(
   model: string = "gemini-3.1-flash-lite",
   history: ChatMessage[] = [],
   attachments: AttachmentRef[] = [],
+  effort: ThinkingEffort = 'auto',
 ) {
   const { supabase } = await getAuthenticatedClient();
 
@@ -153,9 +170,11 @@ export async function generateContent(
   contents.push({ role: 'user', parts: userParts } as Content);
 
   try {
+    const thinkingConfig = buildThinkingConfig(effort);
     const response = await ai.models.generateContent({
       model,
       contents,
+      ...(thinkingConfig ? { config: { thinkingConfig } } : {}),
     });
     return response.text;
   } catch (error: any) {
