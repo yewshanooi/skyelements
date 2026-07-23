@@ -9,9 +9,8 @@ const CHARS_PER_TOKEN = 4;
 
 // Per-model token budgets for conversation history (not counting the new prompt).
 const MODEL_CONTEXT_BUDGETS: Record<string, number> = {
-  'gemini-3.1-flash-lite': 16_000,
-  'gemini-3.5-flash': 32_000,
-  'gemini-3-flash-preview': 32_000,
+  'gemini-3.5-flash-lite': 16_000,
+  'gemini-3.6-flash': 32_000,
 
   default: 16_000,
 };

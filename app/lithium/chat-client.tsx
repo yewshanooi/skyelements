@@ -645,7 +645,7 @@ export function ChatClient({
     const [loading, setLoading] = useState(false);
     const [loadingHistory, setLoadingHistory] = useState(false);
     const [showLoadingBar, setShowLoadingBar] = useState(false);
-    const [selectedModel, setSelectedModel] = useState("gemini-3.1-flash-lite");
+    const [selectedModel, setSelectedModel] = useState("gemini-3.5-flash-lite");
     const [effort, setEffort] = useState<ThinkingEffort>(thinkingEffort);
     const effortReady = true;
     const [currentChatId, setCurrentChatId] = useState<string | null>(chatId ?? null);

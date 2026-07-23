@@ -3,7 +3,6 @@
 import { GoogleGenAI, Content, ThinkingLevel, type ThinkingConfig } from "@google/genai";
 import {
   ALLOWED_MODEL_IDS,
-  getThinkingSupport,
   normalizeThinkingEffort,
   type ThinkingEffort,
 } from "@/lib/models";
@@ -64,24 +63,18 @@ export type MessageWithAttachments = Message & {
   attachments: (MessageAttachment & { signedFileUrl: string | null })[];
 };
 
+const THINKING_LEVELS: Record<Exclude<ThinkingEffort, 'auto'>, ThinkingLevel> = {
+  minimal: ThinkingLevel.MINIMAL,
+  low: ThinkingLevel.LOW,
+  medium: ThinkingLevel.MEDIUM,
+  high: ThinkingLevel.HIGH,
+};
+
 function buildThinkingConfig(model: string, effort: unknown): ThinkingConfig | undefined {
-  const support = getThinkingSupport(model);
   const normalizedEffort = normalizeThinkingEffort(model, effort);
-
-  // Auto uses the selected model's default. Models with another thinking
-  // mechanism can be added here without sending an invalid thinkingLevel.
-  if (!support || support.kind !== 'level' || normalizedEffort === 'auto') {
-    return undefined;
-  }
-
-  const thinkingLevel = {
-    minimal: ThinkingLevel.MINIMAL,
-    low: ThinkingLevel.LOW,
-    medium: ThinkingLevel.MEDIUM,
-    high: ThinkingLevel.HIGH,
-  }[normalizedEffort];
-
-  return thinkingLevel ? { thinkingLevel } : undefined;
+  return normalizedEffort === 'auto'
+    ? undefined
+    : { thinkingLevel: THINKING_LEVELS[normalizedEffort] };
 }
 
 // ---------------------------------------------------------------------------
@@ -90,7 +83,7 @@ function buildThinkingConfig(model: string, effort: unknown): ThinkingConfig | u
 
 export async function generateContent(
   prompt: string,
-  model: string = "gemini-3.1-flash-lite",
+  model: string = "gemini-3.5-flash-lite",
   history: ChatMessage[] = [],
   attachments: AttachmentRef[] = [],
   effort: ThinkingEffort = 'auto',
@@ -254,7 +247,7 @@ async function removeStorageFiles(
 // ---------------------------------------------------------------------------
 
 /** Create a new chat and return it */
-export async function createChat(model: string = 'gemini-3.1-flash-lite'): Promise<Chat> {
+export async function createChat(model: string = 'gemini-3.5-flash-lite'): Promise<Chat> {
   if (!ALLOWED_MODEL_IDS.has(model)) {
     throw new Error('Invalid model specified.');
   }
