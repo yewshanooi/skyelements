@@ -141,7 +141,7 @@
     color: #171717;
   }
   html {
-    @apply font-sans;
+    @apply font-sans scrollbar-thin;
   }
   button:not(:disabled), [role="button"]:not(:disabled) {
     cursor: pointer;

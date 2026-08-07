@@ -249,7 +249,7 @@ export function SettingsDialog({
           </DialogHeader>
 
           {isMobile ? (
-            <div className="flex-1 min-h-0 overflow-y-auto px-4 pt-8 pb-8">
+            <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin px-4 pt-8 pb-8">
               <div className="space-y-8">
                 {accountSection}
                 <Separator />
@@ -291,7 +291,7 @@ export function SettingsDialog({
                 </TabsTrigger>
               </TabsList>
 
-              <div className="flex-1 min-h-0 px-6 py-5 overflow-y-auto">
+              <div className="flex-1 min-h-0 px-6 py-5 overflow-y-auto scrollbar-thin">
                 <TabsContent value="account" className="space-y-6 m-0">
                   {accountSection}
                 </TabsContent>
