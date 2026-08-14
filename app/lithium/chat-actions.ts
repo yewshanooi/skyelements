@@ -77,6 +77,15 @@ function buildThinkingConfig(model: string, effort: unknown): ThinkingConfig | u
     : { thinkingLevel: THINKING_LEVELS[normalizedEffort] };
 }
 
+// Lazily cached AI client – reused across requests within the same server process.
+let _aiClient: GoogleGenAI | null = null;
+function getAIClient(): GoogleGenAI {
+  const key = process.env.GOOGLE_API_KEY;
+  if (!key) throw new Error('GOOGLE_API_KEY is not set');
+  if (!_aiClient) _aiClient = new GoogleGenAI({ apiKey: key });
+  return _aiClient;
+}
+
 // ---------------------------------------------------------------------------
 // AI Generation
 // ---------------------------------------------------------------------------
@@ -92,6 +101,11 @@ export async function generateContent(
 
   if (!ALLOWED_MODEL_IDS.has(model)) {
     return "Sorry, the requested model is not available.";
+  }
+
+  if (!process.env.GOOGLE_API_KEY) {
+    console.error("GOOGLE_API_KEY environment variable is not set.");
+    return "Sorry, I couldn't generate a response at this time.";
   }
 
   // Optimize history to fit within model context budget
@@ -122,13 +136,7 @@ export async function generateContent(
     }
   }
 
-  if (!process.env.GOOGLE_API_KEY) {
-    console.error("GOOGLE_API_KEY environment variable is not set.");
-
-    return "Sorry, I couldn't generate a response at this time.";
-  }
-
-  const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY });
+  const ai = getAIClient();
 
   const contents: Content[] = [
     ...optimizedHistory.map(msg => ({
@@ -377,27 +385,31 @@ export async function saveMessage(
   if (msgErr) throw new Error(msgErr.message);
   const message = msgData as Message;
 
-  if (attachments.length > 0) {
-    const rows = attachments.map((a, i) => ({
-      message_id: message.id,
-      file_url: a.storagePath,
-      file_mime_type: a.mimeType,
-      file_name: a.fileName,
-      position: i,
-    }));
+  // Run attachment insert and chat timestamp update in parallel.
+  const attachmentPromise = attachments.length > 0
+    ? supabase.from('message_attachments').insert(
+        attachments.map((a, i) => ({
+          message_id: message.id,
+          file_url: a.storagePath,
+          file_mime_type: a.mimeType,
+          file_name: a.fileName,
+          position: i,
+        }))
+      ).then(({ error: attErr }) => {
+        if (attErr) {
+          console.error('[chat-actions] saveMessage attachment insert error:', attErr);
+          throw new Error('Failed to save attachments.');
+        }
+      })
+    : Promise.resolve();
 
-    const { error: attErr } = await supabase.from('message_attachments').insert(rows);
-    if (attErr) {
-      console.error('[chat-actions] saveMessage attachment insert error:', attErr);
-      throw new Error('Failed to save attachments.');
-    }
-  }
-
-  await supabase
+  const timestampPromise = supabase
     .from('chats')
     .update({ updated_at: new Date().toISOString() })
     .eq('id', chatId)
     .eq('user_id', user.id);
+
+  await Promise.all([attachmentPromise, timestampPromise]);
 
   return message;
 }

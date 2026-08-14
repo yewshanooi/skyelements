@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback, useMemo, useRef, memo } from "react";
 import { ArrowUpIcon, Gauge, CheckIcon, ChevronDown, ChevronDownIcon, CopyIcon, Paperclip, FileText, X, SearchIcon, FileWarning } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -175,7 +177,8 @@ const MAX_IMAGE_SIZE = 4 * 1024 * 1024; // 4 MB
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
 const MAX_ATTACHMENTS = 5;
 
-const REMARK_PLUGINS = [remarkGfm];
+const REMARK_PLUGINS = [remarkGfm, remarkMath];
+const REHYPE_PLUGINS = [rehypeKatex];
 const PREVIEW_LENGTH = 200;
 
 function useLatestRef<T>(value: T) {
@@ -276,7 +279,7 @@ const MessageItem = memo(function MessageItem({ msg }: { msg: DisplayMessage }) 
                             isLong ? (
                                 <Collapsible open={open} onOpenChange={setOpen}>
                                     <div>
-                                        <ReactMarkdown remarkPlugins={REMARK_PLUGINS}>
+                                        <ReactMarkdown remarkPlugins={REMARK_PLUGINS} rehypePlugins={REHYPE_PLUGINS}>
                                             {open ? msg.content : preview}
                                         </ReactMarkdown>
                                     </div>
@@ -291,13 +294,13 @@ const MessageItem = memo(function MessageItem({ msg }: { msg: DisplayMessage }) 
                                     </CollapsibleTrigger>
                                 </Collapsible>
                             ) : (
-                                <ReactMarkdown remarkPlugins={REMARK_PLUGINS}>
+                                <ReactMarkdown remarkPlugins={REMARK_PLUGINS} rehypePlugins={REHYPE_PLUGINS}>
                                     {msg.content}
                                 </ReactMarkdown>
                             )
                         ) : (
-                            <div className="prose dark:prose-invert max-w-none overflow-x-auto scrollbar-thin">
-                                <ReactMarkdown remarkPlugins={REMARK_PLUGINS}>
+                            <div className="prose dark:prose-invert max-w-none overflow-x-auto overflow-y-hidden scrollbar-thin">
+                                <ReactMarkdown remarkPlugins={REMARK_PLUGINS} rehypePlugins={REHYPE_PLUGINS}>
                                     {msg.content}
                                 </ReactMarkdown>
                             </div>
@@ -1187,6 +1190,7 @@ export function ChatClient({
                             )}
                         </>
                     )}
+
                 </div>
             </div>
 

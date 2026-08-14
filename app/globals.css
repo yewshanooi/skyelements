@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "katex/dist/katex.min.css";
 
 @plugin "@tailwindcss/typography";
 
@@ -198,4 +199,27 @@
   padding: 0.2em 0.4em;
   background-color: var(--muted);
   border-radius: var(--radius-sm);
+}
+
+/* KaTeX math rendering — theme-aware colors & overflow handling */
+.katex {
+  color: var(--foreground);
+  font-size: 1.05em;
+}
+
+.katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.5em 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+.katex-display > .katex {
+  white-space: nowrap;
+}
+
+/* Ensure KaTeX error messages are legible */
+.katex .katex-html .mord.text .mord.textrm,
+.katex .katex-error {
+  color: var(--destructive);
 }

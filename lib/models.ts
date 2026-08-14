@@ -26,6 +26,7 @@ const GEMINI_THINKING_LEVELS: readonly ThinkingLevel[] = ['minimal', 'low', 'med
 export const MODELS: ModelDefinition[] = [
   { id: 'gemini-3.5-flash-lite', label: 'Gemini 3.5 Flash', icon: '/lithium/google.svg', shortcut: 'Lite', thinking: GEMINI_THINKING_LEVELS },
   { id: 'gemini-3.6-flash', label: 'Gemini 3.6 Flash', icon: '/lithium/google.svg', shortcut: '', thinking: GEMINI_THINKING_LEVELS },
+  { id: 'gemini-3.7-flash', label: 'Gemini 3.7 Flash', icon: '/lithium/google.svg', shortcut: '', thinking: GEMINI_THINKING_LEVELS },
 ];
 
 export const ALLOWED_MODEL_IDS = new Set(MODELS.map(m => m.id));

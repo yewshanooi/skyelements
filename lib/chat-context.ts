@@ -11,6 +11,7 @@ const CHARS_PER_TOKEN = 4;
 const MODEL_CONTEXT_BUDGETS: Record<string, number> = {
   'gemini-3.5-flash-lite': 16_000,
   'gemini-3.6-flash': 32_000,
+  'gemini-3.7-flash': 32_000,
 
   default: 16_000,
 };
