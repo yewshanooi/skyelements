@@ -211,8 +211,8 @@ export function SettingsDialog({
           label="Profile"
           wideAction
           action={
-            <div className="flex w-full items-center justify-end gap-2">
-              <Avatar className="size-12">
+            <div className="flex w-full flex-wrap items-center justify-start gap-2 sm:justify-end">
+              <Avatar className="size-12 shrink-0">
                 {avatarPreview && <AvatarImage src={avatarPreview} alt="Your avatar" />}
                 <AvatarFallback>{(displayName || user.email).slice(0, 1).toUpperCase()}</AvatarFallback>
               </Avatar>
@@ -428,7 +428,7 @@ export function SettingsDialog({
               onClick={() => setDeleteAllNotesOpen(true)}
             >
               <Trash2 className="size-4" />
-              Delete
+              Clear
             </Button>
           }
         />
@@ -442,7 +442,7 @@ export function SettingsDialog({
               onClick={() => setDeleteAllChatsOpen(true)}
             >
               <Trash2 className="size-4" />
-              Delete
+              Clear
             </Button>
           }
         />
@@ -581,7 +581,7 @@ export function SettingsDialog({
             </AlertDialogMedia>
             <AlertDialogTitle>Clear your note history?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will delete all your Lithium notes. This action cannot be undone.
+              This will clear all your Lithium notes. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -604,7 +604,7 @@ export function SettingsDialog({
             </AlertDialogMedia>
             <AlertDialogTitle>Clear your chat history?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will delete all your Lithium chats. This action cannot be undone.
+              This will clear all your Lithium chats. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

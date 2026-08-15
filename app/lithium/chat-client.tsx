@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef, memo } from "react";
-import { ArrowUpIcon, Gauge, CheckIcon, ChevronDown, ChevronDownIcon, CopyIcon, Paperclip, FileText, X, SearchIcon, FileWarning } from "lucide-react";
+import { ArrowUpIcon, Gauge, CheckIcon, ChevronDown, ChevronDownIcon, CopyIcon, Paperclip, FileText, X, SearchIcon, FileWarning, Mic, MicOff } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
@@ -67,6 +67,37 @@ import {
     AttachmentTitle,
     AttachmentTrigger,
 } from "@/components/ui/attachment";
+
+type SpeechRecognitionResultLike = {
+    isFinal: boolean;
+    [index: number]: { transcript: string };
+};
+
+type SpeechRecognitionEventLike = {
+    results: {
+        length: number;
+        [index: number]: SpeechRecognitionResultLike;
+    };
+};
+
+type SpeechRecognitionLike = {
+    continuous: boolean;
+    interimResults: boolean;
+    lang: string;
+    start: () => void;
+    stop: () => void;
+    abort: () => void;
+    onresult: ((event: SpeechRecognitionEventLike) => void) | null;
+    onend: (() => void) | null;
+    onerror: ((event: { error: string }) => void) | null;
+};
+
+type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
+
+type SpeechRecognitionWindow = Window & {
+    SpeechRecognition?: SpeechRecognitionConstructor;
+    webkitSpeechRecognition?: SpeechRecognitionConstructor;
+};
 
 
 
@@ -347,6 +378,9 @@ const InputArea = memo(function InputArea({
     onKeyDown,
     onPaste,
     onSend,
+    isVoiceInputSupported,
+    isListening,
+    onToggleVoiceInput,
     onAttachmentSelect,
     onRemoveAttachment,
     onClearAllAttachments,
@@ -371,6 +405,9 @@ const InputArea = memo(function InputArea({
     onKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
     onPaste: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
     onSend: () => void;
+    isVoiceInputSupported: boolean;
+    isListening: boolean;
+    onToggleVoiceInput: () => void;
     onAttachmentSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
     onRemoveAttachment: (id: string) => void;
     onClearAllAttachments: () => void;
@@ -494,10 +531,10 @@ const InputArea = memo(function InputArea({
                     disabled={isInputDisabled}
                     maxLength={MAX_INPUT_CHARS}
                 />
-                <InputGroupAddon align="block-end">
+                <InputGroupAddon align="block-end" className="flex-wrap gap-1.5 sm:gap-2">
                     <InputGroupButton
                         variant="secondary"
-                        className="rounded-sm"
+                        className="shrink-0 rounded-sm"
                         size="icon-xs"
                         onClick={() => fileInputRef.current?.click()}
                         title={pendingAttachments.length >= MAX_ATTACHMENTS
@@ -513,6 +550,7 @@ const InputArea = memo(function InputArea({
                         <DropdownMenuTrigger asChild>
                             <InputGroupButton
                                 variant="secondary"
+                                className="min-w-0 max-w-full flex-1 justify-start sm:flex-none"
                                 disabled={isInputDisabled}
                                 title={`${selectedModelInfo.label} (${selectedEffort.label})`}
                                 aria-label={`${selectedModelInfo.label} (${selectedEffort.label})`}
@@ -522,12 +560,12 @@ const InputArea = memo(function InputArea({
                                     alt={selectedModelInfo.label}
                                     width={16}
                                     height={16}
-                                    className="mr-1"
+                                    className="mr-1 shrink-0"
                                     priority
                                 />
-                                <span>{selectedModelInfo.label}</span>
-                                <span className="hidden text-muted-foreground sm:inline">{selectedEffort.label}</span>
-                                <ChevronDown />
+                                <span className="min-w-0 truncate">{selectedModelInfo.label}</span>
+                                <span className="hidden shrink-0 text-muted-foreground sm:inline">{selectedEffort.label}</span>
+                                <ChevronDown className="shrink-0" />
                             </InputGroupButton>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent side="bottom" align="start" className="scrollbar-thin">
@@ -613,8 +651,21 @@ const InputArea = memo(function InputArea({
                     </InputGroupText>
                     <Separator orientation="vertical" className="mx-2 data-[orientation=vertical]:h-5" />
                     <InputGroupButton
+                        variant="secondary"
+                        className={`shrink-0 ${isListening ? "rounded-full text-destructive" : "rounded-full"}`}
+                        size="icon-xs"
+                        onClick={onToggleVoiceInput}
+                        title={!isVoiceInputSupported ? "Voice input is not supported in this browser" : isListening ? "Stop dictating" : "Dictate"}
+                        aria-label={!isVoiceInputSupported ? "Voice input is not supported in this browser" : isListening ? "Stop dictating" : "Dictate"}
+                        aria-pressed={isListening}
+                        disabled={isInputDisabled || !isVoiceInputSupported}
+                    >
+                        {isListening ? <MicOff /> : <Mic />}
+                        <span className="sr-only">{isListening ? "Stop dictating" : "Dictate"}</span>
+                    </InputGroupButton>
+                    <InputGroupButton
                         variant="default"
-                        className="rounded-full"
+                        className="shrink-0 rounded-full"
                         size="icon-xs"
                         onClick={onSend}
                         title="Send"
@@ -655,11 +706,15 @@ export function ChatClient({
     const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
     const [attachmentError, setAttachmentError] = useState<string | null>(null);
     const [isDraggingOver, setIsDraggingOver] = useState(false);
+    const [isVoiceInputSupported, setIsVoiceInputSupported] = useState(false);
+    const [isListening, setIsListening] = useState(false);
     const generationIdRef = useRef(0);
     const pendingNewChatIdRef = useRef<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const dragCounterRef = useRef(0);
     const supabaseRef = useRef<ReturnType<typeof createClient> | null>(null);
+    const speechRecognitionRef = useRef<SpeechRecognitionLike | null>(null);
+    const speechBasePromptRef = useRef("");
 
     const selectedModelInfo = useMemo(
         () => MODELS.find(m => m.id === selectedModel) ?? MODELS[0],
@@ -679,6 +734,22 @@ export function ChatClient({
     const onChatCreatedRef = useLatestRef(onChatCreated);
     const onChatActivityRef = useLatestRef(onChatActivity);
     const onThinkingEffortChangeRef = useLatestRef(onThinkingEffortChange);
+
+    useEffect(() => {
+        const speechWindow = window as SpeechRecognitionWindow;
+        setIsVoiceInputSupported(Boolean(speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition));
+
+        return () => {
+            speechRecognitionRef.current?.abort();
+            speechRecognitionRef.current = null;
+        };
+    }, []);
+
+    useEffect(() => {
+        speechRecognitionRef.current?.abort();
+        speechRecognitionRef.current = null;
+        setIsListening(false);
+    }, [chatId]);
 
 
 
@@ -1058,17 +1129,87 @@ export function ChatClient({
     }, []);
 
     // Read prompt from ref to keep callbacks stable across keystrokes.
+    const stopVoiceInput = useCallback(() => {
+        const recognition = speechRecognitionRef.current;
+        if (!recognition) return;
+
+        recognition.abort();
+        speechRecognitionRef.current = null;
+        setIsListening(false);
+    }, []);
+
     const handleSend = useCallback(() => {
+        stopVoiceInput();
         sendMessage(promptRef.current.trim());
-    }, [sendMessage]);
+    }, [sendMessage, stopVoiceInput]);
+
+    const handleToggleVoiceInput = useCallback(() => {
+        const speechWindow = window as SpeechRecognitionWindow;
+        const SpeechRecognition = speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition;
+
+        if (!SpeechRecognition || loadingRef.current) return;
+
+        if (isListening) {
+            speechRecognitionRef.current?.stop();
+            return;
+        }
+
+        const recognition = new SpeechRecognition();
+        speechBasePromptRef.current = promptRef.current.trim();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = window.navigator.language || "en-US";
+        recognition.onresult = (event) => {
+            if (speechRecognitionRef.current !== recognition) return;
+
+            let transcript = "";
+            for (let index = 0; index < event.results.length; index += 1) {
+                transcript += `${event.results[index][0].transcript} `;
+            }
+
+            const nextPrompt = [speechBasePromptRef.current, transcript.trim()]
+                .filter(Boolean)
+                .join(" ")
+                .slice(0, MAX_INPUT_CHARS);
+            setPrompt(nextPrompt);
+
+            if (nextPrompt.length >= MAX_INPUT_CHARS) {
+                recognition.stop();
+            }
+        };
+        recognition.onend = () => {
+            if (speechRecognitionRef.current === recognition) {
+                speechRecognitionRef.current = null;
+                setIsListening(false);
+            }
+        };
+        recognition.onerror = () => {
+            // Browser speech services can intermittently report errors such as
+            // "network" or "no-speech". Stop listening without surfacing a
+            // console error, which would trigger Next.js's development overlay.
+            if (speechRecognitionRef.current === recognition) {
+                speechRecognitionRef.current = null;
+                setIsListening(false);
+            }
+        };
+
+        speechRecognitionRef.current = recognition;
+        try {
+            recognition.start();
+            setIsListening(true);
+        } catch {
+            speechRecognitionRef.current = null;
+        }
+    }, [isListening]);
 
     const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             if (loadingRef.current || pendingAttachmentsRef.current.some(a => a.state === "error")) return;
+            stopVoiceInput();
             sendMessage(promptRef.current.trim());
         }
-    }, [sendMessage]);
+    }, [sendMessage, stopVoiceInput]);
 
     const handlePaste = useCallback(async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
         if (loadingRef.current) return;
@@ -1130,6 +1271,9 @@ export function ChatClient({
             onKeyDown={handleKeyDown}
             onPaste={handlePaste}
             onSend={handleSend}
+            isVoiceInputSupported={isVoiceInputSupported}
+            isListening={isListening}
+            onToggleVoiceInput={handleToggleVoiceInput}
             onAttachmentSelect={handleAttachmentSelect}
             onRemoveAttachment={removePendingAttachment}
             onClearAllAttachments={clearAllPendingAttachments}

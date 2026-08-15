@@ -192,6 +192,7 @@ export async function generateContent(
       displayName
         ? `User profile context: the authenticated user's display name is ${JSON.stringify(displayName)}. If the user asks for their name, use this value.`
         : '',
+      'Use the user\'s display name sparingly. It is optional profile context, not a greeting requirement: do not use it in routine replies or default greetings such as "Hello" or "Hi". Only address the user by name when they explicitly ask, when it is genuinely relevant to the task, or when it would feel especially natural; avoid repeating it.',
     ].filter(Boolean).join('\n\n');
     const response = await ai.models.generateContent({
       model,
