@@ -23,6 +23,7 @@ import { ChatClient } from "./chat-client";
 import { NoteClient } from "./note-client";
 import { listChats, deleteChat, deleteAllChats, togglePinChat, type Chat } from "./chat-actions";
 import { listNotes, deleteNote, deleteAllNotes, createNote, togglePinNote, type Note } from "./note-actions";
+import type { UserProfile } from "./profile";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -38,14 +39,13 @@ import {
 type ActiveView = { type: 'chat'; id: string | null } | { type: 'note'; id: string | null };
 
 interface PageClientProps {
-  user: {
-    email: string;
-  };
+  user: UserProfile;
   signout?: () => Promise<void>;
   initialThinkingEffort: ThinkingEffort | null;
 }
 
 export function PageClient({ user, signout, initialThinkingEffort }: PageClientProps) {
+  const [profile, setProfile] = useState(user);
   const [activeView, setActiveView] = useState<ActiveView>({ type: 'chat', id: null });
   const [chatTitle, setChatTitle] = useState("New chat");
   const [noteTitle, setNoteTitle] = useState("New note");
@@ -257,7 +257,8 @@ export function PageClient({ user, signout, initialThinkingEffort }: PageClientP
   return (
     <SidebarProvider className="h-svh overflow-hidden">
       <AppSidebar
-        user={user}
+        user={profile}
+        onProfileUpdated={setProfile}
         signout={signout}
         onNewChat={handleNewChat}
         chats={chats}

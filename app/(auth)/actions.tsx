@@ -37,13 +37,29 @@ export async function signup(prevState: ActionState | null, formData: FormData):
     const email = String(formData.get('email') || '')
     const password = String(formData.get('password') || '')
     const captchaToken = String(formData.get('captchaToken') || '')
+    const displayName = String(formData.get('displayName') || '').trim()
+
+    if (!displayName) {
+        return { error: 'Name is required.' };
+    }
+
+    if (displayName.length > 80) {
+        return { error: 'Name must be 80 characters or fewer.' };
+    }
 
     const passwordError = validatePassword(password);
     if (passwordError) {
         return { error: passwordError };
     }
 
-    const {error} = await supabase.auth.signUp({email, password, options: { captchaToken }});
+    const {error} = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+            captchaToken,
+            data: { display_name: displayName },
+        },
+    });
 
     if (error) {
         return { error: error.message };

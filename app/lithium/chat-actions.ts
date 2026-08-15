@@ -97,7 +97,7 @@ export async function generateContent(
   attachments: AttachmentRef[] = [],
   effort: ThinkingEffort = 'auto',
 ) {
-  const { supabase } = await getAuthenticatedClient();
+  const { supabase, user } = await getAuthenticatedClient();
 
   if (!ALLOWED_MODEL_IDS.has(model)) {
     return "Sorry, the requested model is not available.";
@@ -181,10 +181,27 @@ export async function generateContent(
 
   try {
     const thinkingConfig = buildThinkingConfig(model, effort);
+    const displayName = typeof user.user_metadata?.display_name === 'string'
+      ? user.user_metadata.display_name.trim()
+      : '';
+    const customSystemInstruction = typeof user.user_metadata?.system_instruction === 'string'
+      ? user.user_metadata.system_instruction.trim()
+      : '';
+    const systemInstruction = [
+      customSystemInstruction,
+      displayName
+        ? `User profile context: the authenticated user's display name is ${JSON.stringify(displayName)}. If the user asks for their name, use this value.`
+        : '',
+    ].filter(Boolean).join('\n\n');
     const response = await ai.models.generateContent({
       model,
       contents,
-      ...(thinkingConfig ? { config: { thinkingConfig } } : {}),
+      ...((thinkingConfig || systemInstruction) ? {
+        config: {
+          ...(thinkingConfig ? { thinkingConfig } : {}),
+          ...(systemInstruction ? { systemInstruction } : {}),
+        },
+      } : {}),
     });
     return response.text;
   } catch (error: any) {
