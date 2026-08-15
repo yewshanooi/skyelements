@@ -311,40 +311,6 @@ export function SettingsDialog({
           }
         />
         <SettingsRow
-          label="Custom instructions"
-          wideAction
-          compactAction
-          alignTop
-          action={
-            <div className="flex w-full items-start gap-2">
-              <Textarea
-                aria-label="Custom instructions"
-                className="min-w-0 flex-1 field-sizing-fixed resize-none overflow-y-auto scrollbar-thin text-sm"
-                value={systemInstruction}
-                maxLength={4000}
-                rows={5}
-                placeholder="Additional behavior, style, and tone preferences"
-                onChange={(event) => {
-                  setSystemInstruction(event.target.value)
-                  setProfileError(null)
-                }}
-              />
-              {systemInstruction !== savedSystemInstruction && (
-                <Button
-                  type="button"
-                  size="icon-sm"
-                  variant="ghost"
-                  onClick={handleSaveProfile}
-                  disabled={savingProfile}
-                  aria-label="Save custom instructions"
-                >
-                  {savingProfile ? <LoaderCircle className="size-4 animate-spin" /> : <Check className="size-4" />}
-                </Button>
-              )}
-            </div>
-          }
-        />
-        <SettingsRow
           label="Email"
           action={
             <span
@@ -417,31 +383,66 @@ export function SettingsDialog({
     </>
   )
 
-  const appearanceSection = (
-    <SettingsSection
-      title="Theme"
-      description="Choose your preferred color."
-    >
-      <div className="grid grid-cols-3 gap-2 sm:gap-3">
-        {themeOptions.map(({ value, label, icon: Icon }) => {
-          const isActive = theme === value
-          return (
+  const personalizationSection = (
+    <>
+      <SettingsSection
+        title="Custom instructions"
+        description="Additional behavior, style, and tone preferences."
+      >
+        <div className="flex w-full items-start gap-2">
+          <Textarea
+            aria-label="Custom instructions"
+            className="min-w-0 flex-1 field-sizing-fixed resize-none overflow-y-auto scrollbar-thin text-sm"
+            value={systemInstruction}
+            maxLength={1000}
+            rows={4}
+            onChange={(event) => {
+              setSystemInstruction(event.target.value)
+              setProfileError(null)
+            }}
+          />
+          {systemInstruction !== savedSystemInstruction && (
             <Button
-              key={value}
               type="button"
-              variant="secondary"
-              onClick={() => setTheme(value)}
-              className={`h-auto flex-col gap-1.5 py-3 sm:py-4 border-2 ${
-                isActive ? "border-foreground" : "border-transparent"
-              }`}
+              size="icon-sm"
+              variant="ghost"
+              onClick={handleSaveProfile}
+              disabled={savingProfile}
+              aria-label="Save custom instructions"
             >
-              <Icon className="size-5" />
-              <span className="text-xs sm:text-sm font-medium">{label}</span>
+              {savingProfile ? <LoaderCircle className="size-4 animate-spin" /> : <Check className="size-4" />}
             </Button>
-          )
-        })}
-      </div>
-    </SettingsSection>
+          )}
+        </div>
+      </SettingsSection>
+
+      <Separator />
+
+      <SettingsSection
+        title="Theme"
+        description="Choose your preferred color."
+      >
+        <div className="grid grid-cols-3 gap-2 sm:gap-3">
+          {themeOptions.map(({ value, label, icon: Icon }) => {
+            const isActive = theme === value
+            return (
+              <Button
+                key={value}
+                type="button"
+                variant="secondary"
+                onClick={() => setTheme(value)}
+                className={`h-auto flex-col gap-1.5 py-3 sm:py-4 border-2 ${
+                  isActive ? "border-foreground" : "border-transparent"
+                }`}
+              >
+                <Icon className="size-5" />
+                <span className="text-xs sm:text-sm font-medium">{label}</span>
+              </Button>
+            )
+          })}
+        </div>
+      </SettingsSection>
+    </>
   )
 
   const dataSection = (
@@ -535,7 +536,7 @@ export function SettingsDialog({
             <div className="flex flex-col gap-1">
               <DialogTitle className="text-base sm:text-lg">Settings</DialogTitle>
               <DialogDescription className="sr-only">
-                Manage your account, appearance, and data preferences.
+                Manage your account, personalization, and data preferences.
               </DialogDescription>
             </div>
             <DialogClose
@@ -551,7 +552,7 @@ export function SettingsDialog({
               <div className="space-y-8">
                 {accountSection}
                 <Separator />
-                {appearanceSection}
+                {personalizationSection}
                 <Separator />
                 {dataSection}
               </div>
@@ -574,11 +575,11 @@ export function SettingsDialog({
                   Account
                 </TabsTrigger>
                 <TabsTrigger
-                  value="appearance"
+                  value="personalization"
                   className="gap-2 px-3 py-2 text-sm rounded-md data-[state=active]:bg-accent justify-start"
                 >
                   <Palette className="size-4" />
-                  Appearance
+                  Personalization
                 </TabsTrigger>
                 <TabsTrigger
                   value="data"
@@ -593,8 +594,8 @@ export function SettingsDialog({
                 <TabsContent value="account" className="space-y-6 m-0">
                   {accountSection}
                 </TabsContent>
-                <TabsContent value="appearance" className="space-y-6 m-0">
-                  {appearanceSection}
+                <TabsContent value="personalization" className="space-y-6 m-0">
+                  {personalizationSection}
                 </TabsContent>
                 <TabsContent value="data" className="space-y-6 m-0">
                   {dataSection}

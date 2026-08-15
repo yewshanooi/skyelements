@@ -649,13 +649,13 @@ const InputArea = memo(function InputArea({
                         className={`shrink-0 ${isListening ? "rounded-full text-destructive" : "rounded-full"}`}
                         size="icon-xs"
                         onClick={onToggleVoiceInput}
-                        title={!isVoiceInputSupported ? "Voice input is not supported in this browser" : isListening ? "Stop dictating" : "Dictate"}
-                        aria-label={!isVoiceInputSupported ? "Voice input is not supported in this browser" : isListening ? "Stop dictating" : "Dictate"}
+                        title={!isVoiceInputSupported ? "Voice input is not supported in this browser" : isListening ? "Stop dictation" : "Dictate"}
+                        aria-label={!isVoiceInputSupported ? "Voice input is not supported in this browser" : isListening ? "Stop dictation" : "Dictate"}
                         aria-pressed={isListening}
                         disabled={isInputDisabled || !isVoiceInputSupported}
                     >
                         {isListening ? <MicOff /> : <Mic />}
-                        <span className="sr-only">{isListening ? "Stop dictating" : "Dictate"}</span>
+                        <span className="sr-only">{isListening ? "Stop dictation" : "Dictate"}</span>
                     </InputGroupButton>
                     <InputGroupButton
                         variant="default"
