@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef, memo } from "react";
-import { ArrowUpIcon, Gauge, CheckIcon, ChevronDown, ChevronDownIcon, CopyIcon, Paperclip, FileText, X, SearchIcon, FileWarning, Mic, MicOff } from "lucide-react";
+import { ArrowUpIcon, Gauge, CheckIcon, ChevronDown, CopyIcon, Paperclip, FileText, X, SearchIcon, FileWarning, Mic, MicOff } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
@@ -46,9 +46,8 @@ import {
     type ChatMessage,
     type AttachmentRef,
 } from "./chat-actions";
-import { SUPPORTED_MIME_TYPES, isImageMimeType } from "@/lib/file-types";
+import { SUPPORTED_MIME_TYPES, isImageMimeType, MAX_INPUT_CHARS } from "@/lib/chat-context";
 import { createClient } from "@/utils/supabase/client";
-import { MAX_INPUT_CHARS } from "@/lib/chat-context";
 import {
     getThinkingOptions,
     MODELS,
@@ -317,7 +316,7 @@ const MessageItem = memo(function MessageItem({ msg }: { msg: DisplayMessage }) 
                                     <CollapsibleTrigger asChild>
                                         <Button variant="link" className="gap-1 p-0 text-muted-foreground">
                                             {open ? 'Show less' : 'Show more'}
-                                            <ChevronDownIcon
+                                            <ChevronDown
                                                 data-icon="inline-end"
                                                 className={`transition-transform ${open ? 'rotate-180' : ''}`}
                                             />
@@ -370,7 +369,6 @@ const InputArea = memo(function InputArea({
     setSelectedModel,
     effort,
     setEffort,
-    effortReady,
     isOverLimit,
     isDraggingOver,
     fileInputRef,
@@ -397,7 +395,6 @@ const InputArea = memo(function InputArea({
     setSelectedModel: (id: string) => void;
     effort: ThinkingEffort;
     setEffort: (effort: ThinkingEffort) => void;
-    effortReady: boolean;
     isOverLimit: boolean;
     isDraggingOver: boolean;
     fileInputRef: React.RefObject<HTMLInputElement | null>;
@@ -596,10 +593,7 @@ const InputArea = memo(function InputArea({
                                 <DropdownMenuSubTrigger className="hidden cursor-pointer sm:flex">
                                     <Gauge />
                                     <span>Thinking</span>
-                                    <span
-                                        className={`ml-auto mr-1 text-xs text-muted-foreground ${effortReady ? '' : 'invisible'}`}
-                                        aria-hidden={!effortReady}
-                                    >
+                                    <span className="ml-auto mr-1 text-xs text-muted-foreground">
                                         {selectedEffort.label}
                                     </span>
                                 </DropdownMenuSubTrigger>
@@ -701,7 +695,6 @@ export function ChatClient({
     const [showLoadingBar, setShowLoadingBar] = useState(false);
     const [selectedModel, setSelectedModel] = useState("gemini-3.5-flash-lite");
     const [effort, setEffort] = useState<ThinkingEffort>(thinkingEffort);
-    const effortReady = true;
     const [currentChatId, setCurrentChatId] = useState<string | null>(chatId ?? null);
     const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
     const [attachmentError, setAttachmentError] = useState<string | null>(null);
@@ -783,26 +776,20 @@ export function ChatClient({
             };
         }
 
-        if (isImage) {
-            const useCompression = file.size > 512 * 1024;
-            if (useCompression) {
-                try {
-                    const { blob, previewUrl } = await compressImage(file);
-                    return {
-                        id,
-                        file: blob,
-                        mimeType: blob.type || 'image/webp',
-                        fileName: file.name,
-                        previewUrl,
-                        state: "done",
-                    };
-                } catch {
-                    const previewUrl = URL.createObjectURL(file);
-                    return { id, file, mimeType: file.type, fileName: file.name, previewUrl, state: "done" };
-                }
+        if (isImage && file.size > 512 * 1024) {
+            try {
+                const { blob, previewUrl } = await compressImage(file);
+                return {
+                    id,
+                    file: blob,
+                    mimeType: blob.type || 'image/webp',
+                    fileName: file.name,
+                    previewUrl,
+                    state: "done",
+                };
+            } catch {
+                // Fall through to default return
             }
-            const previewUrl = URL.createObjectURL(file);
-            return { id, file, mimeType: file.type, fileName: file.name, previewUrl, state: "done" };
         }
 
         const previewUrl = URL.createObjectURL(file);
@@ -1249,9 +1236,6 @@ export function ChatClient({
         setPrompt(e.target.value.slice(0, MAX_INPUT_CHARS));
     }, []);
 
-    const handleModelChange = useCallback((id: string) => {
-        setSelectedModel(id);
-    }, []);
 
     const inputArea = (
         <InputArea
@@ -1260,10 +1244,9 @@ export function ChatClient({
             pendingAttachments={pendingAttachments}
             attachmentError={attachmentError}
             selectedModelInfo={selectedModelInfo}
-            setSelectedModel={handleModelChange}
+            setSelectedModel={setSelectedModel}
             effort={effort}
             setEffort={handleEffortChange}
-            effortReady={effortReady}
             isOverLimit={isOverLimit}
             isDraggingOver={isDraggingOver}
             fileInputRef={fileInputRef}

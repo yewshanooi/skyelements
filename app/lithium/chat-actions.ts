@@ -7,7 +7,7 @@ import {
   type ThinkingEffort,
 } from "@/lib/models";
 import { buildOptimizedHistory } from "@/lib/chat-context";
-import { getAuthenticatedClient } from "./auth";
+import { getAuthenticatedClient } from "./profile";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -24,7 +24,6 @@ export type FileAttachment = {
   fileName: string;
 };
 
-/** Stored attachment reference passed from the client */
 export type AttachmentRef = {
   storagePath: string;
   mimeType: string;
@@ -101,11 +100,6 @@ export async function generateContent(
 
   if (!ALLOWED_MODEL_IDS.has(model)) {
     return "Sorry, the requested model is not available.";
-  }
-
-  if (!process.env.GOOGLE_API_KEY) {
-    console.error("GOOGLE_API_KEY environment variable is not set.");
-    return "Sorry, I couldn't generate a response at this time.";
   }
 
   // Optimize history to fit within model context budget
@@ -190,9 +184,9 @@ export async function generateContent(
     const systemInstruction = [
       customSystemInstruction,
       displayName
-        ? `User profile context: the authenticated user's display name is ${JSON.stringify(displayName)}. If the user asks for their name, use this value.`
+        ? `User profile context: the user's display name is ${JSON.stringify(displayName)}.`
         : '',
-      'Use the user\'s display name sparingly. It is optional profile context, not a greeting requirement: do not use it in routine replies or default greetings such as "Hello" or "Hi". Only address the user by name when they explicitly ask, when it is genuinely relevant to the task, or when it would feel especially natural; avoid repeating it.',
+      'Use the user\'s display name sparingly. It is an optional profile context, not a requirement: do not use it in routine replies or default greetings such as "Hello" or "Hi". Only address the user by name when they explicitly ask, when it is genuinely relevant to the task, or when it would feel especially natural; avoid repeating it.',
     ].filter(Boolean).join('\n\n');
     const response = await ai.models.generateContent({
       model,

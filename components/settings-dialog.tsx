@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
   Check,
-  Clipboard,
+  Copy,
   KeyRound,
   LogOut,
   LoaderCircle,
@@ -86,6 +86,7 @@ export function SettingsDialog({
   const [deleteAllChatsOpen, setDeleteAllChatsOpen] = useState(false)
   const [deleteAllNotesOpen, setDeleteAllNotesOpen] = useState(false)
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false)
+  const [signoutOpen, setSignoutOpen] = useState(false)
   const [displayName, setDisplayName] = useState(user.displayName)
   const [savedDisplayName, setSavedDisplayName] = useState(user.displayName)
   const [avatarUrl, setAvatarUrl] = useState(user.avatarUrl)
@@ -96,7 +97,6 @@ export function SettingsDialog({
   const [savedSystemInstruction, setSavedSystemInstruction] = useState(user.systemInstruction)
   const [savingProfile, setSavingProfile] = useState(false)
   const [profileError, setProfileError] = useState<string | null>(null)
-  const [profileSaved, setProfileSaved] = useState(false)
   const [uuidCopied, setUuidCopied] = useState(false)
   const [deletingAccount, setDeletingAccount] = useState(false)
   const [accountError, setAccountError] = useState<string | null>(null)
@@ -126,20 +126,37 @@ export function SettingsDialog({
     }
 
     setProfileError(null)
-    setProfileSaved(false)
     setAvatarFile(file)
     setAvatarPreview(URL.createObjectURL(file))
+  }
+
+  const getAvatarStoragePath = (url: string) => {
+    if (!url) return null
+
+    try {
+      const parsedUrl = new URL(url)
+      const pathPrefix = "/storage/v1/object/public/avatars/"
+      const prefixIndex = parsedUrl.pathname.indexOf(pathPrefix)
+      if (prefixIndex === -1) return null
+
+      const path = decodeURIComponent(parsedUrl.pathname.slice(prefixIndex + pathPrefix.length))
+      return path.startsWith(`${user.id}/`) ? path : null
+    } catch {
+      return null
+    }
   }
 
   const handleSaveProfile = async () => {
     setSavingProfile(true)
     setProfileError(null)
-    setProfileSaved(false)
+
+    let supabase: ReturnType<typeof createClient> | null = null
+    let uploadedAvatarPath: string | null = null
 
     try {
       let nextAvatarUrl = avatarUrl
       if (avatarFile) {
-        const supabase = createClient()
+        supabase = createClient()
         const extension = avatarFile.type.split("/")[1] || "png"
         const path = `${user.id}/${crypto.randomUUID()}.${extension}`
         const { error: uploadError } = await supabase.storage
@@ -147,14 +164,30 @@ export function SettingsDialog({
           .upload(path, avatarFile, { contentType: avatarFile.type, upsert: false })
 
         if (uploadError) throw new Error(uploadError.message)
+        uploadedAvatarPath = path
         nextAvatarUrl = supabase.storage.from("avatars").getPublicUrl(path).data.publicUrl
       }
 
+      const previousAvatarUrl = savedAvatarUrl
       const updatedProfile = await updateProfile({
         displayName,
         avatarUrl: nextAvatarUrl,
         systemInstruction,
       })
+
+      const previousAvatarPath = getAvatarStoragePath(previousAvatarUrl)
+      if (previousAvatarPath && previousAvatarPath !== uploadedAvatarPath) {
+        const storageClient = supabase ?? createClient()
+        const { error: removeError } = await storageClient.storage
+          .from("avatars")
+          .remove([previousAvatarPath])
+
+        if (removeError) {
+          console.error("Failed to remove the previous avatar:", removeError)
+          setProfileError("Profile saved, but the previous profile picture could not be removed.")
+        }
+      }
+
       setAvatarUrl(updatedProfile.avatarUrl)
       setSavedAvatarUrl(updatedProfile.avatarUrl)
       setAvatarPreview(updatedProfile.avatarUrl)
@@ -164,8 +197,10 @@ export function SettingsDialog({
       setSystemInstruction(updatedProfile.systemInstruction)
       setSavedSystemInstruction(updatedProfile.systemInstruction)
       onProfileUpdated?.(updatedProfile)
-      setProfileSaved(true)
     } catch (error) {
+      if (uploadedAvatarPath && supabase) {
+        await supabase.storage.from("avatars").remove([uploadedAvatarPath])
+      }
       setProfileError(error instanceof Error ? error.message : "Failed to save your profile.")
     } finally {
       setSavingProfile(false)
@@ -177,7 +212,6 @@ export function SettingsDialog({
     setAvatarUrl("")
     setAvatarPreview("")
     setProfileError(null)
-    setProfileSaved(false)
   }
 
   const handleCopyUuid = async () => {
@@ -225,6 +259,7 @@ export function SettingsDialog({
               </Button>
               {(avatarPreview || avatarFile) && (
                 <Button type="button" size="sm" variant="destructive" onClick={handleRemoveAvatar}>
+                  <Trash2 className="size-4" />
                   Remove
                 </Button>
               )}
@@ -250,7 +285,6 @@ export function SettingsDialog({
           action={
             <div className="flex w-full items-center gap-2">
               <Input
-                id="display-name"
                 aria-label="Name"
                 className="min-w-0 flex-1 text-sm"
                 value={displayName}
@@ -259,7 +293,6 @@ export function SettingsDialog({
                 onChange={(event) => {
                   setDisplayName(event.target.value)
                   setProfileError(null)
-                  setProfileSaved(false)
                 }}
               />
               {displayName !== savedDisplayName && (
@@ -281,10 +314,10 @@ export function SettingsDialog({
           label="Custom instructions"
           wideAction
           compactAction
+          alignTop
           action={
             <div className="flex w-full items-start gap-2">
               <Textarea
-                id="system-instruction"
                 aria-label="Custom instructions"
                 className="min-w-0 flex-1 field-sizing-fixed resize-none overflow-y-auto scrollbar-thin text-sm"
                 value={systemInstruction}
@@ -294,7 +327,6 @@ export function SettingsDialog({
                 onChange={(event) => {
                   setSystemInstruction(event.target.value)
                   setProfileError(null)
-                  setProfileSaved(false)
                 }}
               />
               {systemInstruction !== savedSystemInstruction && (
@@ -340,7 +372,7 @@ export function SettingsDialog({
                 onClick={handleCopyUuid}
                 aria-label={uuidCopied ? "Account UUID copied" : "Copy account UUID"}
               >
-                {uuidCopied ? <Check className="size-4" /> : <Clipboard className="size-4" />}
+                {uuidCopied ? <Check className="size-4" /> : <Copy className="size-4" />}
               </Button>
             </div>
           }
@@ -373,7 +405,7 @@ export function SettingsDialog({
               size="sm"
               variant="secondary"
               className="text-destructive hover:text-destructive"
-              onClick={() => signout?.()}
+              onClick={() => setSignoutOpen(true)}
             >
               <LogOut className="size-4" />
               Sign out
@@ -596,6 +628,29 @@ export function SettingsDialog({
         </AlertDialogContent>
       </AlertDialog>
 
+      <AlertDialog open={signoutOpen} onOpenChange={setSignoutOpen}>
+        <AlertDialogContent size="sm">
+          <AlertDialogHeader>
+            <AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive">
+              <LogOut />
+            </AlertDialogMedia>
+            <AlertDialogTitle>Sign out of your account?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You will be signed out on this device. You can sign back in at any time.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={() => signout?.()}
+            >
+              Confirm
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <AlertDialog open={deleteAllChatsOpen} onOpenChange={setDeleteAllChatsOpen}>
         <AlertDialogContent size="sm">
           <AlertDialogHeader>
@@ -683,20 +738,24 @@ function SettingsRow({
   action,
   wideAction = false,
   compactAction = false,
+  alignTop = false,
 }: {
   label: string
   description?: string
   action?: React.ReactNode
   wideAction?: boolean
   compactAction?: boolean
+  alignTop?: boolean
 }) {
   return (
     <div
       className={`flex min-h-9 items-center justify-between gap-3 sm:gap-4 ${
-        wideAction ? "flex-col items-stretch sm:flex-row sm:items-center" : ""
+        wideAction
+          ? `flex-col items-stretch sm:flex-row ${alignTop ? "sm:items-start" : "sm:items-center"}`
+          : ""
       }`}
     >
-      <div className="min-w-0 flex-1">
+      <div className={`min-w-0 flex-1 ${alignTop ? "sm:pt-2" : ""}`}>
         <p className="text-sm font-medium">{label}</p>
         {description && (
           <p className="text-xs text-muted-foreground mt-0.5">

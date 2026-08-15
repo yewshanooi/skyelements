@@ -118,11 +118,11 @@ export async function signout() {
     redirect('/')
 }
 
-export async function signInWithGoogle(formData?: FormData) {
+async function signInWithOAuthProvider(provider: 'google' | 'notion') {
     const supabase = await createActionClient();
 
     const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
+        provider,
         options: {
             redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback?next=/lithium`,
         },
@@ -138,22 +138,10 @@ export async function signInWithGoogle(formData?: FormData) {
     }
 }
 
+export async function signInWithGoogle(formData?: FormData) {
+    return signInWithOAuthProvider('google');
+}
+
 export async function signInWithNotion(formData?: FormData) {
-    const supabase = await createActionClient();
-
-    const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'notion',
-        options: {
-            redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback?next=/lithium`,
-        },
-    });
-
-    if (error) {
-        console.error(error.message);
-        return;
-    }
-
-    if (data.url) {
-        redirect(data.url);
-    }
+    return signInWithOAuthProvider('notion');
 }
