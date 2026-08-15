@@ -37,13 +37,29 @@ export async function signup(prevState: ActionState | null, formData: FormData):
     const email = String(formData.get('email') || '')
     const password = String(formData.get('password') || '')
     const captchaToken = String(formData.get('captchaToken') || '')
+    const displayName = String(formData.get('displayName') || '').trim()
+
+    if (!displayName) {
+        return { error: 'Name is required.' };
+    }
+
+    if (displayName.length > 80) {
+        return { error: 'Name must be 80 characters or fewer.' };
+    }
 
     const passwordError = validatePassword(password);
     if (passwordError) {
         return { error: passwordError };
     }
 
-    const {error} = await supabase.auth.signUp({email, password, options: { captchaToken }});
+    const {error} = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+            captchaToken,
+            data: { display_name: displayName },
+        },
+    });
 
     if (error) {
         return { error: error.message };
@@ -102,11 +118,11 @@ export async function signout() {
     redirect('/')
 }
 
-export async function signInWithGoogle(formData?: FormData) {
+async function signInWithOAuthProvider(provider: 'google' | 'notion') {
     const supabase = await createActionClient();
 
     const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
+        provider,
         options: {
             redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback?next=/lithium`,
         },
@@ -122,22 +138,10 @@ export async function signInWithGoogle(formData?: FormData) {
     }
 }
 
+export async function signInWithGoogle(formData?: FormData) {
+    return signInWithOAuthProvider('google');
+}
+
 export async function signInWithNotion(formData?: FormData) {
-    const supabase = await createActionClient();
-
-    const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'notion',
-        options: {
-            redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback?next=/lithium`,
-        },
-    });
-
-    if (error) {
-        console.error(error.message);
-        return;
-    }
-
-    if (data.url) {
-        redirect(data.url);
-    }
+    return signInWithOAuthProvider('notion');
 }

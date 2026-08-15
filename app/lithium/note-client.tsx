@@ -12,7 +12,6 @@ import { Editor } from "@/components/blocks/editor-00/editor";
 
 interface NoteClientProps {
   noteId?: string | null;
-  onNoteCreated?: (noteId: string, title: string) => void;
   onNoteActivity?: (noteId: string, title: string) => void;
 }
 
@@ -27,6 +26,8 @@ export function NoteClient({ noteId, onNoteActivity }: NoteClientProps) {
   const titleRef = useRef<HTMLInputElement>(null);
   const titleSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const contentSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const activeNoteIdRef = useRef<string | null>(noteId ?? null);
+  const noteRequestRef = useRef<{ noteId: string; promise: Promise<Note> } | null>(null);
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;
@@ -40,11 +41,21 @@ export function NoteClient({ noteId, onNoteActivity }: NoteClientProps) {
 
   // Load note when noteId changes
   useEffect(() => {
-    setCurrentNoteId(noteId ?? null);
-    if (noteId) {
+    const activeNoteId = noteId ?? null;
+    activeNoteIdRef.current = activeNoteId;
+    setCurrentNoteId(activeNoteId);
+
+    if (activeNoteId) {
+      // React replays mount effects in development. Reuse the existing request
+      // so viewing a note does not issue a second server action request.
+      if (noteRequestRef.current?.noteId === activeNoteId) return;
+
       setLoading(true);
-      getNote(noteId)
+      const request = getNote(activeNoteId);
+      noteRequestRef.current = { noteId: activeNoteId, promise: request };
+      request
         .then((note: Note) => {
+          if (activeNoteIdRef.current !== activeNoteId) return;
           setTitle(note.title);
           try {
             setEditorState(note.content ? JSON.parse(note.content) : undefined);
@@ -55,9 +66,10 @@ export function NoteClient({ noteId, onNoteActivity }: NoteClientProps) {
           setLoading(false);
         })
         .catch(() => {
-          setLoading(false);
+          if (activeNoteIdRef.current === activeNoteId) setLoading(false);
         });
     } else {
+      noteRequestRef.current = null;
       setTitle("");
       setEditorState(undefined);
       setEditorKey(prev => prev + 1);

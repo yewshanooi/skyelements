@@ -23,6 +23,7 @@ import { ChatClient } from "./chat-client";
 import { NoteClient } from "./note-client";
 import { listChats, deleteChat, deleteAllChats, togglePinChat, type Chat } from "./chat-actions";
 import { listNotes, deleteNote, deleteAllNotes, createNote, togglePinNote, type Note } from "./note-actions";
+import type { UserProfile } from "./profile";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -38,21 +39,19 @@ import {
 type ActiveView = { type: 'chat'; id: string | null } | { type: 'note'; id: string | null };
 
 interface PageClientProps {
-  user: {
-    email: string;
-  };
+  user: UserProfile;
   signout?: () => Promise<void>;
   initialThinkingEffort: ThinkingEffort | null;
 }
 
 export function PageClient({ user, signout, initialThinkingEffort }: PageClientProps) {
+  const [profile, setProfile] = useState(user);
   const [activeView, setActiveView] = useState<ActiveView>({ type: 'chat', id: null });
   const [chatTitle, setChatTitle] = useState("New chat");
   const [noteTitle, setNoteTitle] = useState("New note");
   const [chats, setChats] = useState<Chat[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
   const [chatKey, setChatKey] = useState(0);
-  const [noteKey, setNoteKey] = useState(0);
   const [thinkingEffort, setThinkingEffort] = useState<ThinkingEffort>(initialThinkingEffort ?? 'auto');
 
   // The server cookie supplies the initial value. Once hydrated, keep the
@@ -164,7 +163,6 @@ export function PageClient({ user, signout, initialThinkingEffort }: PageClientP
       ]));
       setActiveView({ type: 'note', id: note.id });
       setNoteTitle('New note');
-      setNoteKey(prev => prev + 1);
     } catch (error) {
       console.error('Failed to create note:', error);
     }
@@ -173,26 +171,12 @@ export function PageClient({ user, signout, initialThinkingEffort }: PageClientP
   const handleSelectNote = useCallback((noteId: string) => {
     setActiveView(prev => {
       if (prev.type === 'note' && prev.id === noteId) return prev;
-      setNoteKey(k => k + 1);
       return { type: 'note', id: noteId };
     });
     setNotes(prev => {
       const note = prev.find(n => n.id === noteId);
       setNoteTitle(note?.title || "New note");
       return prev;
-    });
-  }, []);
-
-  const handleNoteCreated = useCallback((noteId: string, title: string) => {
-    setActiveView({ type: 'note', id: noteId });
-    setNoteTitle(title);
-    setNotes(prev => {
-      if (prev.some(n => n.id === noteId)) return prev;
-      const now = new Date().toISOString();
-      return sortByPinned([
-        { id: noteId, title, content: '', user_id: '', is_pinned: false, created_at: now, updated_at: now } as Note,
-        ...prev,
-      ]);
     });
   }, []);
 
@@ -257,7 +241,8 @@ export function PageClient({ user, signout, initialThinkingEffort }: PageClientP
   return (
     <SidebarProvider className="h-svh overflow-hidden">
       <AppSidebar
-        user={user}
+        user={profile}
+        onProfileUpdated={setProfile}
         signout={signout}
         onNewChat={handleNewChat}
         chats={chats}
@@ -304,9 +289,7 @@ export function PageClient({ user, signout, initialThinkingEffort }: PageClientP
             />
           ) : (
             <NoteClient
-              key={noteKey}
               noteId={activeView.id}
-              onNoteCreated={handleNoteCreated}
               onNoteActivity={handleNoteActivity}
             />
           )}
@@ -316,4 +299,3 @@ export function PageClient({ user, signout, initialThinkingEffort }: PageClientP
     </SidebarProvider>
   );
 }
-

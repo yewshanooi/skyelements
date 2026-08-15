@@ -44,6 +44,16 @@ export default function SignupForm() {
                         <form action={formAction}>
                             <FieldGroup>
                                 <Field>
+                                    <FieldLabel htmlFor="displayName">Name</FieldLabel>
+                                    <Input
+                                        id="displayName"
+                                        name="displayName"
+                                        type="text"
+                                        maxLength={80}
+                                        required
+                                    />
+                                </Field>
+                                <Field>
                                     <FieldLabel htmlFor="email">Email</FieldLabel>
                                     <Input 
                                         id="email" 

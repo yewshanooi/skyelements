@@ -7,7 +7,7 @@ import {
   type ThinkingEffort,
 } from "@/lib/models";
 import { buildOptimizedHistory } from "@/lib/chat-context";
-import { getAuthenticatedClient } from "./auth";
+import { getAuthenticatedClient } from "./profile";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -24,7 +24,6 @@ export type FileAttachment = {
   fileName: string;
 };
 
-/** Stored attachment reference passed from the client */
 export type AttachmentRef = {
   storagePath: string;
   mimeType: string;
@@ -97,15 +96,10 @@ export async function generateContent(
   attachments: AttachmentRef[] = [],
   effort: ThinkingEffort = 'auto',
 ) {
-  const { supabase } = await getAuthenticatedClient();
+  const { supabase, user } = await getAuthenticatedClient();
 
   if (!ALLOWED_MODEL_IDS.has(model)) {
     return "Sorry, the requested model is not available.";
-  }
-
-  if (!process.env.GOOGLE_API_KEY) {
-    console.error("GOOGLE_API_KEY environment variable is not set.");
-    return "Sorry, I couldn't generate a response at this time.";
   }
 
   // Optimize history to fit within model context budget
@@ -181,10 +175,28 @@ export async function generateContent(
 
   try {
     const thinkingConfig = buildThinkingConfig(model, effort);
+    const displayName = typeof user.user_metadata?.display_name === 'string'
+      ? user.user_metadata.display_name.trim()
+      : '';
+    const customSystemInstruction = typeof user.user_metadata?.system_instruction === 'string'
+      ? user.user_metadata.system_instruction.trim()
+      : '';
+    const systemInstruction = [
+      customSystemInstruction,
+      displayName
+        ? `User profile context: the user's display name is ${JSON.stringify(displayName)}.`
+        : '',
+      'Use the user\'s display name sparingly. It is an optional profile context, not a requirement: do not use it in routine replies or default greetings such as "Hello" or "Hi". Only address the user by name when they explicitly ask, when it is genuinely relevant to the task, or when it would feel especially natural; avoid repeating it.',
+    ].filter(Boolean).join('\n\n');
     const response = await ai.models.generateContent({
       model,
       contents,
-      ...(thinkingConfig ? { config: { thinkingConfig } } : {}),
+      ...((thinkingConfig || systemInstruction) ? {
+        config: {
+          ...(thinkingConfig ? { thinkingConfig } : {}),
+          ...(systemInstruction ? { systemInstruction } : {}),
+        },
+      } : {}),
     });
     return response.text;
   } catch (error: any) {
