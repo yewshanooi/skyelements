@@ -1,9 +1,11 @@
-export type ThinkingEffort = 'auto' | 'minimal' | 'low' | 'medium' | 'high';
+export type ThinkingEffort = 'low' | 'medium' | 'high';
+
+export const DEFAULT_THINKING_EFFORT: ThinkingEffort = 'medium';
 
 export const THINKING_EFFORT_PREFERENCE_KEY = 'lithium-thinking-effort';
 
 export function isThinkingEffort(value: unknown): value is ThinkingEffort {
-  return value === 'auto' || value === 'minimal' || value === 'low' || value === 'medium' || value === 'high';
+  return value === 'low' || value === 'medium' || value === 'high';
 }
 
 export type ThinkingOption = {
@@ -11,7 +13,7 @@ export type ThinkingOption = {
   label: string;
 };
 
-type ThinkingLevel = Exclude<ThinkingEffort, 'auto'>;
+type ThinkingLevel = ThinkingEffort;
 
 export type ModelDefinition = {
   id: string;
@@ -21,7 +23,7 @@ export type ModelDefinition = {
   thinking?: readonly ThinkingLevel[];
 };
 
-const GEMINI_THINKING_LEVELS: readonly ThinkingLevel[] = ['minimal', 'low', 'medium', 'high'];
+const GEMINI_THINKING_LEVELS: readonly ThinkingLevel[] = ['low', 'medium', 'high'];
 
 export const MODELS: ModelDefinition[] = [
   { id: 'gemini-3.5-flash-lite', label: 'Gemini 3.5 Flash', icon: '/lithium/google.svg', shortcut: 'Lite', thinking: GEMINI_THINKING_LEVELS },
@@ -40,19 +42,16 @@ export function getThinkingOptions(model?: string): ThinkingOption[] {
   const levels = model ? getModelDefinition(model)?.thinking : GEMINI_THINKING_LEVELS;
   if (!levels) return [];
 
-  return [
-    { value: 'auto', label: 'Auto' },
-    ...levels.map(value => ({
-      value,
-      label: value[0].toUpperCase() + value.slice(1),
-    })),
-  ];
+  return levels.map(value => ({
+    value,
+    label: value[0].toUpperCase() + value.slice(1),
+  }));
 }
 
 /** Normalize untrusted client input before it reaches the model API. */
 export function normalizeThinkingEffort(model: string, effort: unknown): ThinkingEffort {
   const levels = getModelDefinition(model)?.thinking;
-  if (!levels || !isThinkingEffort(effort) || effort === 'auto') return 'auto';
+  if (!levels || !isThinkingEffort(effort)) return DEFAULT_THINKING_EFFORT;
 
-  return levels.includes(effort) ? effort : 'auto';
+  return levels.includes(effort) ? effort : DEFAULT_THINKING_EFFORT;
 }

@@ -3,6 +3,7 @@
 import { GoogleGenAI, Content, ThinkingLevel, type ThinkingConfig } from "@google/genai";
 import {
   ALLOWED_MODEL_IDS,
+  DEFAULT_THINKING_EFFORT,
   normalizeThinkingEffort,
   type ThinkingEffort,
 } from "@/lib/models";
@@ -62,18 +63,15 @@ export type MessageWithAttachments = Message & {
   attachments: (MessageAttachment & { signedFileUrl: string | null })[];
 };
 
-const THINKING_LEVELS: Record<Exclude<ThinkingEffort, 'auto'>, ThinkingLevel> = {
-  minimal: ThinkingLevel.MINIMAL,
+const THINKING_LEVELS: Record<ThinkingEffort, ThinkingLevel> = {
   low: ThinkingLevel.LOW,
   medium: ThinkingLevel.MEDIUM,
   high: ThinkingLevel.HIGH,
 };
 
-function buildThinkingConfig(model: string, effort: unknown): ThinkingConfig | undefined {
+function buildThinkingConfig(model: string, effort: unknown): ThinkingConfig {
   const normalizedEffort = normalizeThinkingEffort(model, effort);
-  return normalizedEffort === 'auto'
-    ? undefined
-    : { thinkingLevel: THINKING_LEVELS[normalizedEffort] };
+  return { thinkingLevel: THINKING_LEVELS[normalizedEffort] };
 }
 
 // Lazily cached AI client – reused across requests within the same server process.
@@ -94,7 +92,7 @@ export async function generateContent(
   model: string = "gemini-3.5-flash-lite",
   history: ChatMessage[] = [],
   attachments: AttachmentRef[] = [],
-  effort: ThinkingEffort = 'auto',
+  effort: ThinkingEffort = DEFAULT_THINKING_EFFORT,
 ) {
   const { supabase, user } = await getAuthenticatedClient();
 

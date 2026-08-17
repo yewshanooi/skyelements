@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import {
+  DEFAULT_THINKING_EFFORT,
   isThinkingEffort,
   THINKING_EFFORT_PREFERENCE_KEY,
   type ThinkingEffort,
@@ -52,7 +53,7 @@ export function PageClient({ user, signout, initialThinkingEffort }: PageClientP
   const [chats, setChats] = useState<Chat[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
   const [chatKey, setChatKey] = useState(0);
-  const [thinkingEffort, setThinkingEffort] = useState<ThinkingEffort>(initialThinkingEffort ?? 'auto');
+  const [thinkingEffort, setThinkingEffort] = useState<ThinkingEffort>(initialThinkingEffort ?? DEFAULT_THINKING_EFFORT);
 
   // The server cookie supplies the initial value. Once hydrated, keep the
   // client preference in this stable parent so chat remounts do not reset it.

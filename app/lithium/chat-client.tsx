@@ -49,6 +49,7 @@ import {
 import { SUPPORTED_MIME_TYPES, isImageMimeType, MAX_INPUT_CHARS } from "@/lib/chat-context";
 import { createClient } from "@/utils/supabase/client";
 import {
+    DEFAULT_THINKING_EFFORT,
     getThinkingOptions,
     MODELS,
     THINKING_EFFORT_PREFERENCE_KEY,
@@ -422,7 +423,9 @@ const InputArea = memo(function InputArea({
         () => getThinkingOptions(selectedModelInfo.id),
         [selectedModelInfo.id]
     );
-    const selectedEffort = thinkingOptions.find(option => option.value === effort) ?? thinkingOptions[0];
+    const selectedEffort = thinkingOptions.find(option => option.value === effort)
+        ?? thinkingOptions.find(option => option.value === DEFAULT_THINKING_EFFORT)
+        ?? thinkingOptions[0];
 
     return (
         <div>
@@ -727,6 +730,10 @@ export function ChatClient({
     const onChatCreatedRef = useLatestRef(onChatCreated);
     const onChatActivityRef = useLatestRef(onChatActivity);
     const onThinkingEffortChangeRef = useLatestRef(onThinkingEffortChange);
+
+    useEffect(() => {
+        setEffort(thinkingEffort);
+    }, [thinkingEffort]);
 
     useEffect(() => {
         const speechWindow = window as SpeechRecognitionWindow;
