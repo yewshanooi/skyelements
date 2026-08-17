@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import {
   Check,
@@ -18,9 +18,11 @@ import {
   Shield,
   Pencil,
   X,
+  type LucideIcon,
 } from "lucide-react"
 import { useTheme } from "next-themes"
 import { isRedirectError } from "next/dist/client/components/redirect-error"
+import { cn } from "@/lib/utils"
 
 import {
   Dialog,
@@ -54,18 +56,102 @@ import type { UserProfile } from "@/app/lithium/profile"
 interface SettingsDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  user: {
-    id: string
-    email: string
-    displayName: string
-    avatarUrl: string
-    systemInstruction: string
-  }
+  user: UserProfile
   signout?: () => Promise<void>
   onDeleteAllChats?: () => Promise<void>
   onDeleteAllNotes?: () => Promise<void>
   onProfileUpdated?: (profile: UserProfile) => void
   onDeleteAccount?: () => Promise<void>
+}
+
+type ConfirmDialogType = "notes" | "chats" | "signout" | "account"
+
+const THEME_OPTIONS = [
+  { value: "system", label: "System", icon: Monitor },
+  { value: "light", label: "Light", icon: Sun },
+  { value: "dark", label: "Dark", icon: Moon },
+] as const
+
+function getAvatarStoragePath(url: string, userId: string): string | null {
+  if (!url) return null
+  try {
+    const parsedUrl = new URL(url)
+    const pathPrefix = "/storage/v1/object/public/avatars/"
+    const prefixIndex = parsedUrl.pathname.indexOf(pathPrefix)
+    if (prefixIndex === -1) return null
+
+    const path = decodeURIComponent(parsedUrl.pathname.slice(prefixIndex + pathPrefix.length))
+    return path.startsWith(`${userId}/`) ? path : null
+  } catch {
+    return null
+  }
+}
+
+async function processAvatarImage(file: File): Promise<{ file: File; previewUrl: string }> {
+  return new Promise((resolve, reject) => {
+    const isImage =
+      file.type.startsWith("image/") ||
+      /\.(jpe?g|png|webp|gif|heic|heif|bmp|svg)$/i.test(file.name)
+    if (!isImage && file.type !== "") {
+      reject(new Error("Please choose an image file."))
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onerror = () => reject(new Error("Failed to read image file."))
+    reader.onload = () => {
+      const dataUrl = reader.result as string
+      const img = new Image()
+      img.onerror = () => {
+        if (file.size > 5 * 1024 * 1024) {
+          reject(new Error("Avatar images must be 5 MB or smaller."))
+        } else {
+          resolve({ file, previewUrl: dataUrl })
+        }
+      }
+      img.onload = () => {
+        try {
+          const maxDim = 512
+          let { width, height } = img
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width)
+              width = maxDim
+            } else {
+              width = Math.round((width * maxDim) / height)
+              height = maxDim
+            }
+          }
+          const canvas = document.createElement("canvas")
+          canvas.width = width
+          canvas.height = height
+          const ctx = canvas.getContext("2d")
+          if (!ctx) {
+            resolve({ file, previewUrl: dataUrl })
+            return
+          }
+          ctx.drawImage(img, 0, 0, width, height)
+          canvas.toBlob(
+            (blob) => {
+              if (!blob) {
+                resolve({ file, previewUrl: dataUrl })
+                return
+              }
+              const processedFile = new File([blob], "avatar.jpg", { type: "image/jpeg" })
+              const previewUrl = canvas.toDataURL("image/jpeg", 0.85)
+              resolve({ file: processedFile, previewUrl })
+            },
+            "image/jpeg",
+            0.85
+          )
+        } catch {
+          resolve({ file, previewUrl: dataUrl })
+        }
+      }
+      img.src = dataUrl
+    }
+    reader.readAsDataURL(file)
+  })
 }
 
 export function SettingsDialog({
@@ -81,10 +167,7 @@ export function SettingsDialog({
   const { theme, setTheme } = useTheme()
   const isMobile = useIsMobile()
 
-  const [deleteAllChatsOpen, setDeleteAllChatsOpen] = useState(false)
-  const [deleteAllNotesOpen, setDeleteAllNotesOpen] = useState(false)
-  const [deleteAccountOpen, setDeleteAccountOpen] = useState(false)
-  const [signoutOpen, setSignoutOpen] = useState(false)
+  // Profile form state
   const [displayName, setDisplayName] = useState(user.displayName)
   const [savedDisplayName, setSavedDisplayName] = useState(user.displayName)
   const [avatarUrl, setAvatarUrl] = useState(user.avatarUrl)
@@ -93,53 +176,54 @@ export function SettingsDialog({
   const [avatarPreview, setAvatarPreview] = useState(user.avatarUrl)
   const [systemInstruction, setSystemInstruction] = useState(user.systemInstruction)
   const [savedSystemInstruction, setSavedSystemInstruction] = useState(user.systemInstruction)
+
+  // Status state
   const [savingProfile, setSavingProfile] = useState(false)
+  const [processingAvatar, setProcessingAvatar] = useState(false)
   const [profileError, setProfileError] = useState<string | null>(null)
   const [uuidCopied, setUuidCopied] = useState(false)
+
+  // Confirm dialog state
+  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogType | null>(null)
   const [deletingAccount, setDeletingAccount] = useState(false)
   const [accountError, setAccountError] = useState<string | null>(null)
 
-  const themeOptions = [
-    { value: "system", label: "System", icon: Monitor },
-    { value: "light", label: "Light", icon: Sun },
-    { value: "dark", label: "Dark", icon: Moon },
-  ] as const
+  // Synchronize state when user prop changes
+  useEffect(() => {
+    setDisplayName(user.displayName)
+    setSavedDisplayName(user.displayName)
+    setAvatarUrl(user.avatarUrl)
+    setSavedAvatarUrl(user.avatarUrl)
+    setAvatarPreview(user.avatarUrl)
+    setAvatarFile(null)
+    setSystemInstruction(user.systemInstruction)
+    setSavedSystemInstruction(user.systemInstruction)
+  }, [user])
 
-
-  const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
 
-    if (!file.type.startsWith("image/")) {
-      setProfileError("Please choose an image file.")
-      return
-    }
-    if (file.size > 2 * 1024 * 1024) {
-      setProfileError("Avatar images must be 2 MB or smaller.")
-      return
-    }
-
     setProfileError(null)
-    setAvatarFile(file)
-    setAvatarPreview(URL.createObjectURL(file))
-    // Reset so re-selecting the same file triggers onChange again
-    event.target.value = ""
-  }
-
-  const getAvatarStoragePath = (url: string) => {
-    if (!url) return null
+    setProcessingAvatar(true)
 
     try {
-      const parsedUrl = new URL(url)
-      const pathPrefix = "/storage/v1/object/public/avatars/"
-      const prefixIndex = parsedUrl.pathname.indexOf(pathPrefix)
-      if (prefixIndex === -1) return null
-
-      const path = decodeURIComponent(parsedUrl.pathname.slice(prefixIndex + pathPrefix.length))
-      return path.startsWith(`${user.id}/`) ? path : null
-    } catch {
-      return null
+      const { file: processedFile, previewUrl } = await processAvatarImage(file)
+      setAvatarFile(processedFile)
+      setAvatarPreview(previewUrl)
+    } catch (err) {
+      setProfileError(err instanceof Error ? err.message : "Failed to process image.")
+    } finally {
+      setProcessingAvatar(false)
+      event.target.value = ""
     }
+  }
+
+  const handleRemoveAvatar = () => {
+    setAvatarFile(null)
+    setAvatarUrl("")
+    setAvatarPreview("")
+    setProfileError(null)
   }
 
   const handleSaveProfile = async () => {
@@ -171,7 +255,7 @@ export function SettingsDialog({
         systemInstruction,
       })
 
-      const previousAvatarPath = getAvatarStoragePath(previousAvatarUrl)
+      const previousAvatarPath = getAvatarStoragePath(previousAvatarUrl, user.id)
       if (previousAvatarPath && previousAvatarPath !== uploadedAvatarPath) {
         const storageClient = supabase ?? createClient()
         const { error: removeError } = await storageClient.storage
@@ -203,13 +287,6 @@ export function SettingsDialog({
     }
   }
 
-  const handleRemoveAvatar = () => {
-    setAvatarFile(null)
-    setAvatarUrl("")
-    setAvatarPreview("")
-    setProfileError(null)
-  }
-
   const handleCopyUuid = async () => {
     await navigator.clipboard.writeText(user.id)
     setUuidCopied(true)
@@ -222,7 +299,7 @@ export function SettingsDialog({
 
     try {
       await (onDeleteAccount ?? deleteAccount)()
-      setDeleteAccountOpen(false)
+      setConfirmDialog(null)
     } catch (error) {
       if (isRedirectError(error)) throw error
       setAccountError(error instanceof Error ? error.message : "Failed to permanently delete your account.")
@@ -231,12 +308,50 @@ export function SettingsDialog({
     }
   }
 
+  // Confirmation dialog configs
+  const confirmConfigs: Record<
+    ConfirmDialogType,
+    {
+      title: string
+      description: string
+      icon: LucideIcon
+      onConfirm: () => Promise<void> | void
+      loading?: boolean
+    }
+  > = {
+    notes: {
+      title: "Clear your note history?",
+      description: "This will clear all your Lithium notes. This action cannot be undone.",
+      icon: Trash2,
+      onConfirm: () => onDeleteAllNotes?.(),
+    },
+    chats: {
+      title: "Clear your chat history?",
+      description: "This will clear all your Lithium chats. This action cannot be undone.",
+      icon: Trash2,
+      onConfirm: () => onDeleteAllChats?.(),
+    },
+    signout: {
+      title: "Sign out of your account?",
+      description: "You will be signed out on this device. You can sign back in at any time.",
+      icon: LogOut,
+      onConfirm: () => signout?.(),
+    },
+    account: {
+      title: "Delete your account?",
+      description: accountError ?? "This will delete all your notes, chats, and account. This action cannot be undone.",
+      icon: Trash2,
+      onConfirm: handleDeleteAccount,
+      loading: deletingAccount,
+    },
+  }
+
+  const activeConfirm = confirmDialog ? confirmConfigs[confirmDialog] : null
+
+  // Section contents
   const accountSection = (
     <>
-      <SettingsSection
-        title="Account"
-        description="Your account information."
-      >
+      <SettingsSection title="Account" description="Your account information.">
         <SettingsRow
           label="Profile"
           wideAction
@@ -246,32 +361,55 @@ export function SettingsDialog({
                 {avatarPreview && <AvatarImage src={avatarPreview} alt="Your avatar" />}
                 <AvatarFallback>{(displayName || user.email).slice(0, 1).toUpperCase()}</AvatarFallback>
               </Avatar>
-              <label className={buttonVariants({ size: "sm", variant: "secondary" }) + " cursor-pointer"}>
-                <Pencil className="size-4" />
+              <label
+                htmlFor="settings-avatar-input"
+                className={cn(
+                  buttonVariants({ size: "sm", variant: "secondary" }),
+                  "cursor-pointer",
+                  processingAvatar && "pointer-events-none opacity-50"
+                )}
+              >
+                {processingAvatar ? (
+                  <LoaderCircle className="size-4 animate-spin" />
+                ) : (
+                  <Pencil className="size-4" />
+                )}
                 Edit
-                <input type="file" accept="image/*" className="sr-only" onChange={handleAvatarChange} />
               </label>
+              <input
+                id="settings-avatar-input"
+                type="file"
+                accept="image/*"
+                className="sr-only"
+                onChange={handleAvatarChange}
+                onClick={(e) => {
+                  (e.target as HTMLInputElement).value = ""
+                }}
+              />
               {(avatarPreview || avatarFile) && (
-                <Button type="button" size="sm" variant="destructive" onClick={handleRemoveAvatar}>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="destructive"
+                  onClick={handleRemoveAvatar}
+                  disabled={processingAvatar || savingProfile}
+                >
                   <Trash2 className="size-4" />
                   Remove
                 </Button>
               )}
               {(avatarFile || avatarUrl !== savedAvatarUrl) && (
-                <Button
-                  type="button"
-                  size="icon-sm"
-                  variant="ghost"
+                <SaveButton
                   onClick={handleSaveProfile}
-                  disabled={savingProfile}
-                  aria-label="Save profile picture"
-                >
-                  {savingProfile ? <LoaderCircle className="size-4 animate-spin" /> : <Check className="size-4" />}
-                </Button>
+                  disabled={processingAvatar}
+                  loading={savingProfile}
+                  label="Save profile picture"
+                />
               )}
             </div>
           }
         />
+        {profileError && <p className="text-xs text-destructive">{profileError}</p>}
         <SettingsRow
           label="Name"
           wideAction
@@ -290,16 +428,11 @@ export function SettingsDialog({
                 }}
               />
               {displayName !== savedDisplayName && (
-                <Button
-                  type="button"
-                  size="icon-sm"
-                  variant="ghost"
+                <SaveButton
                   onClick={handleSaveProfile}
-                  disabled={savingProfile}
-                  aria-label="Save name"
-                >
-                  {savingProfile ? <LoaderCircle className="size-4 animate-spin" /> : <Check className="size-4" />}
-                </Button>
+                  loading={savingProfile}
+                  label="Save name"
+                />
               )}
             </div>
           }
@@ -341,10 +474,7 @@ export function SettingsDialog({
 
       <Separator />
 
-      <SettingsSection
-        title="Session"
-        description="Sign out of your account on this device."
-      >
+      <SettingsSection title="Session" description="Sign out of your account on this device.">
         <SettingsRow
           label="Sign out"
           action={
@@ -352,7 +482,7 @@ export function SettingsDialog({
               size="sm"
               variant="secondary"
               className="text-destructive hover:text-destructive"
-              onClick={() => setSignoutOpen(true)}
+              onClick={() => setConfirmDialog("signout")}
             >
               <LogOut className="size-4" />
               Sign out
@@ -364,46 +494,40 @@ export function SettingsDialog({
   )
 
   const securitySection = (
-    <>
-      <SettingsSection
-        title="Security"
-        description="Manage your SkyElements account."
-      >
-        <SettingsRow
-          label="Reset password"
-          action={
-            <Button
-              asChild
-              size="icon-sm"
-              variant="secondary"
+    <SettingsSection title="Security" description="Manage your SkyElements account.">
+      <SettingsRow
+        label="Reset password"
+        action={
+          <Button asChild size="icon-sm" variant="secondary">
+            <Link
+              href="/reset-password"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Reset password"
             >
-              <Link
-                href="/reset-password"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Reset password"
-              >
-                <ExternalLink className="size-4" />
-              </Link>
-            </Button>
-          }
-        />
-        <SettingsRow
-          label="Delete account"
-          action={
-            <Button
-              size="sm"
-              variant="secondary"
-              className="text-destructive hover:text-destructive"
-              onClick={() => setDeleteAccountOpen(true)}
-            >
-              <Trash2 className="size-4" />
-              Delete
-            </Button>
-          }
-        />
-      </SettingsSection>
-    </>
+              <ExternalLink className="size-4" />
+            </Link>
+          </Button>
+        }
+      />
+      <SettingsRow
+        label="Delete account"
+        action={
+          <Button
+            size="sm"
+            variant="secondary"
+            className="text-destructive hover:text-destructive"
+            onClick={() => {
+              setAccountError(null)
+              setConfirmDialog("account")
+            }}
+          >
+            <Trash2 className="size-4" />
+            Delete
+          </Button>
+        }
+      />
+    </SettingsSection>
   )
 
   const personalizationSection = (
@@ -425,28 +549,20 @@ export function SettingsDialog({
             }}
           />
           {systemInstruction !== savedSystemInstruction && (
-            <Button
-              type="button"
-              size="icon-sm"
-              variant="ghost"
+            <SaveButton
               onClick={handleSaveProfile}
-              disabled={savingProfile}
-              aria-label="Save custom instructions"
-            >
-              {savingProfile ? <LoaderCircle className="size-4 animate-spin" /> : <Check className="size-4" />}
-            </Button>
+              loading={savingProfile}
+              label="Save custom instructions"
+            />
           )}
         </div>
       </SettingsSection>
 
       <Separator />
 
-      <SettingsSection
-        title="Theme"
-        description="Choose your preferred color."
-      >
+      <SettingsSection title="Theme" description="Choose your preferred color.">
         <div className="grid grid-cols-3 gap-2 sm:gap-3">
-          {themeOptions.map(({ value, label, icon: Icon }) => {
+          {THEME_OPTIONS.map(({ value, label, icon: Icon }) => {
             const isActive = theme === value
             return (
               <Button
@@ -454,9 +570,10 @@ export function SettingsDialog({
                 type="button"
                 variant="secondary"
                 onClick={() => setTheme(value)}
-                className={`h-auto flex-col gap-1.5 py-3 sm:py-4 border-2 ${
+                className={cn(
+                  "h-auto flex-col gap-1.5 py-3 sm:py-4 border-2",
                   isActive ? "border-foreground" : "border-transparent"
-                }`}
+                )}
               >
                 <Icon className="size-5" />
                 <span className="text-xs sm:text-sm font-medium">{label}</span>
@@ -470,10 +587,7 @@ export function SettingsDialog({
 
   const dataSection = (
     <>
-      <SettingsSection
-        title="Your data"
-        description="Manage your Lithium data."
-      >
+      <SettingsSection title="Your data" description="Manage your Lithium data.">
         <SettingsRow
           label="Clear notes"
           action={
@@ -481,7 +595,7 @@ export function SettingsDialog({
               size="sm"
               variant="secondary"
               className="text-destructive hover:text-destructive"
-              onClick={() => setDeleteAllNotesOpen(true)}
+              onClick={() => setConfirmDialog("notes")}
             >
               <Trash2 className="size-4" />
               Clear
@@ -495,7 +609,7 @@ export function SettingsDialog({
               size="sm"
               variant="secondary"
               className="text-destructive hover:text-destructive"
-              onClick={() => setDeleteAllChatsOpen(true)}
+              onClick={() => setConfirmDialog("chats")}
             >
               <Trash2 className="size-4" />
               Clear
@@ -513,11 +627,7 @@ export function SettingsDialog({
         <SettingsRow
           label="Privacy policy"
           action={
-            <Button
-              asChild
-              size="icon-sm"
-              variant="secondary"
-            >
+            <Button asChild size="icon-sm" variant="secondary">
               <Link
                 href="/policies"
                 target="_blank"
@@ -530,9 +640,15 @@ export function SettingsDialog({
           }
         />
       </SettingsSection>
-
     </>
   )
+
+  const tabSections = [
+    { id: "account", label: "Account", icon: User, content: accountSection },
+    { id: "security", label: "Security", icon: Shield, content: securitySection },
+    { id: "personalization", label: "Personalization", icon: Palette, content: personalizationSection },
+    { id: "data", label: "Data controls", icon: Database, content: dataSection },
+  ]
 
   return (
     <>
@@ -545,9 +661,7 @@ export function SettingsDialog({
             <div className="flex flex-col gap-1">
               <DialogTitle className="text-base sm:text-lg">Settings</DialogTitle>
             </div>
-            <DialogClose
-              className="rounded-xs opacity-100 disabled:pointer-events-none"
-            >
+            <DialogClose className="rounded-xs opacity-100 disabled:pointer-events-none">
               <X className="size-4" />
               <span className="sr-only">Close</span>
             </DialogClose>
@@ -556,13 +670,12 @@ export function SettingsDialog({
           {isMobile ? (
             <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin px-4 pt-8 pb-8">
               <div className="space-y-8">
-                {accountSection}
-                <Separator />
-                {securitySection}
-                <Separator />
-                {personalizationSection}
-                <Separator />
-                {dataSection}
+                {tabSections.map((section, index) => (
+                  <div key={section.id} className="space-y-8">
+                    {index > 0 && <Separator />}
+                    {section.content}
+                  </div>
+                ))}
               </div>
             </div>
           ) : (
@@ -575,157 +688,97 @@ export function SettingsDialog({
                 variant="line"
                 className="shrink-0 rounded-none gap-1 bg-transparent w-48 border-r p-3 items-stretch"
               >
-                <TabsTrigger
-                  value="account"
-                  className="gap-2 px-3 py-2 text-sm rounded-md data-[state=active]:bg-accent justify-start"
-                >
-                  <User className="size-4" />
-                  Account
-                </TabsTrigger>
-                <TabsTrigger
-                  value="security"
-                  className="gap-2 px-3 py-2 text-sm rounded-md data-[state=active]:bg-accent justify-start"
-                >
-                  <Shield className="size-4" />
-                  Security
-                </TabsTrigger>
-                <TabsTrigger
-                  value="personalization"
-                  className="gap-2 px-3 py-2 text-sm rounded-md data-[state=active]:bg-accent justify-start"
-                >
-                  <Palette className="size-4" />
-                  Personalization
-                </TabsTrigger>
-                <TabsTrigger
-                  value="data"
-                  className="gap-2 px-3 py-2 text-sm rounded-md data-[state=active]:bg-accent justify-start"
-                >
-                  <Database className="size-4" />
-                  Data controls
-                </TabsTrigger>
+                {tabSections.map(({ id, label, icon: Icon }) => (
+                  <TabsTrigger
+                    key={id}
+                    value={id}
+                    className="gap-2 px-3 py-2 text-sm rounded-md data-[state=active]:bg-accent justify-start"
+                  >
+                    <Icon className="size-4" />
+                    {label}
+                  </TabsTrigger>
+                ))}
               </TabsList>
 
               <div className="flex-1 min-h-0 px-6 py-5 overflow-y-auto scrollbar-thin">
-                <TabsContent value="account" className="space-y-6 m-0">
-                  {accountSection}
-                </TabsContent>
-                <TabsContent value="security" className="space-y-6 m-0">
-                  {securitySection}
-                </TabsContent>
-                <TabsContent value="personalization" className="space-y-6 m-0">
-                  {personalizationSection}
-                </TabsContent>
-                <TabsContent value="data" className="space-y-6 m-0">
-                  {dataSection}
-                </TabsContent>
+                {tabSections.map(({ id, content }) => (
+                  <TabsContent key={id} value={id} className="space-y-6 m-0">
+                    {content}
+                  </TabsContent>
+                ))}
               </div>
             </Tabs>
           )}
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={deleteAllNotesOpen} onOpenChange={setDeleteAllNotesOpen}>
-        <AlertDialogContent size="sm">
-          <AlertDialogHeader>
-            <AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive">
-              <Trash2 />
-            </AlertDialogMedia>
-            <AlertDialogTitle>Clear your note history?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will clear all your Lithium notes. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              onClick={() => onDeleteAllNotes?.()}
-            >
-              Confirm
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={signoutOpen} onOpenChange={setSignoutOpen}>
-        <AlertDialogContent size="sm">
-          <AlertDialogHeader>
-            <AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive">
-              <LogOut />
-            </AlertDialogMedia>
-            <AlertDialogTitle>Sign out of your account?</AlertDialogTitle>
-            <AlertDialogDescription>
-              You will be signed out on this device. You can sign back in at any time.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              onClick={() => signout?.()}
-            >
-              Confirm
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={deleteAllChatsOpen} onOpenChange={setDeleteAllChatsOpen}>
-        <AlertDialogContent size="sm">
-          <AlertDialogHeader>
-            <AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive">
-              <Trash2 />
-            </AlertDialogMedia>
-            <AlertDialogTitle>Clear your chat history?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will clear all your Lithium chats. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              onClick={() => onDeleteAllChats?.()}
-            >
-              Confirm
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
+      {/* Reusable Alert Dialog for confirmations */}
       <AlertDialog
-        open={deleteAccountOpen}
-        onOpenChange={(nextOpen) => {
-          setDeleteAccountOpen(nextOpen)
-          if (nextOpen) setAccountError(null)
+        open={confirmDialog !== null}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) {
+            setConfirmDialog(null)
+            setAccountError(null)
+          }
         }}
       >
-        <AlertDialogContent size="sm">
-          <AlertDialogHeader>
-            <AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive">
-              <Trash2 />
-            </AlertDialogMedia>
-            <AlertDialogTitle>Delete your account?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {accountError ?? "This will delete all your notes, chats, and account. This action cannot be undone."}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              onClick={(event) => {
-                event.preventDefault()
-                void handleDeleteAccount()
-              }}
-              disabled={deletingAccount}
-            >
-              {deletingAccount ? <LoaderCircle className="size-4 animate-spin" /> : "Confirm"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
+        {activeConfirm && (
+          <AlertDialogContent size="sm">
+            <AlertDialogHeader>
+              <AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive">
+                <activeConfirm.icon />
+              </AlertDialogMedia>
+              <AlertDialogTitle>{activeConfirm.title}</AlertDialogTitle>
+              <AlertDialogDescription>{activeConfirm.description}</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={activeConfirm.loading}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                variant="destructive"
+                disabled={activeConfirm.loading}
+                onClick={(e) => {
+                  if (activeConfirm.loading !== undefined) {
+                    e.preventDefault()
+                  }
+                  void activeConfirm.onConfirm()
+                }}
+              >
+                {activeConfirm.loading ? (
+                  <LoaderCircle className="size-4 animate-spin" />
+                ) : (
+                  "Confirm"
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        )}
       </AlertDialog>
     </>
+  )
+}
+
+function SaveButton({
+  onClick,
+  disabled = false,
+  loading = false,
+  label,
+}: {
+  onClick: () => void
+  disabled?: boolean
+  loading?: boolean
+  label: string
+}) {
+  return (
+    <Button
+      type="button"
+      size="icon-sm"
+      variant="ghost"
+      onClick={onClick}
+      disabled={disabled || loading}
+      aria-label={label}
+    >
+      {loading ? <LoaderCircle className="size-4 animate-spin" /> : <Check className="size-4" />}
+    </Button>
   )
 }
 
@@ -742,9 +795,7 @@ function SettingsSection({
     <section className="space-y-3">
       <div>
         <h3 className="text-sm font-semibold">{title}</h3>
-        {description && (
-          <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
-        )}
+        {description && <p className="text-xs text-muted-foreground mt-0.5">{description}</p>}
       </div>
       <div className="space-y-2 sm:space-y-3">{children}</div>
     </section>
@@ -753,40 +804,31 @@ function SettingsSection({
 
 function SettingsRow({
   label,
-  description,
   action,
   wideAction = false,
   compactAction = false,
-  alignTop = false,
 }: {
   label: string
-  description?: string
   action?: React.ReactNode
   wideAction?: boolean
   compactAction?: boolean
-  alignTop?: boolean
 }) {
   return (
     <div
-      className={`flex min-h-9 items-center justify-between gap-3 sm:gap-4 ${
-        wideAction
-          ? `flex-col items-stretch sm:flex-row ${alignTop ? "sm:items-start" : "sm:items-center"}`
-          : ""
-      }`}
+      className={cn(
+        "flex min-h-9 items-center justify-between gap-3 sm:gap-4",
+        wideAction && "flex-col items-stretch sm:flex-row sm:items-center"
+      )}
     >
-      <div className={`min-w-0 flex-1 ${alignTop ? "sm:pt-2" : ""}`}>
+      <div className="min-w-0 flex-1">
         <p className="text-sm font-medium">{label}</p>
-        {description && (
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {description}
-          </p>
-        )}
       </div>
       {action && (
         <div
-          className={`shrink-0 flex items-center ${
-            wideAction ? `w-full ${compactAction ? "sm:max-w-sm" : "sm:max-w-md"}` : ""
-          }`}
+          className={cn(
+            "shrink-0 flex items-center",
+            wideAction && cn("w-full", compactAction ? "sm:max-w-sm" : "sm:max-w-md")
+          )}
         >
           {action}
         </div>
