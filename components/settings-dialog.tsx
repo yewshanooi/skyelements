@@ -246,13 +246,6 @@ export function SettingsDialog({
                 {avatarPreview && <AvatarImage src={avatarPreview} alt="Your avatar" />}
                 <AvatarFallback>{(displayName || user.email).slice(0, 1).toUpperCase()}</AvatarFallback>
               </Avatar>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleAvatarChange}
-              />
               <Button
                 type="button"
                 size="sm"
@@ -547,6 +540,13 @@ export function SettingsDialog({
 
   return (
     <>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleAvatarChange}
+      />
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent
           showCloseButton={false}
