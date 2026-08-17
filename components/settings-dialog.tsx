@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useState } from "react"
+import { useState } from "react"
 import Link from "next/link"
 import {
   Check,
@@ -30,7 +30,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -79,7 +79,6 @@ export function SettingsDialog({
   onDeleteAccount,
 }: SettingsDialogProps) {
   const { theme, setTheme } = useTheme()
-  const fileInputRef = useRef<HTMLInputElement>(null)
   const isMobile = useIsMobile()
 
   const [deleteAllChatsOpen, setDeleteAllChatsOpen] = useState(false)
@@ -247,15 +246,11 @@ export function SettingsDialog({
                 {avatarPreview && <AvatarImage src={avatarPreview} alt="Your avatar" />}
                 <AvatarFallback>{(displayName || user.email).slice(0, 1).toUpperCase()}</AvatarFallback>
               </Avatar>
-              <Button
-                type="button"
-                size="sm"
-                variant="secondary"
-                onClick={() => fileInputRef.current?.click()}
-              >
+              <label className={buttonVariants({ size: "sm", variant: "secondary" }) + " cursor-pointer"}>
                 <Pencil className="size-4" />
                 Edit
-              </Button>
+                <input type="file" accept="image/*" className="sr-only" onChange={handleAvatarChange} />
+              </label>
               {(avatarPreview || avatarFile) && (
                 <Button type="button" size="sm" variant="destructive" onClick={handleRemoveAvatar}>
                   <Trash2 className="size-4" />
@@ -541,13 +536,6 @@ export function SettingsDialog({
 
   return (
     <>
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        className="sr-only"
-        onChange={handleAvatarChange}
-      />
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent
           showCloseButton={false}
