@@ -81,6 +81,7 @@ export function SettingsDialog({
   const { theme, setTheme } = useTheme()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const isMobile = useIsMobile()
+
   const [deleteAllChatsOpen, setDeleteAllChatsOpen] = useState(false)
   const [deleteAllNotesOpen, setDeleteAllNotesOpen] = useState(false)
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false)
@@ -544,7 +545,7 @@ export function SettingsDialog({
         ref={fileInputRef}
         type="file"
         accept="image/*"
-        className="hidden"
+        className="sr-only"
         onChange={handleAvatarChange}
       />
       <Dialog open={open} onOpenChange={onOpenChange}>
