@@ -1,12 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import {
   Check,
   Copy,
-  KeyRound,
+  ExternalLink,
   LogOut,
   LoaderCircle,
   Trash2,
@@ -27,7 +26,6 @@ import {
   Dialog,
   DialogClose,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
@@ -80,8 +78,8 @@ export function SettingsDialog({
   onProfileUpdated,
   onDeleteAccount,
 }: SettingsDialogProps) {
-  const router = useRouter()
   const { theme, setTheme } = useTheme()
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const isMobile = useIsMobile()
   const [deleteAllChatsOpen, setDeleteAllChatsOpen] = useState(false)
   const [deleteAllNotesOpen, setDeleteAllNotesOpen] = useState(false)
@@ -107,10 +105,6 @@ export function SettingsDialog({
     { value: "dark", label: "Dark", icon: Moon },
   ] as const
 
-  const handleResetPassword = () => {
-    onOpenChange(false)
-    router.push("/reset-password")
-  }
 
   const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -128,6 +122,8 @@ export function SettingsDialog({
     setProfileError(null)
     setAvatarFile(file)
     setAvatarPreview(URL.createObjectURL(file))
+    // Reset so re-selecting the same file triggers onChange again
+    event.target.value = ""
   }
 
   const getAvatarStoragePath = (url: string) => {
@@ -250,12 +246,21 @@ export function SettingsDialog({
                 {avatarPreview && <AvatarImage src={avatarPreview} alt="Your avatar" />}
                 <AvatarFallback>{(displayName || user.email).slice(0, 1).toUpperCase()}</AvatarFallback>
               </Avatar>
-              <Button asChild size="sm" variant="secondary">
-                <label className="cursor-pointer">
-                  <Pencil className="size-4" />
-                  Edit
-                  <input type="file" accept="image/*" className="sr-only" onChange={handleAvatarChange} />
-                </label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleAvatarChange}
+              />
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Pencil className="size-4" />
+                Edit
               </Button>
               {(avatarPreview || avatarFile) && (
                 <Button type="button" size="sm" variant="destructive" onClick={handleRemoveAvatar}>
@@ -343,19 +348,6 @@ export function SettingsDialog({
             </div>
           }
         />
-        <SettingsRow
-          label="Password"
-          action={
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={handleResetPassword}
-            >
-              <KeyRound className="size-4" />
-              Reset password
-            </Button>
-          }
-        />
       </SettingsSection>
 
       <Separator />
@@ -379,7 +371,49 @@ export function SettingsDialog({
           }
         />
       </SettingsSection>
+    </>
+  )
 
+  const securitySection = (
+    <>
+      <SettingsSection
+        title="Security"
+        description="Manage your SkyElements account."
+      >
+        <SettingsRow
+          label="Reset password"
+          action={
+            <Button
+              asChild
+              size="icon-sm"
+              variant="secondary"
+            >
+              <Link
+                href="/reset-password"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Reset password"
+              >
+                <ExternalLink className="size-4" />
+              </Link>
+            </Button>
+          }
+        />
+        <SettingsRow
+          label="Delete account"
+          action={
+            <Button
+              size="sm"
+              variant="secondary"
+              className="text-destructive hover:text-destructive"
+              onClick={() => setDeleteAccountOpen(true)}
+            >
+              <Trash2 className="size-4" />
+              Delete
+            </Button>
+          }
+        />
+      </SettingsSection>
     </>
   )
 
@@ -452,7 +486,7 @@ export function SettingsDialog({
         description="Manage your Lithium data."
       >
         <SettingsRow
-          label="Notes"
+          label="Clear notes"
           action={
             <Button
               size="sm"
@@ -466,7 +500,7 @@ export function SettingsDialog({
           }
         />
         <SettingsRow
-          label="Chats"
+          label="Clear chats"
           action={
             <Button
               size="sm"
@@ -476,20 +510,6 @@ export function SettingsDialog({
             >
               <Trash2 className="size-4" />
               Clear
-            </Button>
-          }
-        />
-        <SettingsRow
-          label="Account"
-          action={
-            <Button
-              size="sm"
-              variant="secondary"
-              className="text-destructive hover:text-destructive"
-              onClick={() => setDeleteAccountOpen(true)}
-            >
-              <Trash2 className="size-4" />
-              Delete
             </Button>
           }
         />
@@ -506,16 +526,16 @@ export function SettingsDialog({
           action={
             <Button
               asChild
-              size="sm"
+              size="icon-sm"
               variant="secondary"
             >
               <Link
                 href="/policies"
+                target="_blank"
                 rel="noopener noreferrer"
-                onClick={() => onOpenChange(false)}
+                aria-label="Privacy policy"
               >
-                <Shield className="size-4" />
-                View
+                <ExternalLink className="size-4" />
               </Link>
             </Button>
           }
@@ -535,9 +555,6 @@ export function SettingsDialog({
           <DialogHeader className="px-4 sm:px-6 pt-4 sm:pt-5 pb-3 sm:pb-4 border-b flex-row items-center justify-between space-y-0">
             <div className="flex flex-col gap-1">
               <DialogTitle className="text-base sm:text-lg">Settings</DialogTitle>
-              <DialogDescription className="sr-only">
-                Manage your account, personalization, and data preferences.
-              </DialogDescription>
             </div>
             <DialogClose
               className="rounded-xs opacity-100 disabled:pointer-events-none"
@@ -551,6 +568,8 @@ export function SettingsDialog({
             <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin px-4 pt-8 pb-8">
               <div className="space-y-8">
                 {accountSection}
+                <Separator />
+                {securitySection}
                 <Separator />
                 {personalizationSection}
                 <Separator />
@@ -575,6 +594,13 @@ export function SettingsDialog({
                   Account
                 </TabsTrigger>
                 <TabsTrigger
+                  value="security"
+                  className="gap-2 px-3 py-2 text-sm rounded-md data-[state=active]:bg-accent justify-start"
+                >
+                  <Shield className="size-4" />
+                  Security
+                </TabsTrigger>
+                <TabsTrigger
                   value="personalization"
                   className="gap-2 px-3 py-2 text-sm rounded-md data-[state=active]:bg-accent justify-start"
                 >
@@ -593,6 +619,9 @@ export function SettingsDialog({
               <div className="flex-1 min-h-0 px-6 py-5 overflow-y-auto scrollbar-thin">
                 <TabsContent value="account" className="space-y-6 m-0">
                   {accountSection}
+                </TabsContent>
+                <TabsContent value="security" className="space-y-6 m-0">
+                  {securitySection}
                 </TabsContent>
                 <TabsContent value="personalization" className="space-y-6 m-0">
                   {personalizationSection}
