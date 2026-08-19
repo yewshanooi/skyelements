@@ -29,7 +29,11 @@ import {
 } from "@/components/ui/accordion"
 import { ThemeToggle } from "./theme-client";
 
-export function NavigationBar() {
+interface NavigationBarProps {
+  forceShow?: boolean
+}
+
+export function NavigationBar({ forceShow = false }: NavigationBarProps = {}) {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false)
   const [elevatedZ, setElevatedZ] = React.useState(false)
   const pathname = usePathname()
@@ -66,8 +70,8 @@ export function NavigationBar() {
     return () => window.removeEventListener("resize", handleResize)
   }, [])
 
-  // Hide navigation bar on /lithium
-  if (pathname === "/lithium") {
+  // Hide navigation bar on /lithium and /sales (unless forceShow is explicitly true)
+  if (!forceShow && (pathname === "/lithium" || pathname === "/sales" || pathname?.startsWith("/sales/"))) {
     return null
   }
 
@@ -129,6 +133,14 @@ export function NavigationBar() {
                   <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
                     <Link href="/lithium">
                       Lithium
+                    </Link>
+                  </NavigationMenuLink>
+                </NavigationMenuItem>
+
+                <NavigationMenuItem>
+                  <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
+                    <Link href="/sales">
+                      Sales Dashboard
                     </Link>
                   </NavigationMenuLink>
                 </NavigationMenuItem>
@@ -247,6 +259,10 @@ export function NavigationBar() {
                 
                 <Link href="/lithium" className="text-2xl font-medium transition-colors" onClick={() => setMobileMenuOpen(false)}>
                   Lithium
+                </Link>
+                
+                <Link href="/sales" className="text-2xl font-medium transition-colors" onClick={() => setMobileMenuOpen(false)}>
+                  Sales Dashboard
                 </Link>
                 
                 <Link href="/branding" className="text-2xl font-medium transition-colors" onClick={() => setMobileMenuOpen(false)}>
