@@ -73,11 +73,19 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
+  const [currentView, setCurrentView] = useState<ViewMode>(activeView);
   const [sales, setSales] = useState<SaleItem[]>(initialSales || []);
   const [isLoading, setIsLoading] = useState<boolean>(!initialSales && Boolean(user?.id));
   const [hasInitializedInitialSales, setHasInitializedInitialSales] = useState(
     Boolean(initialSales && initialSales.length > 0)
   );
+
+  // Sync currentView if activeView prop changes
+  useEffect(() => {
+    if (activeView) {
+      setCurrentView(activeView);
+    }
+  }, [activeView]);
 
   // Initialize filter and view options from URL parameters
   const initialUrlState = useMemo(() => {
@@ -117,11 +125,11 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
         month: extras?.month ?? timelineMonth,
       });
       const qs = sp.toString();
-      const currentPath = pathname || `/sales/${activeView}`;
+      const currentPath = `/sales/${currentView}`;
       const newUrl = `${currentPath}${qs ? `?${qs}` : ''}`;
       window.history.replaceState(null, '', newUrl);
     },
-    [pathname, activeView, sortField, sortOrder, timelineYear, timelineMonth]
+    [currentView, sortField, sortOrder, timelineYear, timelineMonth]
   );
 
   // Filter change handlers
@@ -165,19 +173,46 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
     }, 150);
   };
 
-  // View tab navigation (preserves active URL filters)
-  const handleSelectView = (view: ViewMode) => {
-    setSelectedIds([]);
-    setSelectedMapSale(null);
-    const sp = buildSearchParamsFromFilters(filters, {
-      sortField,
-      sortOrder,
-      year: timelineYear,
-      month: timelineMonth,
-    });
-    const qs = sp.toString();
-    router.push(`/sales/${view}${qs ? `?${qs}` : ''}`);
-  };
+  // Instant view tab navigation (in-memory state update + shallow browser URL update)
+  const handleSelectView = useCallback(
+    (view: ViewMode) => {
+      setSelectedIds([]);
+      setSelectedMapSale(null);
+      setCurrentView(view);
+      const sp = buildSearchParamsFromFilters(filters, {
+        sortField,
+        sortOrder,
+        year: timelineYear,
+        month: timelineMonth,
+      });
+      const qs = sp.toString();
+      const newUrl = `/sales/${view}${qs ? `?${qs}` : ''}`;
+      window.history.pushState(null, '', newUrl);
+    },
+    [filters, sortField, sortOrder, timelineYear, timelineMonth]
+  );
+
+  // Handle browser back/forward buttons seamlessly
+  useEffect(() => {
+    const handlePopState = () => {
+      const pathParts = window.location.pathname.split('/');
+      const viewCandidate = pathParts[2] as ViewMode;
+      const validViews: ViewMode[] = ['table', 'board', 'chart', 'timeline', 'map'];
+      if (validViews.includes(viewCandidate)) {
+        setCurrentView(viewCandidate);
+      }
+      const currentParams = new URLSearchParams(window.location.search);
+      const parsed = parseFiltersFromSearchParams(currentParams);
+      setFilters(parsed.filters);
+      if (parsed.sortField) setSortField(parsed.sortField);
+      if (parsed.sortOrder) setSortOrder(parsed.sortOrder);
+      if (parsed.year) setTimelineYear(parsed.year);
+      if (parsed.month !== undefined) setTimelineMonth(parsed.month);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   // Modals state
   const [isSaleModalOpen, setIsSaleModalOpen] = useState(false);
@@ -188,8 +223,32 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
   const [authModalMode, setAuthModalMode] = useState<'login' | 'signup'>('login');
   const [invoiceSale, setInvoiceSale] = useState<SaleItem | null>(null);
   const [selectedMapSale, setSelectedMapSale] = useState<SaleItem | null>(null);
-  const [isAiOpen, setIsAiOpen] = useState(false);
+  const [isAiOpen, setIsAiOpen] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    try {
+      return sessionStorage.getItem('sales_ai_drawer_open') === 'true';
+    } catch {
+      return false;
+    }
+  });
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  const handleToggleAi = useCallback(() => {
+    setIsAiOpen((prev) => {
+      const next = !prev;
+      try {
+        sessionStorage.setItem('sales_ai_drawer_open', String(next));
+      } catch {}
+      return next;
+    });
+  }, []);
+
+  const handleCloseAi = useCallback(() => {
+    setIsAiOpen(false);
+    try {
+      sessionStorage.setItem('sales_ai_drawer_open', 'false');
+    } catch {}
+  }, []);
 
   const handleOpenAuth = (mode: 'login' | 'signup' = 'login') => {
     setAuthModalMode(mode);
@@ -201,12 +260,12 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
     const handleGlobalKeyDown = (e: globalThis.KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'j') {
         e.preventDefault();
-        setIsAiOpen((prev) => !prev);
+        handleToggleAi();
       }
     };
     window.addEventListener('keydown', handleGlobalKeyDown);
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, []);
+  }, [handleToggleAi]);
 
   // Fetch sales on mount if not pre-populated
   useEffect(() => {
@@ -404,6 +463,12 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
     }
   };
 
+  useEffect(() => {
+    if (!user && pathname && pathname !== '/sales') {
+      router.replace('/sales');
+    }
+  }, [user, pathname, router]);
+
   if (!user) {
     return (
       <>
@@ -412,7 +477,7 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
           isOpen={isAuthModalOpen}
           onClose={() => setIsAuthModalOpen(false)}
           defaultMode={authModalMode}
-          redirectTo={`/sales/${activeView}`}
+          redirectTo="/sales"
         />
       </>
     );
@@ -421,7 +486,7 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground transition-colors">
       <Header
-        activeView={activeView}
+        activeView={currentView}
         onSelectView={handleSelectView}
         onOpenAuth={() => handleOpenAuth('login')}
         onExportCsv={handleExportCsv}
@@ -431,10 +496,10 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
         onSearchChange={handleSearchChange}
         salesCount={sales.length}
         filteredCount={filteredSales.length}
-        selectedIdsCount={activeView === 'table' ? selectedIds.length : 0}
+        selectedIdsCount={currentView === 'table' ? selectedIds.length : 0}
         onBatchDelete={handleBatchDelete}
         onDeselectAll={() => setSelectedIds([])}
-        onToggleAi={() => setIsAiOpen((prev) => !prev)}
+        onToggleAi={handleToggleAi}
         isAiOpen={isAiOpen}
       />
 
@@ -446,7 +511,7 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
           </div>
         ) : (
           <ErrorBoundary fallbackTitle="Dashboard View Error">
-            {activeView === 'table' && (
+            {currentView === 'table' && (
               <TableView
                 sales={sales}
                 filters={filters}
@@ -467,7 +532,7 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
             )}
 
             <Suspense fallback={<ViewLoading />}>
-              {activeView === 'chart' && (
+              {currentView === 'chart' && (
                 <ChartView
                   sales={sales}
                   filters={filters}
@@ -476,7 +541,7 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
                 />
               )}
 
-              {activeView === 'timeline' && (
+              {currentView === 'timeline' && (
                 <TimelineView
                   sales={sales}
                   selectedCategory={filters.categories[0] || 'all'}
@@ -489,7 +554,7 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
                 />
               )}
 
-              {activeView === 'map' && (
+              {currentView === 'map' && (
                 <MapView
                   sales={sales}
                   filters={filters}
@@ -501,7 +566,7 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
                 />
               )}
 
-              {activeView === 'board' && (
+              {currentView === 'board' && (
                 <KanbanBoardView
                   sales={sales}
                   filters={filters}
@@ -539,7 +604,7 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
         defaultMode={authModalMode}
-        redirectTo={`/sales/${activeView}`}
+        redirectTo={`/sales/${currentView}`}
       />
 
       {isImportModalOpen && (
@@ -557,7 +622,7 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
         <Suspense fallback={null}>
           <AiAssistantDrawer
             isOpen={isAiOpen}
-            onClose={() => setIsAiOpen(false)}
+            onClose={handleCloseAi}
             sales={sales}
             onCreateSale={async (newSaleData) => {
               const created = await createSaleAction(newSaleData);

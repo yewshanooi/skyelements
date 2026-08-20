@@ -19,6 +19,8 @@ interface AuthCardProps {
   redirectTo?: string;
   className?: string;
   onModeChange?: (mode: AuthMode) => void;
+  inDialog?: boolean;
+  footerClassName?: string;
 }
 
 export function AuthCard({
@@ -26,6 +28,8 @@ export function AuthCard({
   redirectTo = '/lithium',
   className = '',
   onModeChange,
+  inDialog = false,
+  footerClassName,
 }: AuthCardProps) {
   const [mode, setModeState] = useState<AuthMode>(defaultMode);
   const [loginState, loginAction] = useActionState(login, null);
@@ -339,7 +343,15 @@ export function AuthCard({
         </CardContent>
       </Card>
 
-      <div className="text-balance text-center text-xs text-muted-foreground [&_a]:underline [&_a]:underline-offset-4 hover:[&_a]:text-primary">
+      <div
+        className={cn(
+          "text-balance text-center text-xs [&_a]:underline [&_a]:underline-offset-4 transition-colors",
+          inDialog
+            ? "text-neutral-400 [&_a]:text-neutral-400 hover:[&_a]:text-neutral-300"
+            : "text-muted-foreground [&_a]:text-foreground hover:[&_a]:text-primary",
+          footerClassName
+        )}
+      >
         By clicking continue, you agree to our <Link href="/policies">Privacy Policy</Link>.
       </div>
     </div>

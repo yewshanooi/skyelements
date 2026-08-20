@@ -100,7 +100,7 @@ export const LithiumUnauthenticatedLanding: FC = () => {
                 <div className="space-y-1.5">
                   <CardTitle>Cloud Sync</CardTitle>
                   <CardDescription>
-                    Real-time workspace sync across devices
+                    Real-time sync across devices
                   </CardDescription>
                 </div>
               </div>
@@ -128,23 +128,21 @@ export const LithiumUnauthenticatedLanding: FC = () => {
             </Card>
           </a>
 
-          <a href="https://supabase.com/auth" target="_blank" rel="noopener noreferrer">
             <Card className="w-full">
-              <CardHeader>
+                <CardHeader>
                 <div className="flex items-center gap-6 mt-2">
-                  <div className="p-1">
+                    <div className="p-1">
                     <Lock className="h-6 w-6" />
-                  </div>
-                  <div className="space-y-1.5">
+                    </div>
+                    <div className="space-y-1.5">
                     <CardTitle>Private & Secure</CardTitle>
                     <CardDescription>
-                      Powered by Supabase Auth
+                        Powered by Supabase Auth
                     </CardDescription>
-                  </div>
+                    </div>
                 </div>
-              </CardHeader>
+                </CardHeader>
             </Card>
-          </a>
         </div>
 
         {/* Key Features Section */}

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { FC } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -21,12 +22,24 @@ import {
   Lock,
 } from "lucide-react";
 import { NavigationBar } from "@/components/navigation-bar";
+import { AuthDialog } from "@/components/auth/AuthDialog";
 
 interface UnauthenticatedLandingProps {
-  onOpenAuth: (mode?: "login" | "signup") => void;
+  onOpenAuth?: (mode?: "login" | "signup") => void;
 }
 
 export const UnauthenticatedLanding: FC<UnauthenticatedLandingProps> = ({ onOpenAuth }) => {
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<"login" | "signup">("login");
+
+  const handleOpenAuth = (mode: "login" | "signup" = "login") => {
+    if (onOpenAuth) {
+      onOpenAuth(mode);
+    } else {
+      setAuthMode(mode);
+      setIsAuthOpen(true);
+    }
+  };
   return (
     <>
       <NavigationBar forceShow />
@@ -44,7 +57,7 @@ export const UnauthenticatedLanding: FC<UnauthenticatedLandingProps> = ({ onOpen
 
         {/* Action Buttons */}
         <div className="mt-8">
-          <Button variant="secondary" onClick={() => onOpenAuth("login")}>
+          <Button variant="secondary" onClick={() => handleOpenAuth("login")}>
             Get started
           </Button>
         </div>
@@ -114,23 +127,21 @@ export const UnauthenticatedLanding: FC<UnauthenticatedLandingProps> = ({ onOpen
             </Card>
           </a>
 
-          <a href="https://supabase.com/auth" target="_blank" rel="noopener noreferrer">
             <Card className="w-full">
-              <CardHeader>
+                <CardHeader>
                 <div className="flex items-center gap-6 mt-2">
-                  <div className="p-1">
+                    <div className="p-1">
                     <Lock className="h-6 w-6" />
-                  </div>
-                  <div className="space-y-1.5">
+                    </div>
+                    <div className="space-y-1.5">
                     <CardTitle>Private & Secure</CardTitle>
                     <CardDescription>
-                      Powered by Supabase Auth
+                        Powered by Supabase Auth
                     </CardDescription>
-                  </div>
+                    </div>
                 </div>
-              </CardHeader>
+                </CardHeader>
             </Card>
-          </a>
         </div>
 
         {/* Key Features Section */}
@@ -254,6 +265,15 @@ export const UnauthenticatedLanding: FC<UnauthenticatedLandingProps> = ({ onOpen
           </div>
         </div>
       </main>
+
+      {!onOpenAuth && (
+        <AuthDialog
+          isOpen={isAuthOpen}
+          onClose={() => setIsAuthOpen(false)}
+          defaultMode={authMode}
+          redirectTo="/sales"
+        />
+      )}
     </>
   );
 };

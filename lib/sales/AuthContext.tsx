@@ -1,5 +1,6 @@
 "use client";
 import React, { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { useRouter } from 'next/navigation';
 import type { User, Session } from '@supabase/supabase-js';
 import { createClient } from '@/utils/supabase/client';
 
@@ -17,6 +18,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children, initialUser }: { children: ReactNode; initialUser?: User | null }) {
+  const router = useRouter();
   const [user, setUser] = useState<User | null>(initialUser ?? null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(!initialUser);
@@ -38,17 +40,21 @@ export function AuthProvider({ children, initialUser }: { children: ReactNode; i
     }
     getSession();
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, currentSession) => {
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, currentSession) => {
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
       setIsLoading(false);
+      if (event === 'SIGNED_OUT') {
+        router.replace('/sales');
+        router.refresh();
+      }
     });
 
     return () => {
       ignore = true;
       authListener?.subscription?.unsubscribe();
     };
-  }, [supabase, initialUser]);
+  }, [supabase, initialUser, router]);
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -69,6 +75,8 @@ export function AuthProvider({ children, initialUser }: { children: ReactNode; i
     await supabase.auth.signOut();
     setUser(null);
     setSession(null);
+    router.replace('/sales');
+    router.refresh();
   };
 
   return (

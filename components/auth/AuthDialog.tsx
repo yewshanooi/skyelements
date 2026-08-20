@@ -58,6 +58,7 @@ export function AuthDialog({
         <AuthCard
           defaultMode={defaultMode}
           redirectTo={redirectTo}
+          inDialog
         />
       </div>
     </div>

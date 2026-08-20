@@ -43,18 +43,20 @@ export default async function SalesViewPage({
     data: { user },
   } = await supabase.auth.getUser();
 
+  if (!user) {
+    redirect('/sales');
+  }
+
   let initialSales: SaleItem[] = [];
 
-  if (user) {
-    const { data: salesData, error } = await supabase
-      .from("sales")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("date", { ascending: false });
+  const { data: salesData, error } = await supabase
+    .from("sales")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("date", { ascending: false });
 
-    if (!error && salesData) {
-      initialSales = salesData.map(mapRowToSaleItem);
-    }
+  if (!error && salesData) {
+    initialSales = salesData.map(mapRowToSaleItem);
   }
 
   return <SalesClient activeView={view as ViewMode} initialUser={user} initialSales={initialSales} />;

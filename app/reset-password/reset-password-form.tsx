@@ -11,7 +11,15 @@ import AuthButton from "../_components/AuthButton";
 import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export default function ResetPasswordForm() {
+interface ResetPasswordFormProps {
+  inDialog?: boolean;
+  footerClassName?: string;
+}
+
+export default function ResetPasswordForm({
+  inDialog = false,
+  footerClassName,
+}: ResetPasswordFormProps = {}) {
   const [state, formAction] = useActionState(resetPassword, null);
 
   return (
@@ -79,7 +87,15 @@ export default function ResetPasswordForm() {
           </CardContent>
         </Card>
 
-        <div className="text-balance text-center text-xs text-muted-foreground [&_a]:underline [&_a]:underline-offset-4 hover:[&_a]:text-primary">
+        <div
+          className={cn(
+            "text-balance text-center text-xs [&_a]:underline [&_a]:underline-offset-4 transition-colors",
+            inDialog
+              ? "text-neutral-400 [&_a]:text-neutral-400 hover:[&_a]:text-neutral-300"
+              : "text-muted-foreground [&_a]:text-foreground hover:[&_a]:text-primary",
+            footerClassName
+          )}
+        >
           By clicking continue, you agree to our <Link href="/policies">Privacy Policy</Link>.
         </div>
       </div>
