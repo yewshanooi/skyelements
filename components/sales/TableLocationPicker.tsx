@@ -61,13 +61,14 @@ export const TableLocationPicker: FC<TableLocationPickerProps> = ({
 
   // Background auto-geocode if sale has location text but missing coordinates
   useEffect(() => {
-    if (!validCoords && sale.location && sale.location.trim().length >= 3) {
+    const loc = sale.location;
+    if (!validCoords && loc && loc.trim().length >= 3) {
       let isCancelled = false;
-      geocodeAddress(sale.location).then((res) => {
+      geocodeAddress(loc).then((res) => {
         if (!isCancelled && res) {
           const norm = normalizeCoordinates(res.lat, res.lng);
           if (norm) {
-            onSaveLocation(sale.location, norm.lat, norm.lng);
+            onSaveLocation(loc, norm.lat, norm.lng);
             setViewMode('preview');
           }
         }
