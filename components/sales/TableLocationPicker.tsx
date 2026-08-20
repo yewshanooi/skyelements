@@ -14,9 +14,10 @@ import {
   Loader2,
   MapPin,
 } from 'lucide-react';
+
 import { geocodeAddress, searchLocations } from '@/services/sales/geocodeService';
 import type { LocationSuggestion } from '@/services/sales/geocodeService';
-import { normalizeCoordinates } from '@/lib/sales/locationParser';
+import { normalizeCoordinates, extractEmbeddedCoordinates } from '@/lib/sales/locationParser';
 import type { SaleItem } from '@/types/sales';
 import { useTheme } from '@/lib/sales/useTheme';
 
@@ -34,7 +35,7 @@ export const TableLocationPicker: FC<TableLocationPickerProps> = ({
   onClose,
 }) => {
   const { isDarkMode } = useTheme();
-  const validCoords = normalizeCoordinates(sale.latitude, sale.longitude);
+  const validCoords = normalizeCoordinates(sale.latitude, sale.longitude) || extractEmbeddedCoordinates(sale.location);
   const hasValidCoords = !!sale.location && validCoords !== null;
 
   const [viewMode, setViewMode] = useState<'preview' | 'search'>(
@@ -57,6 +58,25 @@ export const TableLocationPicker: FC<TableLocationPickerProps> = ({
   const miniMapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<Map | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Background auto-geocode if sale has location text but missing coordinates
+  useEffect(() => {
+    if (!validCoords && sale.location && sale.location.trim().length >= 3) {
+      let isCancelled = false;
+      geocodeAddress(sale.location).then((res) => {
+        if (!isCancelled && res) {
+          const norm = normalizeCoordinates(res.lat, res.lng);
+          if (norm) {
+            onSaveLocation(sale.location, norm.lat, norm.lng);
+            setViewMode('preview');
+          }
+        }
+      });
+      return () => {
+        isCancelled = true;
+      };
+    }
+  }, [sale.location, validCoords, onSaveLocation]);
 
   const computePosition = () => {
     const anchor = anchorRef.current?.parentElement || anchorRef.current;
@@ -145,11 +165,12 @@ export const TableLocationPicker: FC<TableLocationPickerProps> = ({
 
   // Mini Map setup
   useEffect(() => {
-    const norm = normalizeCoordinates(sale.latitude, sale.longitude);
+    const norm = normalizeCoordinates(sale.latitude, sale.longitude) || extractEmbeddedCoordinates(sale.location);
     if (
       viewMode !== 'preview' ||
-      !miniMapRef.current ||
-      !norm
+      !coords ||
+      !norm ||
+      !miniMapRef.current
     ) {
       return;
     }
@@ -218,14 +239,16 @@ export const TableLocationPicker: FC<TableLocationPickerProps> = ({
 
     const t1 = setTimeout(() => mapInstanceRef.current?.resize(), 60);
     const t2 = setTimeout(() => mapInstanceRef.current?.resize(), 200);
+    const t3 = setTimeout(() => mapInstanceRef.current?.resize(), 500);
 
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
+      clearTimeout(t3);
       map.remove();
       mapInstanceRef.current = null;
     };
-  }, [viewMode, sale.latitude, sale.longitude, isDarkMode]);
+  }, [viewMode, sale.latitude, sale.longitude, sale.location, isDarkMode, !!coords]);
 
   // Debounced location search
   const fetchSuggestions = useCallback(async (query: string) => {

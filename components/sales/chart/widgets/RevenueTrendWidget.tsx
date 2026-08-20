@@ -105,6 +105,9 @@ export const RevenueTrendWidget: FC<RevenueTrendWidgetProps> = ({
               <XAxis dataKey="label" stroke="#888888" fontSize={10} tickLine={false} minTickGap={10} />
               <YAxis stroke="#888888" fontSize={10} tickLine={false} width={yAxisWidth} tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : `${v}`} />
               <Tooltip
+                isAnimationActive={false}
+                animationDuration={0}
+                wrapperStyle={{ transition: 'none', pointerEvents: 'none' }}
                 content={({ active, payload, label }) => {
                   if (active && payload && payload.length) {
                     return (
@@ -139,7 +142,7 @@ export const RevenueTrendWidget: FC<RevenueTrendWidgetProps> = ({
               <CartesianGrid strokeDasharray="3 3" opacity={0.12} />
               <XAxis dataKey="label" stroke="#888888" fontSize={10} tickLine={false} minTickGap={10} />
               <YAxis stroke="#888888" fontSize={10} tickLine={false} width={yAxisWidth} tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : `${v}`} />
-              <Tooltip />
+              <Tooltip isAnimationActive={false} animationDuration={0} wrapperStyle={{ transition: 'none', pointerEvents: 'none' }} />
               <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '4px' }} />
               {showRevenue && <Bar dataKey="subtotal" name="Gross Revenue" fill="#3b82f6" radius={[4, 4, 0, 0]} />}
               {showProfit && <Bar dataKey="profit" name="Net Profit" fill="#10b981" radius={[4, 4, 0, 0]} />}
@@ -151,7 +154,7 @@ export const RevenueTrendWidget: FC<RevenueTrendWidgetProps> = ({
               <CartesianGrid strokeDasharray="3 3" opacity={0.12} />
               <XAxis dataKey="label" stroke="#888888" fontSize={10} tickLine={false} minTickGap={10} />
               <YAxis stroke="#888888" fontSize={10} tickLine={false} width={yAxisWidth} tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : `${v}`} />
-              <Tooltip />
+              <Tooltip isAnimationActive={false} animationDuration={0} wrapperStyle={{ transition: 'none', pointerEvents: 'none' }} />
               <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '4px' }} />
               {showRevenue && <Line type="monotone" dataKey="subtotal" name="Gross Revenue" stroke="#3b82f6" strokeWidth={2} dot={{ r: 3 }} />}
               {showProfit && <Line type="monotone" dataKey="profit" name="Net Profit" stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} />}

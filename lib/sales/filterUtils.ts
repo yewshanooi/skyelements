@@ -1,4 +1,4 @@
-import type { DateFilterConfig, DateOperator } from '@/components/sales/NotionDatePicker';
+import type { DateFilterConfig } from '@/components/sales/NotionDatePicker';
 import type { SaleItem, SortField, SortOrder } from '@/types/sales';
 
 export type PropertyType = 'category' | 'store' | 'orderStatus' | 'paymentStatus' | 'paymentMethod' | 'date';
@@ -89,16 +89,14 @@ export function parseFiltersFromSearchParams(
     getVal('payment_method') || getVal('paymentMethod') || getVal('payment_methods')
   );
 
-  // Date Filter parsing
-  const dateOp = (getVal('date_op') || getVal('operator')) as DateOperator | undefined;
+  // Date Filter parsing (single date or range from/to)
   const dateFrom = String(getVal('date_from') || getVal('start_date') || getVal('startDate') || getVal('date') || '').trim();
   const dateTo = String(getVal('date_to') || getVal('end_date') || getVal('endDate') || '').trim();
   const dateRange = String(getVal('date_range') || getVal('dateRange') || 'all').trim();
 
   let dateFilter: DateFilterConfig | undefined = undefined;
-  if (dateOp || dateFrom || dateTo) {
+  if (dateFrom || dateTo) {
     dateFilter = {
-      operator: dateOp || (dateFrom && dateTo ? 'between' : 'exact'),
       startDate: dateFrom || undefined,
       endDate: dateTo || undefined,
     };
@@ -114,7 +112,18 @@ export function parseFiltersFromSearchParams(
   const sortOrder = (rawOrder === 'asc' || rawOrder === 'desc' ? rawOrder : undefined) as SortOrder | undefined;
 
   const year = rawYear ? parseInt(String(rawYear), 10) : undefined;
-  const month = rawMonth !== null && rawMonth !== undefined ? parseInt(String(rawMonth), 10) : undefined;
+  let month: number | undefined = undefined;
+  if (rawMonth !== null && rawMonth !== undefined) {
+    const parsedM = parseInt(String(rawMonth), 10);
+    if (!isNaN(parsedM)) {
+      // 1-indexed URL months (1 = Jan, 8 = Aug, 12 = Dec) mapped to 0-indexed JS (0..11)
+      if (parsedM >= 1 && parsedM <= 12) {
+        month = parsedM - 1;
+      } else if (parsedM === 0) {
+        month = 0;
+      }
+    }
+  }
 
   return {
     filters: {
@@ -130,7 +139,7 @@ export function parseFiltersFromSearchParams(
     sortField,
     sortOrder,
     year: isNaN(year!) ? undefined : year,
-    month: isNaN(month!) ? undefined : month,
+    month,
   };
 }
 
@@ -168,9 +177,6 @@ export function buildSearchParamsFromFilters(
   }
 
   if (filters.dateFilter) {
-    if (filters.dateFilter.operator && filters.dateFilter.operator !== 'between') {
-      sp.set('date_op', filters.dateFilter.operator);
-    }
     if (filters.dateFilter.startDate) {
       sp.set('date_from', filters.dateFilter.startDate);
     }
@@ -196,56 +202,34 @@ export function buildSearchParamsFromFilters(
   }
 
   if (extras?.month !== undefined) {
-    sp.set('month', String(extras.month));
+    // 0-indexed JS month (0..11) converted to 1-indexed human URL month (1..12)
+    sp.set('month', String(extras.month + 1));
   }
 
   return sp;
 }
 
-/**
- * Returns a URL query string (e.g. "?category=Clothing&q=shirt") or empty string.
- */
-export function filtersToQueryString(
-  filters: FilterState,
-  extras?: { sortField?: SortField; sortOrder?: SortOrder; year?: number; month?: number }
-): string {
-  const sp = buildSearchParamsFromFilters(filters, extras);
-  const str = sp.toString();
-  return str ? `?${str}` : '';
-}
 
 export function matchesDateFilter(dateStr?: string, dateFilter?: DateFilterConfig, legacyRange?: string): boolean {
   if (dateFilter) {
-    const { operator, startDate, endDate } = dateFilter;
+    const { startDate, endDate } = dateFilter;
 
-    if (operator === 'empty') return !dateStr;
-    if (operator === 'not_empty') return Boolean(dateStr);
-
-    if (operator === 'between') {
-      if (!startDate && !endDate) return true;
+    if (startDate && endDate) {
       if (!dateStr) return false;
       const saleDate = dateStr.slice(0, 10);
-      if (startDate && endDate) return saleDate >= startDate && saleDate <= endDate;
-      if (startDate) return saleDate >= startDate;
-      if (endDate) return saleDate <= endDate;
-      return true;
+      return saleDate >= startDate && saleDate <= endDate;
     }
 
-    if (!dateStr) return false;
-    const saleDate = dateStr.slice(0, 10);
+    if (startDate) {
+      if (!dateStr) return false;
+      const saleDate = dateStr.slice(0, 10);
+      return saleDate === startDate;
+    }
 
-    if (operator === 'exact') return !startDate || saleDate === startDate;
-    if (operator === 'before') return !startDate || saleDate < startDate;
-    if (operator === 'after') return !startDate || saleDate > startDate;
-    if (operator === 'on_or_before') return !startDate || saleDate <= startDate;
-    if (operator === 'on_or_after') return !startDate || saleDate >= startDate;
-
-    if (operator === 'relative_today') {
-      const today = new Date();
-      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(
-        today.getDate()
-      ).padStart(2, '0')}`;
-      return saleDate === todayStr;
+    if (endDate) {
+      if (!dateStr) return false;
+      const saleDate = dateStr.slice(0, 10);
+      return saleDate <= endDate;
     }
   }
 
@@ -282,38 +266,67 @@ export function matchesDateFilter(dateStr?: string, dateFilter?: DateFilterConfi
 }
 
 export function matchesSaleFilter(sale: SaleItem, filters: FilterState): boolean {
-  const matchesCategory =
-    filters.categories.length === 0 || filters.categories.includes(sale.category);
-  const matchesStore =
-    filters.stores.length === 0 || filters.stores.includes(sale.marketplace);
-  const matchesOrderStatus =
-    filters.orderStatuses.length === 0 || filters.orderStatuses.includes(sale.order_status);
-  const matchesPaymentStatus =
-    filters.paymentStatuses.length === 0 || filters.paymentStatuses.includes(sale.payment_status);
-  const matchesPaymentMethod =
-    filters.paymentMethods.length === 0 || filters.paymentMethods.includes(sale.payment_method);
-  const matchesDate = matchesDateFilter(sale.date, filters.dateFilter, filters.dateRange);
-
-  const query = filters.search.toLowerCase().trim();
-  const matchesSearch =
-    !query ||
-    sale.item.toLowerCase().includes(query) ||
-    sale.customer.toLowerCase().includes(query) ||
-    sale.marketplace.toLowerCase().includes(query) ||
-    Boolean(sale.location && sale.location.toLowerCase().includes(query)) ||
-    Boolean(sale.notes && sale.notes.toLowerCase().includes(query));
-
-  return (
-    matchesCategory &&
-    matchesStore &&
-    matchesOrderStatus &&
-    matchesPaymentStatus &&
-    matchesPaymentMethod &&
-    matchesDate &&
-    matchesSearch
-  );
+  return filterSales([sale], filters).length > 0;
 }
 
+/**
+ * Highly optimized batch filter using pre-allocated Set lookups and precomputed search query.
+ */
 export function filterSales(sales: SaleItem[], filters: FilterState): SaleItem[] {
-  return sales.filter((sale) => matchesSaleFilter(sale, filters));
+  if (!sales || sales.length === 0) return [];
+
+  const query = filters.search?.trim().toLowerCase() || '';
+  const hasCategoryFilter = filters.categories.length > 0;
+  const hasStoreFilter = filters.stores.length > 0;
+  const hasOrderStatusFilter = filters.orderStatuses.length > 0;
+  const hasPaymentStatusFilter = filters.paymentStatuses.length > 0;
+  const hasPaymentMethodFilter = filters.paymentMethods.length > 0;
+  const hasDateFilter = Boolean(
+    filters.dateFilter || (filters.dateRange && filters.dateRange !== 'all')
+  );
+
+  // Fast-path: no active filters and no search
+  if (
+    !query &&
+    !hasCategoryFilter &&
+    !hasStoreFilter &&
+    !hasOrderStatusFilter &&
+    !hasPaymentStatusFilter &&
+    !hasPaymentMethodFilter &&
+    !hasDateFilter
+  ) {
+    return sales;
+  }
+
+  // Precompute Set lookups for O(1) matching
+  const categorySet = hasCategoryFilter ? new Set(filters.categories) : null;
+  const storeSet = hasStoreFilter ? new Set(filters.stores) : null;
+  const orderStatusSet = hasOrderStatusFilter ? new Set(filters.orderStatuses) : null;
+  const paymentStatusSet = hasPaymentStatusFilter ? new Set(filters.paymentStatuses) : null;
+  const paymentMethodSet = hasPaymentMethodFilter ? new Set(filters.paymentMethods) : null;
+
+  return sales.filter((sale) => {
+    if (categorySet && !categorySet.has(sale.category)) return false;
+    if (storeSet && !storeSet.has(sale.marketplace)) return false;
+    if (orderStatusSet && !orderStatusSet.has(sale.order_status)) return false;
+    if (paymentStatusSet && !paymentStatusSet.has(sale.payment_status)) return false;
+    if (paymentMethodSet && !paymentMethodSet.has(sale.payment_method)) return false;
+    if (hasDateFilter && !matchesDateFilter(sale.date, filters.dateFilter, filters.dateRange)) {
+      return false;
+    }
+
+    if (query) {
+      const itemMatch = sale.item ? sale.item.toLowerCase().includes(query) : false;
+      const customerMatch = sale.customer ? sale.customer.toLowerCase().includes(query) : false;
+      const marketplaceMatch = sale.marketplace ? sale.marketplace.toLowerCase().includes(query) : false;
+      const locationMatch = sale.location ? sale.location.toLowerCase().includes(query) : false;
+      const notesMatch = sale.notes ? sale.notes.toLowerCase().includes(query) : false;
+
+      if (!itemMatch && !customerMatch && !marketplaceMatch && !locationMatch && !notesMatch) {
+        return false;
+      }
+    }
+
+    return true;
+  });
 }

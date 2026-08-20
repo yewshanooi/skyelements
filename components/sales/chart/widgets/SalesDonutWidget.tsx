@@ -102,6 +102,9 @@ export const SalesDonutWidget: FC<SalesDonutWidgetProps> = ({
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Tooltip
+                isAnimationActive={false}
+                animationDuration={0}
+                wrapperStyle={{ transition: 'none', pointerEvents: 'none' }}
                 content={({ active, payload }) => {
                   if (active && payload && payload.length) {
                     const d = payload[0];

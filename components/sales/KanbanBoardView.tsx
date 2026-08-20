@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import type { FC, DragEvent } from 'react';
 import { Plus, User, ShoppingBag, Calendar } from 'lucide-react';
 import type { SaleItem, StoreType, SortField, SortOrder } from '@/types/sales';
@@ -77,27 +77,54 @@ export const KanbanBoardView: FC<KanbanBoardViewProps> = ({
     }
   };
 
+  // High-performance Schwartzian transform sorting (precomputes sort keys once in O(N))
   const filteredAndSortedSales = useMemo(() => {
-    return filterSales(sales, filters)
-      .sort((a, b) => {
-        let valA: string | number = (a[sortField] as string | number) ?? '';
-        let valB: string | number = (b[sortField] as string | number) ?? '';
+    const matched = filterSales(sales, filters);
+    if (matched.length <= 1) return matched;
 
-        if (sortField === 'date') {
-          valA = a.date ? new Date(a.date).getTime() : 0;
-          if (isNaN(valA)) valA = 0;
-          valB = b.date ? new Date(b.date).getTime() : 0;
-          if (isNaN(valB)) valB = 0;
-        } else if (typeof valA === 'string') {
-          valA = valA.toLowerCase();
-          valB = (typeof valB === 'string' ? valB : String(valB || '')).toLowerCase();
-        }
+    const mapped = matched.map((sale) => {
+      let val: string | number = (sale[sortField] as string | number) ?? '';
 
-        if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
-        if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
-        return 0;
-      });
+      if (sortField === 'date') {
+        val = sale.date ? new Date(sale.date).getTime() : 0;
+        if (isNaN(val)) val = 0;
+      } else if (typeof val === 'string') {
+        val = val.toLowerCase();
+      }
+
+      return { sale, val };
+    });
+
+    mapped.sort((a, b) => {
+      if (a.val < b.val) return sortOrder === 'asc' ? -1 : 1;
+      if (a.val > b.val) return sortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    return mapped.map((m) => m.sale);
   }, [sales, sortField, sortOrder, filters]);
+
+  // Single-pass column grouping and total aggregation
+  const storeColumnData = useMemo(() => {
+    const data: Record<StoreType, { sales: SaleItem[]; total: number }> = {
+      Shopee: { sales: [], total: 0 },
+      Carousell: { sales: [], total: 0 },
+    };
+
+    for (let i = 0; i < filteredAndSortedSales.length; i++) {
+      const s = filteredAndSortedSales[i];
+      const mp = (s.marketplace || '').trim().toLowerCase();
+      if (mp === 'shopee') {
+        data.Shopee.sales.push(s);
+        data.Shopee.total += s.sales || 0;
+      } else if (mp === 'carousell') {
+        data.Carousell.sales.push(s);
+        data.Carousell.total += s.sales || 0;
+      }
+    }
+
+    return data;
+  }, [filteredAndSortedSales]);
 
   const handleDragStart = (e: DragEvent<HTMLDivElement>, saleId: string) => {
     e.dataTransfer.setData('text/plain', saleId);
@@ -168,11 +195,9 @@ export const KanbanBoardView: FC<KanbanBoardViewProps> = ({
       {/* 2-Column Store Board Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-6">
         {STORE_COLUMNS.map((col) => {
-          const colSales = filteredAndSortedSales.filter((s) => {
-            const mp = (s.marketplace || '').trim().toLowerCase();
-            return mp === col.id.toLowerCase();
-          });
-          const colTotal = colSales.reduce((sum, s) => sum + (s.sales || 0), 0);
+          const colInfo = storeColumnData[col.id] || { sales: [], total: 0 };
+          const colSales = colInfo.sales;
+          const colTotal = colInfo.total;
           const isOver = dragOverCol === col.id;
 
           return (

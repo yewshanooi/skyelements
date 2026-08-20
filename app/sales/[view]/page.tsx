@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { SalesClient } from "../sales-client";
-import type { SaleItem, ViewMode } from "@/types/sales";
-import { mapRowToSaleItem } from "@/lib/sales/saleMappers";
+import type { ViewMode } from "@/types/sales";
+import { fetchSalesAction } from "@/services/sales/salesActions";
 
 const VALID_VIEWS: ViewMode[] = ['table', 'board', 'chart', 'timeline', 'map'];
 
@@ -24,7 +24,7 @@ export async function generateMetadata({
   const title = VIEW_TITLES[view as ViewMode] || 'Sales Dashboard';
   return {
     title: `Sales Dashboard | ${title}`,
-    description: "Comprehensive multi-view sales analytics, Notion tables, and AI Copilot.",
+    description: "Comprehensive multi-view sales analytics, Notion tables, and AI Assistant.",
   };
 }
 
@@ -47,17 +47,7 @@ export default async function SalesViewPage({
     redirect('/sales');
   }
 
-  let initialSales: SaleItem[] = [];
-
-  const { data: salesData, error } = await supabase
-    .from("sales")
-    .select("*")
-    .eq("user_id", user.id)
-    .order("date", { ascending: false });
-
-  if (!error && salesData) {
-    initialSales = salesData.map(mapRowToSaleItem);
-  }
+  const initialSales = await fetchSalesAction();
 
   return <SalesClient activeView={view as ViewMode} initialUser={user} initialSales={initialSales} />;
 }

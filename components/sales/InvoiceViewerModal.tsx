@@ -501,7 +501,7 @@ const InvoiceViewerModalContent: FC<{ sale: SaleItem; onClose: () => void }> = (
                 target="_blank"
                 rel="noreferrer"
                 className="p-2 text-neutral-500 hover:text-blue-600 dark:text-neutral-400 dark:hover:text-blue-400 hover:bg-neutral-200/60 dark:hover:bg-neutral-800 rounded-lg transition-colors cursor-pointer"
-                title="Open in new tab / Download"
+                title="Open in new tab"
               >
                 <ExternalLink className="w-4 h-4" />
               </a>

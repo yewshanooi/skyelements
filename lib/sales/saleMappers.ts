@@ -2,6 +2,13 @@ import type { SaleItem } from '@/types/sales';
 import { normalizeCoordinates } from '@/lib/sales/locationParser';
 
 /**
+ * Explicit columns to select for sales items.
+ * Avoids SELECT * overhead, improves query serialization, and leverages composite indexes.
+ */
+export const SALES_SELECT_COLUMNS =
+  'id, user_id, quantity, item, category, marketplace, payment_method, customer, date, subtotal, cost, sales, order_status, payment_status, invoice_url, invoice_name, location, latitude, longitude, notes, created_at';
+
+/**
  * Helper to reliably parse the Supabase Storage object path from any format:
  * - Direct object path: `<userId>/<timestamp>_<filename>`
  * - Bucket-prefixed path: `invoices/<userId>/<timestamp>_<filename>`

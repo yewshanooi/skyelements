@@ -21,7 +21,7 @@ import {
 import type { SaleItem, SortField, SortOrder } from '@/types/sales';
 import { TagPill } from './TagPill';
 import { NotionFilterBar } from './NotionFilterBar';
-import { matchesSaleFilter, type FilterState } from '@/lib/sales/filterUtils';
+import { filterSales, type FilterState } from '@/lib/sales/filterUtils';
 import { formatDateDisplay } from '@/lib/sales/dateUtils';
 import { TableOptionPicker } from './TableOptionPicker';
 import { TableDatePicker } from './TableDatePicker';
@@ -167,18 +167,39 @@ export const TableView: FC<TableViewProps> = ({
   const { user } = useAuth();
 
   // Custom formula state
-  const [customFormula, setCustomFormula] = useState<string>(DEFAULT_FORMULA);
+  const [customFormula, setCustomFormula] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const savedFormula = localStorage.getItem(STORAGE_KEY_FORMULA);
+        if (savedFormula && savedFormula !== 'round( # Subtotal (in MYR) - # Cost(s) , 2)') {
+          return savedFormula.replace(/round\(\s+#/g, 'round(#');
+        }
+      } catch {}
+    }
+    return DEFAULT_FORMULA;
+  });
 
   const fileInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
 
   // Column Resizing state & persistence
-  const [columnWidths, setColumnWidths] = useState<Record<ColumnId, number>>({ ...DEFAULT_COLUMN_WIDTHS });
+  const [columnWidths, setColumnWidths] = useState<Record<ColumnId, number>>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const storedWidths = localStorage.getItem(STORAGE_KEY_COLUMN_WIDTHS);
+        if (storedWidths) {
+          const parsed = JSON.parse(storedWidths);
+          return { ...DEFAULT_COLUMN_WIDTHS, ...parsed };
+        }
+      } catch {}
+    }
+    return { ...DEFAULT_COLUMN_WIDTHS };
+  });
   const [resizingCol, setResizingCol] = useState<ColumnId | null>(null);
   const dragOccurredRef = useRef(false);
 
-  const isHydratedRef = useRef(false);
+  const isHydratedRef = useRef(true);
 
-  // Hydrate preferences from localStorage on mount without SSR mismatch
+  // Hydrate preferences from localStorage on mount
   useEffect(() => {
     try {
       const savedFormula = localStorage.getItem(STORAGE_KEY_FORMULA);
@@ -195,10 +216,7 @@ export const TableView: FC<TableViewProps> = ({
       }
     } catch {}
 
-    const timer = setTimeout(() => {
-      isHydratedRef.current = true;
-    }, 50);
-    return () => clearTimeout(timer);
+    isHydratedRef.current = true;
   }, []);
 
   // Persist formula and column widths (only after hydration)
@@ -254,6 +272,8 @@ export const TableView: FC<TableViewProps> = ({
     };
   }, []);
 
+  const resizeRafRef = useRef<number | null>(null);
+
   const handleStartResize = (
     e: React.MouseEvent<HTMLDivElement>,
     colId: ColumnId
@@ -267,16 +287,28 @@ export const TableView: FC<TableViewProps> = ({
     setResizingCol(colId);
 
     const handleMouseMove = (moveEvent: MouseEvent) => {
-      const deltaX = moveEvent.clientX - startX;
-      const minW = MIN_COLUMN_WIDTHS[colId] || 50;
-      const newWidth = Math.max(minW, Math.round(startWidth + deltaX));
-      setColumnWidths((prev) => ({
-        ...prev,
-        [colId]: newWidth,
-      }));
+      if (resizeRafRef.current !== null) {
+        cancelAnimationFrame(resizeRafRef.current);
+      }
+      resizeRafRef.current = requestAnimationFrame(() => {
+        const deltaX = moveEvent.clientX - startX;
+        const minW = MIN_COLUMN_WIDTHS[colId] || 50;
+        const newWidth = Math.max(minW, Math.round(startWidth + deltaX));
+        setColumnWidths((prev) => {
+          if (prev[colId] === newWidth) return prev;
+          return {
+            ...prev,
+            [colId]: newWidth,
+          };
+        });
+      });
     };
 
     const handleMouseUp = () => {
+      if (resizeRafRef.current !== null) {
+        cancelAnimationFrame(resizeRafRef.current);
+        resizeRafRef.current = null;
+      }
       setResizingCol(null);
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
@@ -311,16 +343,29 @@ export const TableView: FC<TableViewProps> = ({
 
     const handleTouchMove = (moveEvent: TouchEvent) => {
       if (!moveEvent.touches[0]) return;
-      const deltaX = moveEvent.touches[0].clientX - startX;
-      const minW = MIN_COLUMN_WIDTHS[colId] || 50;
-      const newWidth = Math.max(minW, Math.round(startWidth + deltaX));
-      setColumnWidths((prev) => ({
-        ...prev,
-        [colId]: newWidth,
-      }));
+      if (resizeRafRef.current !== null) {
+        cancelAnimationFrame(resizeRafRef.current);
+      }
+      const clientX = moveEvent.touches[0].clientX;
+      resizeRafRef.current = requestAnimationFrame(() => {
+        const deltaX = clientX - startX;
+        const minW = MIN_COLUMN_WIDTHS[colId] || 50;
+        const newWidth = Math.max(minW, Math.round(startWidth + deltaX));
+        setColumnWidths((prev) => {
+          if (prev[colId] === newWidth) return prev;
+          return {
+            ...prev,
+            [colId]: newWidth,
+          };
+        });
+      });
     };
 
     const handleTouchEnd = () => {
+      if (resizeRafRef.current !== null) {
+        cancelAnimationFrame(resizeRafRef.current);
+        resizeRafRef.current = null;
+      }
       setResizingCol(null);
       window.removeEventListener('touchmove', handleTouchMove);
       window.removeEventListener('touchend', handleTouchEnd);
@@ -394,31 +439,36 @@ export const TableView: FC<TableViewProps> = ({
     }
   };
 
+  // High-performance Schwartzian transform sorting (precomputes sort keys once in O(N))
   const filteredAndSortedSales = useMemo(() => {
-    return sales
-      .filter((sale) => matchesSaleFilter(sale, filters))
-      .sort((a, b) => {
-        let valA: string | number = (a[sortField] as string | number) ?? '';
-        let valB: string | number = (b[sortField] as string | number) ?? '';
+    const matched = filterSales(sales, filters);
+    if (matched.length <= 1) return matched;
 
-        if (sortField === 'sales') {
-          valA = evaluateSalesFormula(customFormula, a);
-          valB = evaluateSalesFormula(customFormula, b);
-        } else if (sortField === 'date') {
-          valA = a.date ? new Date(a.date).getTime() : 0;
-          if (isNaN(valA)) valA = 0;
-          valB = b.date ? new Date(b.date).getTime() : 0;
-          if (isNaN(valB)) valB = 0;
-        } else if (typeof valA === 'string') {
-          valA = valA.toLowerCase();
-          valB = (typeof valB === 'string' ? valB : String(valB || '')).toLowerCase();
-        }
+    const mapped = matched.map((sale) => {
+      let val: string | number = (sale[sortField] as string | number) ?? '';
 
-        if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
-        if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
-        return 0;
-      });
+      if (sortField === 'sales') {
+        val = evaluateSalesFormula(customFormula, sale);
+      } else if (sortField === 'date') {
+        val = sale.date ? new Date(sale.date).getTime() : 0;
+        if (isNaN(val)) val = 0;
+      } else if (typeof val === 'string') {
+        val = val.toLowerCase();
+      }
+
+      return { sale, val };
+    });
+
+    mapped.sort((a, b) => {
+      if (a.val < b.val) return sortOrder === 'asc' ? -1 : 1;
+      if (a.val > b.val) return sortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    return mapped.map((m) => m.sale);
   }, [sales, sortField, sortOrder, filters, customFormula]);
+
+  const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
 
   const toggleSelectAll = () => {
     if (selectedIds.length === filteredAndSortedSales.length) {
@@ -429,7 +479,7 @@ export const TableView: FC<TableViewProps> = ({
   };
 
   const toggleSelectRow = (id: string) => {
-    if (selectedIds.includes(id)) {
+    if (selectedIdSet.has(id)) {
       setSelectedIds(selectedIds.filter((i) => i !== id));
     } else {
       setSelectedIds([...selectedIds, id]);
@@ -508,11 +558,28 @@ export const TableView: FC<TableViewProps> = ({
     }
   };
 
-  // Summary Metrics
-  const totalSubtotal = useMemo(() => sales.reduce((acc, s) => acc + (s.subtotal || 0), 0), [sales]);
-  const totalCost = useMemo(() => sales.reduce((acc, s) => acc + (s.cost || 0), 0), [sales]);
-  const totalSales = useMemo(() => sales.reduce((acc, s) => acc + evaluateSalesFormula(customFormula, s), 0), [sales, customFormula]);
-  const totalQuantity = useMemo(() => sales.reduce((acc, s) => acc + (s.quantity || 0), 0), [sales]);
+  // Optimized single-pass summary metrics calculation
+  const { totalSubtotal, totalCost, totalSales, totalQuantity } = useMemo(() => {
+    let subtotal = 0;
+    let cost = 0;
+    let netSales = 0;
+    let qty = 0;
+
+    for (let i = 0; i < sales.length; i++) {
+      const s = sales[i];
+      subtotal += s.subtotal || 0;
+      cost += s.cost || 0;
+      netSales += evaluateSalesFormula(customFormula, s);
+      qty += s.quantity || 0;
+    }
+
+    return {
+      totalSubtotal: subtotal,
+      totalCost: cost,
+      totalSales: netSales,
+      totalQuantity: qty,
+    };
+  }, [sales, customFormula]);
 
   const renderSortIcon = (field: SortField) => {
     if (sortField !== field) {
@@ -795,7 +862,7 @@ export const TableView: FC<TableViewProps> = ({
                 </tr>
               ) : (
                 filteredAndSortedSales.map((sale) => {
-                  const isSelected = selectedIds.includes(sale.id);
+                  const isSelected = selectedIdSet.has(sale.id);
                   const isRowActive =
                     activeOptionPicker?.saleId === sale.id ||
                     activeDatePickerSaleId === sale.id ||
@@ -908,13 +975,13 @@ export const TableView: FC<TableViewProps> = ({
                       <td
                         onClick={() =>
                           setActiveOptionPicker(
-                            activeOptionPicker?.saleId === sale.id && activeOptionPicker.field === 'category'
+                            activeOptionPicker?.saleId === sale.id && activeOptionPicker?.field === 'category'
                               ? null
                               : { saleId: sale.id, field: 'category' }
                           )
                         }
                         className={`px-3 py-2 border-r border-neutral-200/60 dark:border-neutral-800 relative cursor-pointer hover:bg-neutral-100/60 dark:hover:bg-neutral-800/40 transition-colors select-none ${
-                          activeOptionPicker?.saleId === sale.id && activeOptionPicker.field === 'category' ? 'z-30' : ''
+                          activeOptionPicker?.saleId === sale.id && activeOptionPicker?.field === 'category' ? 'z-30' : ''
                         }`}
                       >
                         <div className="flex items-center min-h-[22px] w-full min-w-0">
@@ -922,7 +989,7 @@ export const TableView: FC<TableViewProps> = ({
                             <TagPill text={sale.category} type="category" />
                           ) : null}
                         </div>
-                        {activeOptionPicker?.saleId === sale.id && activeOptionPicker.field === 'category' && (
+                        {activeOptionPicker?.saleId === sale.id && activeOptionPicker?.field === 'category' && (
                           <TableOptionPicker
                             type="category"
                             currentValue={sale.category}
@@ -939,13 +1006,13 @@ export const TableView: FC<TableViewProps> = ({
                       <td
                         onClick={() =>
                           setActiveOptionPicker(
-                            activeOptionPicker?.saleId === sale.id && activeOptionPicker.field === 'marketplace'
+                            activeOptionPicker?.saleId === sale.id && activeOptionPicker?.field === 'marketplace'
                               ? null
                               : { saleId: sale.id, field: 'marketplace' }
                           )
                         }
                         className={`px-3 py-2 border-r border-neutral-200/60 dark:border-neutral-800 relative cursor-pointer hover:bg-neutral-100/60 dark:hover:bg-neutral-800/40 transition-colors select-none ${
-                          activeOptionPicker?.saleId === sale.id && activeOptionPicker.field === 'marketplace' ? 'z-30' : ''
+                          activeOptionPicker?.saleId === sale.id && activeOptionPicker?.field === 'marketplace' ? 'z-30' : ''
                         }`}
                       >
                         <div className="flex items-center min-h-[22px] w-full min-w-0">
@@ -953,7 +1020,7 @@ export const TableView: FC<TableViewProps> = ({
                             <TagPill text={sale.marketplace} type="marketplace" />
                           ) : null}
                         </div>
-                        {activeOptionPicker?.saleId === sale.id && activeOptionPicker.field === 'marketplace' && (
+                        {activeOptionPicker?.saleId === sale.id && activeOptionPicker?.field === 'marketplace' && (
                           <TableOptionPicker
                             type="marketplace"
                             currentValue={sale.marketplace}
@@ -970,13 +1037,13 @@ export const TableView: FC<TableViewProps> = ({
                       <td
                         onClick={() =>
                           setActiveOptionPicker(
-                            activeOptionPicker?.saleId === sale.id && activeOptionPicker.field === 'payment_method'
+                            activeOptionPicker?.saleId === sale.id && activeOptionPicker?.field === 'payment_method'
                               ? null
                               : { saleId: sale.id, field: 'payment_method' }
                           )
                         }
                         className={`px-3 py-2 border-r border-neutral-200/60 dark:border-neutral-800 relative cursor-pointer hover:bg-neutral-100/60 dark:hover:bg-neutral-800/40 transition-colors select-none ${
-                          activeOptionPicker?.saleId === sale.id && activeOptionPicker.field === 'payment_method' ? 'z-30' : ''
+                          activeOptionPicker?.saleId === sale.id && activeOptionPicker?.field === 'payment_method' ? 'z-30' : ''
                         }`}
                       >
                         <div className="flex items-center min-h-[22px] w-full min-w-0">
@@ -984,7 +1051,7 @@ export const TableView: FC<TableViewProps> = ({
                             <TagPill text={sale.payment_method} type="payment_method" />
                           ) : null}
                         </div>
-                        {activeOptionPicker?.saleId === sale.id && activeOptionPicker.field === 'payment_method' && (
+                        {activeOptionPicker?.saleId === sale.id && activeOptionPicker?.field === 'payment_method' && (
                           <TableOptionPicker
                             type="payment_method"
                             currentValue={sale.payment_method}
@@ -1122,13 +1189,13 @@ export const TableView: FC<TableViewProps> = ({
                       <td
                         onClick={() =>
                           setActiveOptionPicker(
-                            activeOptionPicker?.saleId === sale.id && activeOptionPicker.field === 'order_status'
+                            activeOptionPicker?.saleId === sale.id && activeOptionPicker?.field === 'order_status'
                               ? null
                               : { saleId: sale.id, field: 'order_status' }
                           )
                         }
                         className={`px-3 py-2 border-r border-neutral-200/60 dark:border-neutral-800 relative cursor-pointer hover:bg-neutral-100/60 dark:hover:bg-neutral-800/40 transition-colors select-none ${
-                          activeOptionPicker?.saleId === sale.id && activeOptionPicker.field === 'order_status' ? 'z-30' : ''
+                          activeOptionPicker?.saleId === sale.id && activeOptionPicker?.field === 'order_status' ? 'z-30' : ''
                         }`}
                       >
                         <div className="flex items-center min-h-[22px] w-full min-w-0">
@@ -1136,7 +1203,7 @@ export const TableView: FC<TableViewProps> = ({
                             <TagPill text={sale.order_status} type="order_status" />
                           ) : null}
                         </div>
-                        {activeOptionPicker?.saleId === sale.id && activeOptionPicker.field === 'order_status' && (
+                        {activeOptionPicker?.saleId === sale.id && activeOptionPicker?.field === 'order_status' && (
                           <TableOptionPicker
                             type="order_status"
                             currentValue={sale.order_status}
@@ -1153,13 +1220,13 @@ export const TableView: FC<TableViewProps> = ({
                       <td
                         onClick={() =>
                           setActiveOptionPicker(
-                            activeOptionPicker?.saleId === sale.id && activeOptionPicker.field === 'payment_status'
+                            activeOptionPicker?.saleId === sale.id && activeOptionPicker?.field === 'payment_status'
                               ? null
                               : { saleId: sale.id, field: 'payment_status' }
                           )
                         }
                         className={`px-3 py-2 border-r border-neutral-200/60 dark:border-neutral-800 relative cursor-pointer hover:bg-neutral-100/60 dark:hover:bg-neutral-800/40 transition-colors select-none ${
-                          activeOptionPicker?.saleId === sale.id && activeOptionPicker.field === 'payment_status' ? 'z-30' : ''
+                          activeOptionPicker?.saleId === sale.id && activeOptionPicker?.field === 'payment_status' ? 'z-30' : ''
                         }`}
                       >
                         <div className="flex items-center min-h-[22px] w-full min-w-0">
@@ -1167,7 +1234,7 @@ export const TableView: FC<TableViewProps> = ({
                             <TagPill text={sale.payment_status} type="payment_status" />
                           ) : null}
                         </div>
-                        {activeOptionPicker?.saleId === sale.id && activeOptionPicker.field === 'payment_status' && (
+                        {activeOptionPicker?.saleId === sale.id && activeOptionPicker?.field === 'payment_status' && (
                           <TableOptionPicker
                             type="payment_status"
                             currentValue={sale.payment_status}

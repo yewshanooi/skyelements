@@ -31,12 +31,14 @@ CREATE TABLE IF NOT EXISTS public.sales (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
 
--- 3. Create Indexes for Query Performance
-CREATE INDEX IF NOT EXISTS idx_sales_user_id ON public.sales(user_id);
-CREATE INDEX IF NOT EXISTS idx_sales_date ON public.sales(date DESC);
-CREATE INDEX IF NOT EXISTS idx_sales_category ON public.sales(category);
-CREATE INDEX IF NOT EXISTS idx_sales_marketplace ON public.sales(marketplace);
-CREATE INDEX IF NOT EXISTS idx_sales_order_status ON public.sales(order_status);
+-- 3. Create Indexes for High-Performance Multi-Tenant Queries
+CREATE INDEX IF NOT EXISTS idx_sales_user_date_created ON public.sales(user_id, date DESC, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_sales_user_id_lookup ON public.sales(user_id, id);
+CREATE INDEX IF NOT EXISTS idx_sales_user_category_date ON public.sales(user_id, category, date DESC);
+CREATE INDEX IF NOT EXISTS idx_sales_user_marketplace_date ON public.sales(user_id, marketplace, date DESC);
+CREATE INDEX IF NOT EXISTS idx_sales_user_order_status_date ON public.sales(user_id, order_status, date DESC);
+CREATE INDEX IF NOT EXISTS idx_sales_user_payment_status_date ON public.sales(user_id, payment_status, date DESC);
+CREATE INDEX IF NOT EXISTS idx_sales_user_customer ON public.sales(user_id, customer);
 
 -- 4. Enable Row Level Security (RLS)
 ALTER TABLE public.sales ENABLE ROW LEVEL SECURITY;

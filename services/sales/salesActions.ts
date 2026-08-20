@@ -5,7 +5,7 @@ import { createClient } from '@/utils/supabase/server';
 import type { SaleItem } from '@/types/sales';
 import { geocodeAddress } from '@/services/sales/geocodeService';
 import { normalizeCoordinates } from '@/lib/sales/locationParser';
-import { extractStoragePath, mapRowToSaleItem } from '@/lib/sales/saleMappers';
+import { extractStoragePath, mapRowToSaleItem, SALES_SELECT_COLUMNS } from '@/lib/sales/saleMappers';
 
 /**
  * Fetch all sales for the authenticated user from the server
@@ -20,9 +20,10 @@ export async function fetchSalesAction(): Promise<SaleItem[]> {
 
   const { data, error } = await supabase
     .from('sales')
-    .select('*')
+    .select(SALES_SELECT_COLUMNS)
     .eq('user_id', user.id)
-    .order('date', { ascending: false });
+    .order('date', { ascending: false })
+    .order('created_at', { ascending: false });
 
   if (error) {
     console.error('[fetchSalesAction] Error fetching sales:', error);
@@ -92,7 +93,7 @@ export async function createSaleAction(sale: Omit<SaleItem, 'id'>): Promise<Sale
       longitude: lng ?? null,
       notes: sale.notes || null,
     })
-    .select()
+    .select(SALES_SELECT_COLUMNS)
     .single();
 
   if (error) {
@@ -156,7 +157,7 @@ export async function updateSaleAction(
     .update(dbPayload)
     .eq('id', id)
     .eq('user_id', user.id)
-    .select()
+    .select(SALES_SELECT_COLUMNS)
     .single();
 
   if (error) {
@@ -306,7 +307,7 @@ export async function createSalesBatchAction(
     };
   });
 
-  const chunkSize = 50;
+  const chunkSize = 100;
   const insertedSales: SaleItem[] = [];
 
   for (let i = 0; i < rowsToInsert.length; i += chunkSize) {
@@ -314,7 +315,7 @@ export async function createSalesBatchAction(
     const { data, error } = await supabase
       .from('sales')
       .insert(chunk)
-      .select();
+      .select(SALES_SELECT_COLUMNS);
 
     if (error) {
       console.error('[createSalesBatchAction] DB batch insert error:', error);

@@ -18,11 +18,11 @@ import {
   Award,
   Layers2,
   Sliders,
-  Pencil,
   Check,
+  Pencil,
 } from 'lucide-react';
 import { NotionFilterBar } from './NotionFilterBar';
-import { filterSales, type FilterState, type PropertyType } from '@/lib/sales/filterUtils';
+import { filterSales, DEFAULT_EMPTY_FILTERS, type FilterState, type PropertyType } from '@/lib/sales/filterUtils';
 import type {
   WidgetConfig,
   WidgetWidth,
@@ -74,17 +74,6 @@ interface ChartViewProps {
 
 const STORAGE_KEY_CHART_LAYOUT = 'sales_dashboard_chart_layout_v3';
 const STORAGE_KEY_OVERVIEW_KPI_LAYOUT = 'sales_dashboard_overview_kpi_layout_v3';
-const DEFAULT_VISIBLE_PROPS: PropertyType[] = ['paymentStatus', 'category', 'date'];
-
-const DEFAULT_FILTERS: FilterState = {
-  search: '',
-  categories: [],
-  stores: [],
-  orderStatuses: [],
-  paymentStatuses: ['Paid'],
-  paymentMethods: [],
-  dateRange: 'all',
-};
 
 // Widget registry definition
 const ALL_WIDGET_CONFIGS: WidgetConfig[] = [
@@ -379,7 +368,7 @@ export const ChartView: FC<ChartViewProps> = ({
   }, [layout]);
 
   // Chart Filter state
-  const [internalFilters, setInternalFilters] = useState<FilterState>(DEFAULT_FILTERS);
+  const [internalFilters, setInternalFilters] = useState<FilterState>(DEFAULT_EMPTY_FILTERS);
   const filters = propFilters ?? internalFilters;
   const setFilters = (newFilters: FilterState) => {
     if (propOnFiltersChange) {
@@ -447,7 +436,7 @@ export const ChartView: FC<ChartViewProps> = ({
   );
 
   const handleResetFilters = () => {
-    setFilters(DEFAULT_FILTERS);
+    setFilters(DEFAULT_EMPTY_FILTERS);
     onResetSearch?.();
   };
 
@@ -845,7 +834,6 @@ export const ChartView: FC<ChartViewProps> = ({
         filteredCount={filteredSales.length}
         filters={filters}
         onFiltersChange={setFilters}
-        defaultVisibleProps={DEFAULT_VISIBLE_PROPS}
         extraRightActions={
           <button
             type="button"

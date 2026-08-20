@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import type { SaleItem } from '@/types/sales';
 import { geocodeAddress, searchLocations, type LocationSuggestion } from '@/services/sales/geocodeService';
-import { normalizeCoordinates } from '@/lib/sales/locationParser';
+import { normalizeCoordinates, extractEmbeddedCoordinates } from '@/lib/sales/locationParser';
 import { NotionFilterBar } from './NotionFilterBar';
 import { filterSales, type FilterState, type PropertyType } from '@/lib/sales/filterUtils';
 import { useTheme } from '@/lib/sales/useTheme';
@@ -34,7 +34,6 @@ interface MapViewProps {
 }
 
 const STORAGE_KEY_MAP_VIEWPORT = 'sales_dashboard_map_viewport_v1';
-const DEFAULT_VISIBLE_PROPS: PropertyType[] = ['paymentStatus'];
 
 interface MapViewport {
   center: [number, number];
@@ -358,19 +357,44 @@ export const MapView: FC<MapViewProps> = ({
     }
   }, [locatedSales, onSelectSale, selectedSalePin]);
 
-  // If a specific pin was selected from another view, fly to it
+  // If a specific pin was selected from another view, fly to it & open its popup
   useEffect(() => {
-    if (selectedSalePin && mapInstanceRef.current) {
-      const norm = normalizeCoordinates(selectedSalePin.latitude, selectedSalePin.longitude);
-      if (norm) {
-        mapInstanceRef.current.flyTo({
-          center: [norm.lng, norm.lat],
-          zoom: 12,
-          duration: 1200,
-        });
+    if (!selectedSalePin) return;
+    const norm =
+      normalizeCoordinates(selectedSalePin.latitude, selectedSalePin.longitude) ||
+      extractEmbeddedCoordinates(selectedSalePin.location);
+    if (!norm) return;
+
+    const flyAndOpen = () => {
+      const map = mapInstanceRef.current;
+      if (!map) return;
+
+      map.flyTo({
+        center: [norm.lng, norm.lat],
+        zoom: 14.5,
+        duration: 1000,
+      });
+
+      const targetMarker = markersRef.current.find((m) => {
+        const lngLat = m.getLngLat();
+        return (
+          Math.abs(lngLat.lng - norm.lng) < 0.0002 &&
+          Math.abs(lngLat.lat - norm.lat) < 0.0002
+        );
+      });
+      if (targetMarker && !targetMarker.getPopup()?.isOpen()) {
+        targetMarker.togglePopup();
       }
-    }
-  }, [selectedSalePin]);
+    };
+
+    flyAndOpen();
+    const t1 = setTimeout(flyAndOpen, 300);
+    const t2 = setTimeout(flyAndOpen, 700);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, [selectedSalePin, locatedSales]);
 
   // Toggle fullscreen mode
   const toggleFullscreen = useCallback(async () => {
@@ -588,7 +612,6 @@ export const MapView: FC<MapViewProps> = ({
         filters={filters}
         onFiltersChange={setFilters}
         onOpenNewSale={onOpenNewSale}
-        defaultVisibleProps={DEFAULT_VISIBLE_PROPS}
       />
 
       {/* Map Card */}

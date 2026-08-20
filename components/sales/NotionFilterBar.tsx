@@ -15,9 +15,9 @@ import {
   ShoppingBag,
   Truck,
   CreditCard,
-  GripVertical,
   Building2,
   Trash2,
+  GripVertical,
   RotateCcw,
 } from 'lucide-react';
 import type { SortField, SortOrder } from '@/types/sales';
@@ -80,7 +80,7 @@ export const NotionFilterBar: FC<NotionFilterBarProps> = ({
   onSortChange,
   filters,
   onFiltersChange,
-  defaultVisibleProps = ['category', 'paymentStatus'],
+  defaultVisibleProps = [],
   isAnyColumnResized = false,
   onResetColumnWidths,
   extraRightActions,
@@ -108,6 +108,29 @@ export const NotionFilterBar: FC<NotionFilterBarProps> = ({
 
   // Active filter pills visible on toolbar
   const [visibleFilterProps, setVisibleFilterProps] = useState<PropertyType[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem(storageKey);
+        if (stored !== null) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) {
+            const merged = [...parsed];
+            if (filters.categories?.length > 0 && !merged.includes('category')) merged.push('category');
+            if (filters.stores?.length > 0 && !merged.includes('store')) merged.push('store');
+            if (filters.orderStatuses?.length > 0 && !merged.includes('orderStatus')) merged.push('orderStatus');
+            if (filters.paymentStatuses?.length > 0 && !merged.includes('paymentStatus')) merged.push('paymentStatus');
+            if (filters.paymentMethods?.length > 0 && !merged.includes('paymentMethod')) merged.push('paymentMethod');
+            if (
+              (filters.dateFilter?.startDate || filters.dateFilter?.endDate || (filters.dateRange && filters.dateRange !== 'all')) &&
+              !merged.includes('date')
+            ) {
+              merged.push('date');
+            }
+            return merged;
+          }
+        }
+      } catch {}
+    }
     const initial = [...defaultVisibleProps];
     if (filters.categories?.length > 0 && !initial.includes('category')) initial.push('category');
     if (filters.stores?.length > 0 && !initial.includes('store')) initial.push('store');
@@ -115,7 +138,7 @@ export const NotionFilterBar: FC<NotionFilterBarProps> = ({
     if (filters.paymentStatuses?.length > 0 && !initial.includes('paymentStatus')) initial.push('paymentStatus');
     if (filters.paymentMethods?.length > 0 && !initial.includes('paymentMethod')) initial.push('paymentMethod');
     if (
-      (filters.dateFilter?.startDate || (filters.dateRange && filters.dateRange !== 'all')) &&
+      (filters.dateFilter?.startDate || filters.dateFilter?.endDate || (filters.dateRange && filters.dateRange !== 'all')) &&
       !initial.includes('date')
     ) {
       initial.push('date');
@@ -123,21 +146,20 @@ export const NotionFilterBar: FC<NotionFilterBarProps> = ({
     return initial;
   });
 
-  const isHydratedRef = useRef(false);
+  const isHydratedRef = useRef(true);
 
   useEffect(() => {
     try {
       const stored = localStorage.getItem(storageKey);
       if (stored !== null) {
-        setVisibleFilterProps(JSON.parse(stored));
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          setVisibleFilterProps(parsed);
+        }
       }
     } catch {
       /* ignore storage error */
     }
-    const timer = setTimeout(() => {
-      isHydratedRef.current = true;
-    }, 50);
-    return () => clearTimeout(timer);
   }, [storageKey]);
 
   const barRef = useRef<HTMLDivElement>(null);
@@ -225,18 +247,28 @@ export const NotionFilterBar: FC<NotionFilterBarProps> = ({
   };
 
   const clearFilterType = (type: PropertyType) => {
-    if (type === 'category') onFiltersChange({ ...filters, categories: [] });
-    if (type === 'store') onFiltersChange({ ...filters, stores: [] });
-    if (type === 'orderStatus') onFiltersChange({ ...filters, orderStatuses: [] });
-    if (type === 'paymentStatus') onFiltersChange({ ...filters, paymentStatuses: [] });
-    if (type === 'paymentMethod') onFiltersChange({ ...filters, paymentMethods: [] });
-    if (type === 'date') onFiltersChange({ ...filters, dateFilter: undefined, dateRange: 'all' });
+    const nextFilters = { ...filters };
+    if (type === 'category') nextFilters.categories = [];
+    if (type === 'store') nextFilters.stores = [];
+    if (type === 'orderStatus') nextFilters.orderStatuses = [];
+    if (type === 'paymentStatus') nextFilters.paymentStatuses = [];
+    if (type === 'paymentMethod') nextFilters.paymentMethods = [];
+    if (type === 'date') {
+      nextFilters.dateFilter = undefined;
+      nextFilters.dateRange = 'all';
+    }
+    onFiltersChange(nextFilters);
   };
 
   const removeFilterProp = (type: PropertyType) => {
     clearFilterType(type);
     const updated = visibleFilterProps.filter((p) => p !== type);
     setVisibleFilterProps(updated);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(updated));
+      } catch {}
+    }
     if (activeFilterPopover === type) setActiveFilterPopover(null);
   };
 
@@ -291,19 +323,18 @@ export const NotionFilterBar: FC<NotionFilterBarProps> = ({
     }
     if (type === 'date') {
       if (filters.dateFilter) {
-        const { operator, startDate, endDate } = filters.dateFilter;
-        if (operator === 'empty') return 'Date: is empty';
-        if (operator === 'not_empty') return 'Date: is not empty';
-        if (operator === 'relative_today') return 'Date: relative to today';
-        if (operator === 'between' && startDate && endDate) {
+        const { startDate, endDate } = filters.dateFilter;
+        if (startDate && endDate) {
+          if (startDate === endDate) {
+            return `Date: ${formatDateShort(startDate)}`;
+          }
           return `Date: ${formatDateShort(startDate)} - ${formatDateShort(endDate)}`;
         }
         if (startDate) {
-          if (operator === 'exact' || operator === 'between') return `Date: ${formatDateShort(startDate)}`;
-          if (operator === 'before') return `Date: < ${formatDateShort(startDate)}`;
-          if (operator === 'after') return `Date: > ${formatDateShort(startDate)}`;
-          if (operator === 'on_or_before') return `Date: <= ${formatDateShort(startDate)}`;
-          if (operator === 'on_or_after') return `Date: >= ${formatDateShort(startDate)}`;
+          return `Date: ${formatDateShort(startDate)}`;
+        }
+        if (endDate) {
+          return `Date: <= ${formatDateShort(endDate)}`;
         }
       }
       if (filters.dateRange && filters.dateRange !== 'all') {
@@ -536,7 +567,7 @@ export const NotionFilterBar: FC<NotionFilterBarProps> = ({
                   <div className="absolute left-0 top-full mt-1.5 z-50 animate-in fade-in-50 zoom-in-95 duration-100">
                     {type === 'date' ? (
                       <NotionDatePicker
-                        value={filters.dateFilter || { operator: 'between' }}
+                        value={filters.dateFilter}
                         onChange={(val) => onFiltersChange({ ...filters, dateFilter: val })}
                         onClear={() => clearFilterType('date')}
                         onDeleteFilter={() => removeFilterProp('date')}

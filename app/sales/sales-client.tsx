@@ -6,7 +6,6 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import type { User } from '@supabase/supabase-js';
 import { AuthProvider, useAuth } from '@/lib/sales/AuthContext';
 import { Header } from '@/components/sales/Header';
-import { TableView } from '@/components/sales/TableView';
 import { SaleModal } from '@/components/sales/SaleModal';
 import { AuthModal } from '@/components/sales/AuthModal';
 import { InvoiceViewerModal } from '@/components/sales/InvoiceViewerModal';
@@ -37,6 +36,10 @@ const ViewLoading = () => (
 );
 
 // Dynamically import heavy and browser-only components
+const TableView = dynamic(
+  () => import('@/components/sales/TableView').then((m) => ({ default: m.TableView })),
+  { ssr: false, loading: () => <ViewLoading /> }
+);
 const ChartView = dynamic(
   () => import('@/components/sales/ChartView').then((m) => ({ default: m.ChartView })),
   { ssr: false, loading: () => <ViewLoading /> }
@@ -76,9 +79,12 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
   const [currentView, setCurrentView] = useState<ViewMode>(activeView);
   const [sales, setSales] = useState<SaleItem[]>(initialSales || []);
   const [isLoading, setIsLoading] = useState<boolean>(!initialSales && Boolean(user?.id));
-  const [hasInitializedInitialSales, setHasInitializedInitialSales] = useState(
-    Boolean(initialSales && initialSales.length > 0)
-  );
+  const [isClientReady, setIsClientReady] = useState(false);
+  const hasInitializedInitialSalesRef = useRef(Boolean(initialSales !== undefined));
+
+  useEffect(() => {
+    setIsClientReady(true);
+  }, []);
 
   // Sync currentView if activeView prop changes
   useEffect(() => {
@@ -118,11 +124,12 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
       nextFilters: FilterState,
       extras?: { sortField?: SortField; sortOrder?: SortOrder; year?: number; month?: number }
     ) => {
+      const isTimeline = currentView === 'timeline';
       const sp = buildSearchParamsFromFilters(nextFilters, {
         sortField: extras?.sortField ?? sortField,
         sortOrder: extras?.sortOrder ?? sortOrder,
-        year: extras?.year ?? timelineYear,
-        month: extras?.month ?? timelineMonth,
+        year: isTimeline ? (extras?.year ?? timelineYear) : undefined,
+        month: isTimeline ? (extras?.month ?? timelineMonth) : undefined,
       });
       const qs = sp.toString();
       const currentPath = `/sales/${currentView}`;
@@ -133,45 +140,60 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
   );
 
   // Filter change handlers
-  const handleFiltersChange = (newFilters: FilterState) => {
-    setFilters(newFilters);
-    syncFiltersToUrl(newFilters);
-  };
+  const handleFiltersChange = useCallback(
+    (newFilters: FilterState) => {
+      setFilters(newFilters);
+      syncFiltersToUrl(newFilters);
+    },
+    [syncFiltersToUrl]
+  );
 
-  const handleSortChange = (field: SortField, order: SortOrder) => {
-    setSortField(field);
-    setSortOrder(order);
-    syncFiltersToUrl(filters, { sortField: field, sortOrder: order });
-  };
+  const handleSortChange = useCallback(
+    (field: SortField, order: SortOrder) => {
+      setSortField(field);
+      setSortOrder(order);
+      syncFiltersToUrl(filters, { sortField: field, sortOrder: order });
+    },
+    [filters, syncFiltersToUrl]
+  );
 
-  const handleTimelineYearMonthChange = (year: number, month: number) => {
-    setTimelineYear(year);
-    setTimelineMonth(month);
-    syncFiltersToUrl(filters, { year, month });
-  };
+  const handleTimelineYearMonthChange = useCallback(
+    (year: number, month: number) => {
+      setTimelineYear(year);
+      setTimelineMonth(month);
+      syncFiltersToUrl(filters, { year, month });
+    },
+    [filters, syncFiltersToUrl]
+  );
 
-  const handleSelectTimelineCategory = (category: string) => {
-    const updated = {
-      ...filters,
-      categories: category === 'all' ? [] : [category],
-    };
-    setFilters(updated);
-    syncFiltersToUrl(updated);
-  };
+  const handleSelectTimelineCategory = useCallback(
+    (category: string) => {
+      const updated = {
+        ...filters,
+        categories: category === 'all' ? [] : [category],
+      };
+      setFilters(updated);
+      syncFiltersToUrl(updated);
+    },
+    [filters, syncFiltersToUrl]
+  );
 
   // Debounced search change handler for smooth typing & URL update
   const debounceSearchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const handleSearchChange = (query: string) => {
-    const updated = { ...filters, search: query };
-    setFilters(updated);
+  const handleSearchChange = useCallback(
+    (query: string) => {
+      const updated = { ...filters, search: query };
+      setFilters(updated);
 
-    if (debounceSearchTimerRef.current) {
-      clearTimeout(debounceSearchTimerRef.current);
-    }
-    debounceSearchTimerRef.current = setTimeout(() => {
-      syncFiltersToUrl(updated);
-    }, 150);
-  };
+      if (debounceSearchTimerRef.current) {
+        clearTimeout(debounceSearchTimerRef.current);
+      }
+      debounceSearchTimerRef.current = setTimeout(() => {
+        syncFiltersToUrl(updated);
+      }, 150);
+    },
+    [filters, syncFiltersToUrl]
+  );
 
   // Instant view tab navigation (in-memory state update + shallow browser URL update)
   const handleSelectView = useCallback(
@@ -179,11 +201,12 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
       setSelectedIds([]);
       setSelectedMapSale(null);
       setCurrentView(view);
+      const isTimeline = view === 'timeline';
       const sp = buildSearchParamsFromFilters(filters, {
         sortField,
         sortOrder,
-        year: timelineYear,
-        month: timelineMonth,
+        year: isTimeline ? timelineYear : undefined,
+        month: isTimeline ? timelineMonth : undefined,
       });
       const qs = sp.toString();
       const newUrl = `/sales/${view}${qs ? `?${qs}` : ''}`;
@@ -223,15 +246,17 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
   const [authModalMode, setAuthModalMode] = useState<'login' | 'signup'>('login');
   const [invoiceSale, setInvoiceSale] = useState<SaleItem | null>(null);
   const [selectedMapSale, setSelectedMapSale] = useState<SaleItem | null>(null);
-  const [isAiOpen, setIsAiOpen] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false;
-    try {
-      return sessionStorage.getItem('sales_ai_drawer_open') === 'true';
-    } catch {
-      return false;
-    }
-  });
+  const [isAiOpen, setIsAiOpen] = useState<boolean>(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  // Restore AI Assistant drawer state from sessionStorage after hydration
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem('sales_ai_drawer_open') === 'true') {
+        setIsAiOpen(true);
+      }
+    } catch {}
+  }, []);
 
   const handleToggleAi = useCallback(() => {
     setIsAiOpen((prev) => {
@@ -250,12 +275,12 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
     } catch {}
   }, []);
 
-  const handleOpenAuth = (mode: 'login' | 'signup' = 'login') => {
+  const handleOpenAuth = useCallback((mode: 'login' | 'signup' = 'login') => {
     setAuthModalMode(mode);
     setIsAuthModalOpen(true);
-  };
+  }, []);
 
-  // Global keyboard shortcut to toggle AI Copilot (Ctrl+J or Cmd+J)
+  // Global keyboard shortcut to toggle AI Assistant (Ctrl+J or Cmd+J)
   useEffect(() => {
     const handleGlobalKeyDown = (e: globalThis.KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'j') {
@@ -272,8 +297,8 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
     let ignore = false;
     if (!user?.id) return;
 
-    if (hasInitializedInitialSales) {
-      setHasInitializedInitialSales(false);
+    if (hasInitializedInitialSalesRef.current) {
+      hasInitializedInitialSalesRef.current = false;
       return;
     }
 
@@ -295,10 +320,10 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
     return () => {
       ignore = true;
     };
-  }, [user?.id, hasInitializedInitialSales]);
+  }, [user?.id]);
 
   // Create or update line item via Server Actions
-  const handleSaveSale = async (saleData: Omit<SaleItem, 'id'> | SaleItem) => {
+  const handleSaveSale = useCallback(async (saleData: Omit<SaleItem, 'id'> | SaleItem) => {
     try {
       if ('id' in saleData && saleData.id) {
         const updated = await updateSaleAction(saleData.id, saleData);
@@ -313,9 +338,9 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
       console.error('Save sale failed:', err);
       throw err;
     }
-  };
+  }, []);
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = useCallback(async (id: string) => {
     try {
       await deleteSaleAction(id);
       setSales((prev) => prev.filter((s) => s.id !== id));
@@ -323,9 +348,9 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
     } catch (err) {
       console.error('Delete sale failed:', err);
     }
-  };
+  }, []);
 
-  const handleBatchDelete = async () => {
+  const handleBatchDelete = useCallback(async () => {
     if (selectedIds.length === 0) return;
     const count = selectedIds.length;
     if (window.confirm(`Are you sure you want to delete ${count} selected order${count > 1 ? 's' : ''}?`)) {
@@ -337,18 +362,18 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
         console.error('Batch delete failed:', err);
       }
     }
-  };
+  }, [selectedIds]);
 
-  const handleUpdateStore = async (saleId: string, newStore: StoreType | string) => {
+  const handleUpdateStore = useCallback(async (saleId: string, newStore: StoreType | string) => {
     try {
       const updated = await updateSaleAction(saleId, { marketplace: newStore });
       setSales((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
     } catch (err) {
       console.error('Store update failed:', err);
     }
-  };
+  }, []);
 
-  const handleUpdateLocation = async (saleId: string, location: string, lat: number, lng: number) => {
+  const handleUpdateLocation = useCallback(async (saleId: string, location: string, lat: number, lng: number) => {
     try {
       const norm = normalizeCoordinates(lat, lng);
       const updated = await updateSaleAction(
@@ -359,33 +384,41 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
     } catch (err) {
       console.error('Location update failed:', err);
     }
-  };
+  }, []);
 
-  const handleOpenEdit = (sale: SaleItem) => {
+  const handleOpenEdit = useCallback((sale: SaleItem) => {
     setEditingSale(sale);
     setIsSaleModalOpen(true);
-  };
+  }, []);
 
-  const handleOpenNew = (defaultStore?: StoreType | string) => {
+  const handleOpenNew = useCallback((defaultStore?: StoreType | string) => {
     setEditingSale(null);
     setDefaultStoreForNewSale(defaultStore || '');
     setIsSaleModalOpen(true);
-  };
+  }, []);
 
-  const handleSelectMapPin = (sale: SaleItem) => {
+  const handleSelectMapPin = useCallback((sale: SaleItem) => {
     setSelectedMapSale(sale);
-    handleSelectView('map');
-  };
+    setSelectedIds([]);
+    setCurrentView('map');
+    const sp = buildSearchParamsFromFilters(filters, {
+      sortField,
+      sortOrder,
+    });
+    const qs = sp.toString();
+    const newUrl = `/sales/map${qs ? `?${qs}` : ''}`;
+    window.history.pushState(null, '', newUrl);
+  }, [filters, sortField, sortOrder]);
 
-  const handleImportComplete = (newSales: SaleItem[]) => {
+  const handleImportComplete = useCallback((newSales: SaleItem[]) => {
     setSales((prev) => {
       const existingIds = new Set(prev.map((s) => s.id));
       const filteredNew = newSales.filter((s) => !existingIds.has(s.id));
       return [...filteredNew, ...prev];
     });
-  };
+  }, []);
 
-  const handleExportCsv = () => {
+  const handleExportCsv = useCallback(() => {
     if (sales.length === 0) return;
 
     const headers = [
@@ -437,14 +470,14 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-  };
+  }, [sales]);
 
-  // Filter sales based on active URL filters
+  // Filter sales based on active URL filters (uses optimized Set & fast-path engine)
   const filteredSales = useMemo(() => {
     return filterSales(sales, filters);
   }, [sales, filters]);
 
-  const handleUpdateSaleInline = async (saleId: string, updates: Partial<SaleItem>) => {
+  const handleUpdateSaleInline = useCallback(async (saleId: string, updates: Partial<SaleItem>) => {
     try {
       const existing = sales.find((s) => s.id === saleId);
       if (!existing) return;
@@ -461,7 +494,7 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
     } catch (err) {
       console.error('Failed to update sale inline:', err);
     }
-  };
+  }, [sales, handleSaveSale]);
 
   useEffect(() => {
     if (!user && pathname && pathname !== '/sales') {
@@ -504,34 +537,34 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
       />
 
       <main className="flex-1 px-4 md:px-6 py-4 w-full">
-        {isLoading ? (
+        {isLoading || !isClientReady ? (
           <div className="flex flex-col items-center justify-center py-24 space-y-3">
             <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
             <p className="text-sm text-muted-foreground font-medium">Loading...</p>
           </div>
         ) : (
           <ErrorBoundary fallbackTitle="Dashboard View Error">
-            {currentView === 'table' && (
-              <TableView
-                sales={sales}
-                filters={filters}
-                onFiltersChange={handleFiltersChange}
-                sortField={sortField}
-                sortOrder={sortOrder}
-                onSortChange={handleSortChange}
-                onEditSale={handleOpenEdit}
-                onUpdateSale={handleUpdateSaleInline}
-                onDeleteSale={handleDelete}
-                onOpenNewSale={handleOpenNew}
-                onViewInvoice={(sale) => setInvoiceSale(sale)}
-                onSelectMapPin={handleSelectMapPin}
-                selectedIds={selectedIds}
-                onSelectionChange={setSelectedIds}
-                onResetSearch={() => handleSearchChange('')}
-              />
-            )}
-
             <Suspense fallback={<ViewLoading />}>
+              {currentView === 'table' && (
+                <TableView
+                  sales={sales}
+                  filters={filters}
+                  onFiltersChange={handleFiltersChange}
+                  sortField={sortField}
+                  sortOrder={sortOrder}
+                  onSortChange={handleSortChange}
+                  onEditSale={handleOpenEdit}
+                  onUpdateSale={handleUpdateSaleInline}
+                  onDeleteSale={handleDelete}
+                  onOpenNewSale={handleOpenNew}
+                  onViewInvoice={(sale) => setInvoiceSale(sale)}
+                  onSelectMapPin={handleSelectMapPin}
+                  selectedIds={selectedIds}
+                  onSelectionChange={setSelectedIds}
+                  onResetSearch={() => handleSearchChange('')}
+                />
+              )}
+
               {currentView === 'chart' && (
                 <ChartView
                   sales={sales}
@@ -593,6 +626,7 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
         onSave={handleSaveSale}
         initialData={editingSale}
         defaultStore={defaultStoreForNewSale}
+        onOpenFullMap={handleSelectMapPin}
       />
 
       <InvoiceViewerModal

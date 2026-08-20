@@ -218,6 +218,15 @@ export const TimelineView: FC<TimelineViewProps> = ({
     return list;
   }, [currentYear, currentMonth, daysInMonth, daysInPrevMonth]);
 
+  // Fast O(1) date string to timeline column index lookup map
+  const dayIndexMap = useMemo(() => {
+    const map = new Map<string, number>();
+    for (let i = 0; i < timelineDays.length; i++) {
+      map.set(timelineDays[i].fullDate, i);
+    }
+    return map;
+  }, [timelineDays]);
+
   const totalGridWidth = useMemo(() => timelineDays.length * COLUMN_WIDTH, [timelineDays]);
 
   // Left-align to the first day of the current month
@@ -242,7 +251,7 @@ export const TimelineView: FC<TimelineViewProps> = ({
     const container = scrollContainerRef.current;
     if (!container) return;
 
-    const todayIdx = timelineDays.findIndex((d) => d.fullDate === todayDateStr);
+    const todayIdx = dayIndexMap.get(todayDateStr) ?? -1;
     if (todayIdx === -1) {
       scrollToMonthStart(smooth);
       return;
@@ -255,7 +264,7 @@ export const TimelineView: FC<TimelineViewProps> = ({
       left: Math.max(0, targetScroll),
       behavior: smooth ? 'smooth' : 'auto',
     });
-  }, [timelineDays, todayDateStr, scrollToMonthStart]);
+  }, [dayIndexMap, todayDateStr, scrollToMonthStart]);
 
   // Left-align when month changes
   useEffect(() => {
@@ -289,15 +298,23 @@ export const TimelineView: FC<TimelineViewProps> = ({
     }
   };
 
-  // Filter sales for the timeline
+  // Filter and sort sales for the timeline efficiently
   const relevantSales = useMemo(() => {
-    return sales
-      .filter((s) => {
-        if (!s.date) return false;
-        if (selectedCategory !== 'all' && s.category !== selectedCategory) return false;
-        return true;
-      })
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    const filtered = sales.filter((s) => {
+      if (!s.date) return false;
+      if (selectedCategory !== 'all' && s.category !== selectedCategory) return false;
+      return true;
+    });
+
+    if (filtered.length <= 1) return filtered;
+
+    const mapped = filtered.map((sale) => {
+      const time = sale.date ? new Date(sale.date).getTime() : 0;
+      return { sale, time: isNaN(time) ? 0 : time };
+    });
+
+    mapped.sort((a, b) => b.time - a.time);
+    return mapped.map((m) => m.sale);
   }, [sales, selectedCategory]);
 
   // Categories list
@@ -547,7 +564,7 @@ export const TimelineView: FC<TimelineViewProps> = ({
               ) : (
                 relevantSales.map((sale) => {
                   const saleIso = normalizeDate(sale.date);
-                  const colIdx = timelineDays.findIndex((d) => d.fullDate === saleIso);
+                  const colIdx = dayIndexMap.get(saleIso) ?? -1;
                   if (colIdx === -1) return null;
 
                   // Align flush with the day column boundary

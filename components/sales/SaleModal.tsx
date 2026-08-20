@@ -37,6 +37,7 @@ interface SaleModalProps {
   onSave: (saleData: Omit<SaleItem, 'id'> | SaleItem) => Promise<void>;
   initialData?: SaleItem | null;
   defaultStore?: StoreType | string;
+  onOpenFullMap?: (sale: SaleItem) => void;
 }
 
 interface SaleFormData {
@@ -117,6 +118,7 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
   onSave,
   initialData,
   defaultStore,
+  onOpenFullMap,
 }) => {
   const [activeOptionPicker, setActiveOptionPicker] = useState<
     'category' | 'marketplace' | 'order_status' | 'payment_method' | 'payment_status' | null
@@ -334,7 +336,7 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
                 {formData.category ? (
                   <TagPill text={formData.category} type="category" className="hover:opacity-85 transition-opacity" />
                 ) : (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs text-neutral-400 dark:text-neutral-500 italic hover:bg-neutral-100 dark:hover:bg-neutral-800/80 transition-colors">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs text-neutral-400 dark:text-neutral-500 italic hover:bg-neutral-100 dark:hover:bg-neutral-800/80 transition-colors pr-1.5">
                     Empty
                   </span>
                 )}
@@ -365,7 +367,7 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
                   min="0"
                   value={formData.cost}
                   onChange={(e) => setFormData((prev) => ({ ...prev, cost: e.target.value }))}
-                  className="w-full px-2.5 py-1 text-xs bg-transparent hover:bg-neutral-100/70 dark:hover:bg-neutral-800/70 focus:bg-white dark:focus:bg-[#282828] border border-neutral-200/80 dark:border-neutral-700/80 focus:border-blue-500 rounded-md font-mono text-neutral-900 dark:text-neutral-100 outline-hidden transition-colors"
+                  className="w-full px-2.5 py-1 text-xs bg-transparent hover:bg-neutral-100/70 dark:hover:bg-neutral-800/70 focus:bg-white dark:focus:bg-[#282828] border border-neutral-200/80 dark:border-neutral-700/80 focus:border-blue-500 rounded font-mono text-neutral-900 dark:text-neutral-100 outline-hidden transition-colors"
                 />
               </div>
             </div>
@@ -381,7 +383,7 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
                   type="text"
                   value={formData.customer}
                   onChange={(e) => setFormData((prev) => ({ ...prev, customer: e.target.value }))}
-                  className="w-full px-2.5 py-1 text-xs bg-transparent hover:bg-neutral-100/70 dark:hover:bg-neutral-800/70 focus:bg-white dark:focus:bg-[#282828] border border-neutral-200/80 dark:border-neutral-700/80 focus:border-blue-500 rounded-md text-neutral-900 dark:text-neutral-100 outline-hidden transition-colors"
+                  className="w-full px-2.5 py-1 text-xs bg-transparent hover:bg-neutral-100/70 dark:hover:bg-neutral-800/70 focus:bg-white dark:focus:bg-[#282828] border border-neutral-200/80 dark:border-neutral-700/80 focus:border-blue-500 rounded text-neutral-900 dark:text-neutral-100 outline-hidden transition-colors"
                 />
               </div>
             </div>
@@ -399,8 +401,9 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
                     setIsLocationPickerOpen(false);
                     setIsDatePickerOpen(!isDatePickerOpen);
                   }}
-                  className="cursor-pointer inline-flex items-center gap-1.5 px-2 py-0.5 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800/80 transition-colors font-mono text-xs text-neutral-900 dark:text-neutral-100"
+                  className="cursor-pointer inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium text-neutral-800 dark:text-neutral-200 bg-neutral-100 dark:bg-neutral-800/80 border border-neutral-200/70 dark:border-neutral-700/70 hover:bg-neutral-200/70 dark:hover:bg-neutral-700/70 transition-colors select-none"
                 >
+                  <Calendar className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
                   <span>{formatDateDisplay(formData.date) || 'Select date'}</span>
                 </div>
                 {isDatePickerOpen && (
@@ -437,9 +440,9 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
                     <span>Uploading to Supabase Storage...</span>
                   </div>
                 ) : formData.invoice_name || formData.invoice_url ? (
-                  <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800/90 border border-neutral-200 dark:border-neutral-700 text-neutral-800 dark:text-neutral-200 group/inv max-w-sm">
+                  <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium bg-neutral-100 dark:bg-neutral-800/90 border border-neutral-200/70 dark:border-neutral-700/70 text-neutral-800 dark:text-neutral-200 group/inv max-w-sm select-none">
                     <FileText className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
-                    <span className="font-mono text-xs truncate" title={formData.invoice_name}>
+                    <span className="truncate" title={formData.invoice_name}>
                       {formData.invoice_name || 'receipt.pdf'}
                     </span>
                     <button
@@ -455,7 +458,7 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="inline-flex items-center gap-1.5 px-2 py-0.5 text-xs text-neutral-500 dark:text-neutral-400 hover:text-blue-600 dark:hover:text-blue-400 bg-transparent hover:bg-neutral-100 dark:hover:bg-neutral-800/80 rounded transition-colors cursor-pointer border border-dashed border-neutral-300 dark:border-neutral-700 hover:border-blue-400"
+                    className="inline-flex items-center gap-1.5 px-2 py-0.5 text-xs font-medium text-neutral-500 dark:text-neutral-400 hover:text-blue-600 dark:hover:text-blue-400 bg-transparent hover:bg-neutral-100 dark:hover:bg-neutral-800/80 rounded transition-colors cursor-pointer border border-dashed border-neutral-300 dark:border-neutral-700 hover:border-blue-400 select-none"
                   >
                     <Upload className="w-3.5 h-3.5" />
                     <span>Upload invoice</span>
@@ -477,15 +480,19 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
                     setIsDatePickerOpen(false);
                     setIsLocationPickerOpen(!isLocationPickerOpen);
                   }}
-                  className="cursor-pointer inline-flex items-center gap-1.5 px-2 py-0.5 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800/80 transition-colors text-xs text-neutral-800 dark:text-neutral-200 max-w-full"
+                  className={`cursor-pointer inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium transition-colors max-w-full select-none ${
+                    formData.location
+                      ? 'bg-neutral-100 dark:bg-neutral-800/80 border border-neutral-200/70 dark:border-neutral-700/70 text-neutral-800 dark:text-neutral-200 hover:bg-neutral-200/70 dark:hover:bg-neutral-700/70'
+                      : 'text-neutral-400 dark:text-neutral-500 italic hover:bg-neutral-100 dark:hover:bg-neutral-800/80 border border-transparent'
+                  }`}
                 >
                   <MapPin
                     className={`w-3.5 h-3.5 shrink-0 ${
                       formData.location ? 'text-red-500' : 'text-neutral-400'
                     }`}
                   />
-                  <span className="truncate" title={formData.location || 'Empty'}>
-                    {formData.location || <span className="text-neutral-400 dark:text-neutral-500 italic">Empty</span>}
+                  <span className="truncate pr-1" title={formData.location || 'Empty'}>
+                    {formData.location || 'Empty'}
                   </span>
                 </div>
                 {isLocationPickerOpen && (
@@ -508,6 +515,24 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
                       }));
                       setIsLocationPickerOpen(false);
                     }}
+                    onOpenFullMap={
+                      onOpenFullMap
+                        ? () => {
+                            const norm = normalizeCoordinates(formData.latitude, formData.longitude);
+                            onOpenFullMap({
+                              ...formData,
+                              quantity: isNaN(parseInt(String(formData.quantity), 10)) ? 0 : Math.max(0, parseInt(String(formData.quantity), 10)),
+                              cost: Math.max(0, parseFloat(String(formData.cost)) || 0),
+                              subtotal: Math.max(0, parseFloat(String(formData.subtotal)) || 0),
+                              sales: calculatedSales,
+                              latitude: norm?.lat ?? formData.latitude,
+                              longitude: norm?.lng ?? formData.longitude,
+                              id: initialData?.id || 'temp',
+                            } as SaleItem);
+                            onClose();
+                          }
+                        : undefined
+                    }
                     onClose={() => setIsLocationPickerOpen(false)}
                   />
                 )}
@@ -533,7 +558,7 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
                 {formData.marketplace ? (
                   <TagPill text={formData.marketplace} type="marketplace" className="hover:opacity-85 transition-opacity" />
                 ) : (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs text-neutral-400 dark:text-neutral-500 italic hover:bg-neutral-100 dark:hover:bg-neutral-800/80 transition-colors">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs text-neutral-400 dark:text-neutral-500 italic hover:bg-neutral-100 dark:hover:bg-neutral-800/80 transition-colors pr-1.5">
                     Empty
                   </span>
                 )}
@@ -582,7 +607,7 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
                 {formData.order_status ? (
                   <TagPill text={formData.order_status} type="order_status" className="hover:opacity-85 transition-opacity" />
                 ) : (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs text-neutral-400 dark:text-neutral-500 italic hover:bg-neutral-100 dark:hover:bg-neutral-800/80 transition-colors">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs text-neutral-400 dark:text-neutral-500 italic hover:bg-neutral-100 dark:hover:bg-neutral-800/80 transition-colors pr-1.5">
                     Empty
                   </span>
                 )}
@@ -622,7 +647,7 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
                 {formData.payment_method ? (
                   <TagPill text={formData.payment_method} type="payment_method" className="hover:opacity-85 transition-opacity" />
                 ) : (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs text-neutral-400 dark:text-neutral-500 italic hover:bg-neutral-100 dark:hover:bg-neutral-800/80 transition-colors">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs text-neutral-400 dark:text-neutral-500 italic hover:bg-neutral-100 dark:hover:bg-neutral-800/80 transition-colors pr-1.5">
                     Empty
                   </span>
                 )}
@@ -662,7 +687,7 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
                 {formData.payment_status ? (
                   <TagPill text={formData.payment_status} type="payment_status" className="hover:opacity-85 transition-opacity" />
                 ) : (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs text-neutral-400 dark:text-neutral-500 italic hover:bg-neutral-100 dark:hover:bg-neutral-800/80 transition-colors">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs text-neutral-400 dark:text-neutral-500 italic hover:bg-neutral-100 dark:hover:bg-neutral-800/80 transition-colors pr-1.5">
                     Empty
                   </span>
                 )}
@@ -696,7 +721,7 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
                   step="1"
                   value={formData.quantity}
                   onChange={(e) => setFormData((prev) => ({ ...prev, quantity: e.target.value }))}
-                  className="w-full px-2.5 py-1 text-xs bg-transparent hover:bg-neutral-100/70 dark:hover:bg-neutral-800/70 focus:bg-white dark:focus:bg-[#282828] border border-neutral-200/80 dark:border-neutral-700/80 focus:border-blue-500 rounded-md font-mono text-neutral-900 dark:text-neutral-100 outline-hidden transition-colors"
+                  className="w-full px-2.5 py-1 text-xs bg-transparent hover:bg-neutral-100/70 dark:hover:bg-neutral-800/70 focus:bg-white dark:focus:bg-[#282828] border border-neutral-200/80 dark:border-neutral-700/80 focus:border-blue-500 rounded font-mono text-neutral-900 dark:text-neutral-100 outline-hidden transition-colors"
                 />
               </div>
             </div>
@@ -731,7 +756,7 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
                   min="0"
                   value={formData.subtotal}
                   onChange={(e) => setFormData((prev) => ({ ...prev, subtotal: e.target.value }))}
-                  className="w-full px-2.5 py-1 text-xs bg-transparent hover:bg-neutral-100/70 dark:hover:bg-neutral-800/70 focus:bg-white dark:focus:bg-[#282828] border border-neutral-200/80 dark:border-neutral-700/80 focus:border-blue-500 rounded-md font-mono font-medium text-neutral-900 dark:text-neutral-100 outline-hidden transition-colors"
+                  className="w-full px-2.5 py-1 text-xs bg-transparent hover:bg-neutral-100/70 dark:hover:bg-neutral-800/70 focus:bg-white dark:focus:bg-[#282828] border border-neutral-200/80 dark:border-neutral-700/80 focus:border-blue-500 rounded font-mono font-medium text-neutral-900 dark:text-neutral-100 outline-hidden transition-colors"
                 />
               </div>
             </div>
@@ -807,6 +832,7 @@ export const SaleModal: FC<SaleModalProps> = ({
   onSave,
   initialData,
   defaultStore,
+  onOpenFullMap,
 }) => {
   if (!isOpen) return null;
 
@@ -817,6 +843,7 @@ export const SaleModal: FC<SaleModalProps> = ({
       onSave={onSave}
       initialData={initialData}
       defaultStore={defaultStore}
+      onOpenFullMap={onOpenFullMap}
     />
   );
 };

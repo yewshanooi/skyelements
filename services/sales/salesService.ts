@@ -10,7 +10,7 @@ import {
   deleteInvoiceFileAction,
   deleteInvoiceFilesAction,
 } from './salesActions';
-import { extractStoragePath, mapRowToSaleItem } from '@/lib/sales/saleMappers';
+import { extractStoragePath, mapRowToSaleItem, SALES_SELECT_COLUMNS } from '@/lib/sales/saleMappers';
 
 // Re-export Server Actions & helpers
 export {
@@ -25,6 +25,7 @@ export {
   deleteInvoiceFilesAction,
   extractStoragePath,
   mapRowToSaleItem,
+  SALES_SELECT_COLUMNS,
 };
 
 /**

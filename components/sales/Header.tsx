@@ -108,7 +108,7 @@ export const Header: FC<HeaderProps> = ({
 
         {/* Right: Import & Export Buttons, Auth, Theme */}
         <div className="flex items-center gap-1.5 md:gap-2 justify-end flex-1">
-          {/* Ask AI Copilot Button */}
+          {/* Ask AI Assistant Button */}
           {onToggleAi && (
             <button
               type="button"
@@ -118,7 +118,7 @@ export const Header: FC<HeaderProps> = ({
                   ? 'bg-gradient-to-r from-[#7c3aed] to-[#6366f1] hover:from-[#6d28d9] hover:to-[#4f46e5] text-white shadow-xs'
                   : 'bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-neutral-100 border border-neutral-200/70 dark:border-neutral-700/70'
               }`}
-              title="Sales AI Copilot (Ctrl+J)"
+              title="AI Assistant (Ctrl+J)"
             >
               <Sparkles className={`w-3 h-3 ${isAiOpen ? 'text-white' : 'text-purple-600 dark:text-purple-400'}`} />
               <span>Ask AI</span>
@@ -131,7 +131,7 @@ export const Header: FC<HeaderProps> = ({
               type="button"
               onClick={onOpenImport}
               className="px-2.5 py-1 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-neutral-100 border border-neutral-200/70 dark:border-neutral-700/70 rounded-md text-[11px] font-medium transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
-              title="Import from Notion (ZIP or CSV)"
+              title="Import from Notion"
             >
               <Upload className="w-3 h-3" />
               <span>Import</span>
@@ -180,7 +180,7 @@ export const Header: FC<HeaderProps> = ({
             type="button"
             onClick={toggleTheme}
             className="p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-md text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200 transition-colors cursor-pointer"
-            title="Toggle Light/Dark Theme"
+            title="Toggle Theme"
           >
             <Sun className="w-3.5 h-3.5 hidden dark:block" />
             <Moon className="w-3.5 h-3.5 block dark:hidden" />

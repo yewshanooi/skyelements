@@ -63,6 +63,9 @@ export const CategoryProfitabilityWidget: FC<CategoryProfitabilityWidgetProps> =
               tickFormatter={(v) => (currentWidth === '1/4' && v.length > 8 ? `${v.slice(0, 7)}...` : v)}
             />
             <Tooltip
+              isAnimationActive={false}
+              animationDuration={0}
+              wrapperStyle={{ transition: 'none', pointerEvents: 'none' }}
               content={({ active, payload }) => {
                 if (active && payload && payload.length) {
                   const d = payload[0].payload as CategoryMatrixPoint;

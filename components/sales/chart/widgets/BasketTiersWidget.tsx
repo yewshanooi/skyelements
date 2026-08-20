@@ -40,6 +40,9 @@ export const BasketTiersWidget: FC<BasketTiersWidgetProps> = ({
             <XAxis dataKey="key" stroke="#888888" fontSize={9} tickLine={false} interval={0} />
             <YAxis stroke="#888888" fontSize={10} tickLine={false} width={30} />
             <Tooltip
+              isAnimationActive={false}
+              animationDuration={0}
+              wrapperStyle={{ transition: 'none', pointerEvents: 'none' }}
               content={({ active, payload }) => {
                 if (active && payload && payload.length) {
                   const d = payload[0].payload as BasketTierPoint;

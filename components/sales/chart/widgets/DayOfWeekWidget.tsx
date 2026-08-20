@@ -35,6 +35,9 @@ export const DayOfWeekWidget: FC<DayOfWeekWidgetProps> = ({
             <XAxis dataKey="day" stroke="#888888" fontSize={10} tickLine={false} tickFormatter={(v) => v.slice(0, 3)} />
             <YAxis stroke="#888888" fontSize={10} tickLine={false} width={35} tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : `${v}`} />
             <Tooltip
+              isAnimationActive={false}
+              animationDuration={0}
+              wrapperStyle={{ transition: 'none', pointerEvents: 'none' }}
               content={({ active, payload }) => {
                 if (active && payload && payload.length) {
                   const d = payload[0].payload as DayOfWeekPoint;

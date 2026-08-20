@@ -181,79 +181,69 @@ function escapeRegex(str: string) {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-/**
- * Builds the math & utility function scope for formula evaluation.
- */
-function createScope() {
-  const round = (val: unknown, decimals: number = 0) => {
+const RE_DANGEROUS = /(window|document|localStorage|sessionStorage|fetch|eval|Function|process|global|import|require)/i;
+const RE_IF_KEYWORD = /\bif\s*\(/gi;
+
+// Static Math and utility scope functions (instantiated once, reused for all evaluations)
+const MATH_FUNCS: Record<string, (...args: unknown[]) => unknown> = {
+  round: (val: unknown, decimals: unknown = 0) => {
     const num = Number(val);
     if (isNaN(num)) return 0;
-    const factor = Math.pow(10, Math.max(0, decimals));
+    const factor = Math.pow(10, Math.max(0, Number(decimals) || 0));
     return Math.round((num + Number.EPSILON) * factor) / factor;
-  };
+  },
+  multiply: (...args: unknown[]) => (args.length === 0 ? 0 : args.reduce((acc: number, v: unknown) => acc * Number(v || 0), 1)),
+  divide: (a: unknown, b: unknown) => (Number(b || 0) === 0 ? 0 : Number(a || 0) / Number(b || 0)),
+  add: (...args: unknown[]) => args.reduce((acc: number, v: unknown) => acc + Number(v || 0), 0),
+  subtract: (a: unknown, b: unknown) => Number(a || 0) - Number(b || 0),
+  min: (...args: unknown[]) => Math.min(...args.map((x) => Number(x || 0))),
+  max: (...args: unknown[]) => Math.max(...args.map((x) => Number(x || 0))),
+  abs: (x: unknown) => Math.abs(Number(x || 0)),
+  ceil: (x: unknown) => Math.ceil(Number(x || 0)),
+  floor: (x: unknown) => Math.floor(Number(x || 0)),
+  sqrt: (x: unknown) => Math.sqrt(Math.max(0, Number(x || 0))),
+  pow: (a: unknown, b: unknown) => Math.pow(Number(a || 0), Number(b || 0)),
+  power: (a: unknown, b: unknown) => Math.pow(Number(a || 0), Number(b || 0)),
+  _if: (cond: unknown, ifTrue: unknown, ifFalse: unknown) => (cond ? ifTrue : ifFalse),
+  iff: (cond: unknown, ifTrue: unknown, ifFalse: unknown) => (cond ? ifTrue : ifFalse),
+};
 
-  const multiply = (...args: unknown[]) => {
-    if (args.length === 0) return 0;
-    return args.reduce((acc: number, v: unknown) => acc * Number(v || 0), 1);
-  };
+const STATIC_SCOPE: Record<string, unknown> = {};
+for (const [key, fn] of Object.entries(MATH_FUNCS)) {
+  STATIC_SCOPE[key] = fn;
+  STATIC_SCOPE[key.toUpperCase()] = fn;
+}
 
-  const divide = (a: unknown, b: unknown) => {
-    const numA = Number(a || 0);
-    const numB = Number(b || 0);
-    if (numB === 0) return 0;
-    return numA / numB;
-  };
+const STATIC_SCOPE_KEYS = Object.keys(STATIC_SCOPE);
+const STATIC_SCOPE_VALUES = Object.values(STATIC_SCOPE);
 
-  const add = (...args: unknown[]) => {
-    return args.reduce((acc: number, v: unknown) => acc + Number(v || 0), 0);
-  };
+// Pre-compiled token replacement rules from FORMULA_COLUMNS
+const TOKEN_REPLACERS = FORMULA_COLUMNS.flatMap((col) =>
+  col.aliases.map((alias) => ({
+    col,
+    alias,
+    pattern: alias.startsWith('#')
+      ? new RegExp(escapeRegex(alias), 'gi')
+      : new RegExp(`\\b${escapeRegex(alias)}\\b`, 'gi'),
+  }))
+);
 
-  const subtract = (a: unknown, b: unknown) => {
-    return Number(a || 0) - Number(b || 0);
-  };
-
-  const min = (...args: unknown[]) => Math.min(...args.map((x) => Number(x || 0)));
-  const max = (...args: unknown[]) => Math.max(...args.map((x) => Number(x || 0)));
-  const abs = (x: unknown) => Math.abs(Number(x || 0));
-  const ceil = (x: unknown) => Math.ceil(Number(x || 0));
-  const floor = (x: unknown) => Math.floor(Number(x || 0));
-  const sqrt = (x: unknown) => Math.sqrt(Math.max(0, Number(x || 0)));
-  const pow = (a: unknown, b: unknown) => Math.pow(Number(a || 0), Number(b || 0));
-  const power = pow;
-  const ifCondition = (cond: unknown, ifTrue: unknown, ifFalse: unknown) => (cond ? ifTrue : ifFalse);
-
-  return {
-    round,
-    ROUND: round,
-    multiply,
-    MULTIPLY: multiply,
-    divide,
-    DIVIDE: divide,
-    add,
-    ADD: add,
-    subtract,
-    SUBTRACT: subtract,
-    min,
-    MIN: min,
-    max,
-    MAX: max,
-    abs,
-    ABS: abs,
-    ceil,
-    CEIL: ceil,
-    floor,
-    FLOOR: floor,
-    sqrt,
-    SQRT: sqrt,
-    pow,
-    power,
-    POW: pow,
-    POWER: power,
-    _if: ifCondition,
-    _IF: ifCondition,
-    iff: ifCondition,
-    IFF: ifCondition,
-  };
+/**
+ * Checks whether the formula string represents the standard default profit formula.
+ */
+function isDefaultFormula(formulaStr?: string | null): boolean {
+  if (!formulaStr) return true;
+  const normalized = formulaStr.replace(/\s+/g, '').toLowerCase();
+  return (
+    normalized === 'round(#subtotal(inmyr)-#cost(s),2)' ||
+    normalized === 'round(#subtotal(inmyr)-#cost,2)' ||
+    normalized === 'round(#subtotal-#cost(s),2)' ||
+    normalized === 'round(#subtotal-#cost,2)' ||
+    normalized === '#subtotal(inmyr)-#cost(s)' ||
+    normalized === '#subtotal-#cost' ||
+    normalized === 'subtotal-cost' ||
+    normalized === ''
+  );
 }
 
 /**
@@ -265,75 +255,39 @@ export function substituteFormulaTokens(
 ): { expr: string; variables: { token: string; value: number | string; colId: string }[] } {
   let expr = formulaStr || '';
   const variables: { token: string; value: number | string; colId: string }[] = [];
+  const recordedCols = new Set<string>();
 
-  // Specific high-priority replacements with flexible spacing
-  const subtotalVal = Number(item?.subtotal ?? 0);
-  const costVal = Number(item?.cost ?? 0);
-  const quantityVal = Number(item?.quantity ?? 1);
-  const salesVal = Number(item?.sales ?? Number((subtotalVal - costVal).toFixed(2)));
-
-  // Replace explicit # tokens first
-  // 1. # Subtotal (in MYR)
-  if (/#\s*Subtotal\s*\(\s*in\s*MYR\s*\)/i.test(expr)) {
-    expr = expr.replace(/#\s*Subtotal\s*\(\s*in\s*MYR\s*\)/gi, String(subtotalVal));
-    variables.push({ token: '# Subtotal (in MYR)', value: subtotalVal, colId: 'subtotal' });
-  }
-  // 2. # Cost(s)
-  if (/#\s*Cost\s*\(\s*s\s*\)/i.test(expr)) {
-    expr = expr.replace(/#\s*Cost\s*\(\s*s\s*\)/gi, String(costVal));
-    variables.push({ token: '# Cost(s)', value: costVal, colId: 'cost' });
-  }
-  // 3. # Sales (in MYR)
-  if (/#\s*Sales\s*\(\s*in\s*MYR\s*\)/i.test(expr)) {
-    expr = expr.replace(/#\s*Sales\s*\(\s*in\s*MYR\s*\)/gi, String(salesVal));
-    variables.push({ token: '# Sales (in MYR)', value: salesVal, colId: 'sales' });
-  }
-
-  // 4. # Subtotal
-  if (/#\s*Subtotal\b/i.test(expr)) {
-    expr = expr.replace(/#\s*Subtotal\b/gi, String(subtotalVal));
-    variables.push({ token: '# Subtotal', value: subtotalVal, colId: 'subtotal' });
-  }
-  // 5. # Cost
-  if (/#\s*Cost\b/i.test(expr)) {
-    expr = expr.replace(/#\s*Cost\b/gi, String(costVal));
-    variables.push({ token: '# Cost', value: costVal, colId: 'cost' });
-  }
-  // 6. # Quantity
-  if (/#\s*Quantity\b/i.test(expr)) {
-    expr = expr.replace(/#\s*Quantity\b/gi, String(quantityVal));
-    variables.push({ token: '# Quantity', value: quantityVal, colId: 'quantity' });
-  }
-  // 7. # Sales
-  if (/#\s*Sales\b/i.test(expr)) {
-    expr = expr.replace(/#\s*Sales\b/gi, String(salesVal));
-    variables.push({ token: '# Sales', value: salesVal, colId: 'sales' });
-  }
-
-  // Other columns replacement
-  for (const col of FORMULA_COLUMNS) {
-    if (['subtotal', 'cost', 'quantity', 'sales'].includes(col.id)) continue;
-    const val = col.getValue(item);
-    const repVal = col.type === 'number' ? String(Number(val) || 0) : JSON.stringify(String(val ?? ''));
-
-    // Try # Token
-    const hashPattern = new RegExp(`#\\s*${escapeRegex(col.name.replace(/#/g, '').trim())}\\b`, 'gi');
-    if (hashPattern.test(expr)) {
-      expr = expr.replace(hashPattern, repVal);
-      variables.push({ token: col.token, value: val, colId: col.id });
+  for (const { col, pattern } of TOKEN_REPLACERS) {
+    if (pattern.test(expr)) {
+      const val = col.getValue(item);
+      const repVal = col.type === 'number' ? String(Number(val) || 0) : JSON.stringify(String(val ?? ''));
+      expr = expr.replace(pattern, repVal);
+      if (!recordedCols.has(col.id)) {
+        recordedCols.add(col.id);
+        variables.push({ token: col.token, value: val, colId: col.id });
+      }
     }
   }
 
-  // Also replace bare subtotal/cost/quantity if they appear standalone without # (case-insensitive)
-  expr = expr
-    .replace(/\bSubtotal\s*\(\s*in\s*MYR\s*\)/gi, String(subtotalVal))
-    .replace(/\bCost\s*\(\s*s\s*\)/gi, String(costVal))
-    .replace(/\bSales\s*\(\s*in\s*MYR\s*\)/gi, String(salesVal))
-    .replace(/\bSubtotal\b/gi, String(subtotalVal))
-    .replace(/\bCost\b/gi, String(costVal))
-    .replace(/\bQuantity\b/gi, String(quantityVal));
-
   return { expr, variables };
+}
+
+// In-memory compiled expression cache
+const COMPILED_FN_CACHE = new Map<string, (...args: unknown[]) => unknown>();
+const MAX_CACHE_SIZE = 100;
+
+function getCompiledEvaluator(runnableExpr: string): (...args: unknown[]) => unknown {
+  let fn = COMPILED_FN_CACHE.get(runnableExpr);
+  if (!fn) {
+    if (COMPILED_FN_CACHE.size >= MAX_CACHE_SIZE) {
+      COMPILED_FN_CACHE.clear();
+    }
+    fn = new Function(...STATIC_SCOPE_KEYS, `"use strict"; return (${runnableExpr});`) as (
+      ...args: unknown[]
+    ) => unknown;
+    COMPILED_FN_CACHE.set(runnableExpr, fn);
+  }
+  return fn;
 }
 
 /**
@@ -347,7 +301,7 @@ export function evaluateFormulaDetails(
   const cost = Number(item?.cost ?? 0);
   const fallback = Number((subtotal - cost).toFixed(2));
 
-  if (!formulaStr || !formulaStr.trim()) {
+  if (!formulaStr || !formulaStr.trim() || isDefaultFormula(formulaStr)) {
     return {
       isValid: true,
       result: fallback,
@@ -362,20 +316,16 @@ export function evaluateFormulaDetails(
   const { expr, variables } = substituteFormulaTokens(formulaStr, item);
 
   try {
-    const scope = createScope();
-    const keys = Object.keys(scope);
-    const values = Object.values(scope);
-
     // Sanitize: do not allow dangerous constructs
-    if (/(window|document|localStorage|sessionStorage|fetch|eval|Function|process|global|import|require)/i.test(expr)) {
+    if (RE_DANGEROUS.test(expr)) {
       throw new Error('Unauthorized keyword in formula');
     }
 
     // Transform if( to _if( since 'if' is a reserved JS keyword
-    const runnableExpr = expr.replace(/\bif\s*\(/gi, '_if(');
+    const runnableExpr = expr.replace(RE_IF_KEYWORD, '_if(');
 
-    const evaluator = new Function(...keys, `"use strict"; return (${runnableExpr});`);
-    const rawResult = evaluator(...values);
+    const evaluator = getCompiledEvaluator(runnableExpr);
+    const rawResult = evaluator(...STATIC_SCOPE_VALUES);
 
     let type: FormulaDetails['type'] = 'number';
     let numericValue = 0;
@@ -429,11 +379,18 @@ export function evaluateFormulaDetails(
 
 /**
  * Fast and robust formula calculation returning a numeric result.
+ * Features zero-overhead fast path for default profit formulas.
  */
 export function evaluateSalesFormula(
   formulaStr: string,
   item: Partial<SaleItem> | null | undefined
 ): number {
+  if (!formulaStr || isDefaultFormula(formulaStr)) {
+    const subtotal = Number(item?.subtotal ?? 0);
+    const cost = Number(item?.cost ?? 0);
+    return Number((subtotal - cost).toFixed(2));
+  }
+
   const details = evaluateFormulaDetails(formulaStr, item);
   if (details.isValid && !isNaN(details.numericValue)) {
     return details.numericValue;
