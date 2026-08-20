@@ -31,6 +31,49 @@ interface RevenueTrendWidgetProps {
   isModal?: boolean;
 }
 
+interface TooltipPayloadEntry {
+  name?: string;
+  value?: number | string;
+  color?: string;
+  fill?: string;
+  stroke?: string;
+}
+
+const TrendTooltipContent = ({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean;
+  payload?: TooltipPayloadEntry[];
+  label?: string;
+}) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="p-3 bg-white dark:bg-[#1a1a1a] border border-neutral-200 dark:border-neutral-700 shadow-xl rounded-xl text-xs space-y-1.5 min-w-[170px]">
+        <p className="font-bold text-neutral-900 dark:text-neutral-100 border-b border-neutral-200/60 dark:border-neutral-800 pb-1">
+          {label}
+        </p>
+        {payload.map((entry, i) => {
+          const color = entry.color || entry.fill || entry.stroke || '#888888';
+          const numVal = typeof entry.value === 'number' ? entry.value : Number(entry.value) || 0;
+          return (
+            <div key={i} className="flex justify-between items-center gap-3">
+              <span style={{ color }} className="font-medium">
+                {entry.name}:
+              </span>
+              <span className="font-mono font-bold text-neutral-900 dark:text-neutral-100">
+                RM {numVal.toFixed(2)}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+  return null;
+};
+
 export const RevenueTrendWidget: FC<RevenueTrendWidgetProps> = ({
   data,
   granularity,
@@ -105,31 +148,11 @@ export const RevenueTrendWidget: FC<RevenueTrendWidgetProps> = ({
               <XAxis dataKey="label" stroke="#888888" fontSize={10} tickLine={false} minTickGap={10} />
               <YAxis stroke="#888888" fontSize={10} tickLine={false} width={yAxisWidth} tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : `${v}`} />
               <Tooltip
+                cursor={{ stroke: '#888888', strokeWidth: 1, opacity: 0.4 }}
                 isAnimationActive={false}
                 animationDuration={0}
                 wrapperStyle={{ transition: 'none', pointerEvents: 'none' }}
-                content={({ active, payload, label }) => {
-                  if (active && payload && payload.length) {
-                    return (
-                      <div className="p-3 bg-white dark:bg-[#1a1a1a] border border-neutral-200 dark:border-neutral-700 shadow-xl rounded-xl text-xs space-y-1.5 min-w-[170px]">
-                        <p className="font-bold text-neutral-900 dark:text-neutral-100 border-b border-neutral-200/60 dark:border-neutral-800 pb-1">
-                          {label}
-                        </p>
-                        {payload.map((entry, i) => (
-                          <div key={i} className="flex justify-between items-center gap-3">
-                            <span style={{ color: entry.color }} className="font-medium">
-                              {entry.name}:
-                            </span>
-                            <span className="font-mono font-bold text-neutral-900 dark:text-neutral-100">
-                              RM {Number(entry.value).toFixed(2)}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    );
-                  }
-                  return null;
-                }}
+                content={<TrendTooltipContent />}
               />
               <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '4px' }} />
               {showRevenue && <Area type="monotone" dataKey="subtotal" name="Gross Revenue" stroke="#3b82f6" fill="url(#colorRevenue)" strokeWidth={2} />}
@@ -142,7 +165,13 @@ export const RevenueTrendWidget: FC<RevenueTrendWidgetProps> = ({
               <CartesianGrid strokeDasharray="3 3" opacity={0.12} />
               <XAxis dataKey="label" stroke="#888888" fontSize={10} tickLine={false} minTickGap={10} />
               <YAxis stroke="#888888" fontSize={10} tickLine={false} width={yAxisWidth} tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : `${v}`} />
-              <Tooltip isAnimationActive={false} animationDuration={0} wrapperStyle={{ transition: 'none', pointerEvents: 'none' }} />
+              <Tooltip
+                cursor={{ fill: 'rgba(128, 128, 128, 0.08)' }}
+                isAnimationActive={false}
+                animationDuration={0}
+                wrapperStyle={{ transition: 'none', pointerEvents: 'none' }}
+                content={<TrendTooltipContent />}
+              />
               <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '4px' }} />
               {showRevenue && <Bar dataKey="subtotal" name="Gross Revenue" fill="#3b82f6" radius={[4, 4, 0, 0]} />}
               {showProfit && <Bar dataKey="profit" name="Net Profit" fill="#10b981" radius={[4, 4, 0, 0]} />}
@@ -154,12 +183,18 @@ export const RevenueTrendWidget: FC<RevenueTrendWidgetProps> = ({
               <CartesianGrid strokeDasharray="3 3" opacity={0.12} />
               <XAxis dataKey="label" stroke="#888888" fontSize={10} tickLine={false} minTickGap={10} />
               <YAxis stroke="#888888" fontSize={10} tickLine={false} width={yAxisWidth} tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : `${v}`} />
-              <Tooltip isAnimationActive={false} animationDuration={0} wrapperStyle={{ transition: 'none', pointerEvents: 'none' }} />
+              <Tooltip
+                cursor={{ stroke: '#888888', strokeWidth: 1, opacity: 0.4 }}
+                isAnimationActive={false}
+                animationDuration={0}
+                wrapperStyle={{ transition: 'none', pointerEvents: 'none' }}
+                content={<TrendTooltipContent />}
+              />
               <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '4px' }} />
-              {showRevenue && <Line type="monotone" dataKey="subtotal" name="Gross Revenue" stroke="#3b82f6" strokeWidth={2} dot={{ r: 3 }} />}
-              {showProfit && <Line type="monotone" dataKey="profit" name="Net Profit" stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} />}
-              {showCost && <Line type="monotone" dataKey="cost" name="Total Cost" stroke="#f43f5e" strokeWidth={1.5} strokeDasharray="4 4" dot={false} />}
-              {showCumulative && <Line type="monotone" dataKey="cumulativeProfit" name="Cumulative Profit" stroke="#8b5cf6" strokeWidth={2.5} dot={{ r: 3 }} />}
+              {showRevenue && <Line type="monotone" dataKey="subtotal" name="Gross Revenue" stroke="#3b82f6" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} />}
+              {showProfit && <Line type="monotone" dataKey="profit" name="Net Profit" stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} />}
+              {showCost && <Line type="monotone" dataKey="cost" name="Total Cost" stroke="#f43f5e" strokeWidth={1.5} strokeDasharray="4 4" dot={false} activeDot={{ r: 4.5 }} />}
+              {showCumulative && <Line type="monotone" dataKey="cumulativeProfit" name="Cumulative Profit" stroke="#8b5cf6" strokeWidth={2.5} dot={{ r: 3 }} activeDot={{ r: 5 }} />}
             </LineChart>
           )}
         </ResponsiveContainer>

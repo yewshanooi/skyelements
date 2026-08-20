@@ -63,6 +63,7 @@ export const CategoryProfitabilityWidget: FC<CategoryProfitabilityWidgetProps> =
               tickFormatter={(v) => (currentWidth === '1/4' && v.length > 8 ? `${v.slice(0, 7)}...` : v)}
             />
             <Tooltip
+              cursor={{ fill: 'rgba(128, 128, 128, 0.08)' }}
               isAnimationActive={false}
               animationDuration={0}
               wrapperStyle={{ transition: 'none', pointerEvents: 'none' }}
