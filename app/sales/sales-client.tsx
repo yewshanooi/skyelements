@@ -528,7 +528,7 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
         searchQuery={filters.search}
         onSearchChange={handleSearchChange}
         salesCount={sales.length}
-        filteredCount={filteredSales.length}
+        filteredCount={currentView === 'timeline' ? undefined : filteredSales.length}
         selectedIdsCount={currentView === 'table' ? selectedIds.length : 0}
         onBatchDelete={handleBatchDelete}
         onDeselectAll={() => setSelectedIds([])}
@@ -536,7 +536,7 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
         isAiOpen={isAiOpen}
       />
 
-      <main className="flex-1 px-4 md:px-6 py-4 w-full">
+      <main className="flex-1 px-2.5 sm:px-4 md:px-6 py-3 sm:py-4 w-full max-w-full min-w-0">
         {isLoading || !isClientReady ? (
           <div className="flex flex-col items-center justify-center py-24 space-y-3">
             <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />

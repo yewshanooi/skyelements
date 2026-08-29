@@ -82,24 +82,24 @@ export const WidgetHeader: FC<WidgetHeaderProps> = ({
   const Icon = widget.icon;
 
   return (
-    <div className="flex items-center justify-between gap-3 pb-3.5 mb-4 border-b border-neutral-100 dark:border-neutral-800/80 select-none">
-      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+    <div className="flex items-center justify-between gap-2 sm:gap-3 pb-3 mb-3.5 sm:mb-4 border-b border-neutral-100 dark:border-neutral-800/80 select-none">
+      <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1">
         <div
           draggable
           onDragStart={onDragStart}
           onDragEnd={onDragEnd}
-          className="p-1 rounded-md transition-colors cursor-grab active:cursor-grabbing text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 shrink-0"
+          className="hidden sm:block p-1 rounded-md transition-colors cursor-grab active:cursor-grabbing text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 shrink-0"
           title="Drag :: to reorder widget"
         >
           <GripVertical className="w-4 h-4" />
         </div>
 
-        <div className="w-7 h-7 rounded-lg bg-neutral-100 dark:bg-neutral-800/80 flex items-center justify-center text-neutral-700 dark:text-neutral-300 shrink-0">
+        <div className="w-6.5 h-6.5 sm:w-7 sm:h-7 rounded-lg bg-neutral-100 dark:bg-neutral-800/80 flex items-center justify-center text-neutral-700 dark:text-neutral-300 shrink-0">
           <Icon className="w-3.5 h-3.5" />
         </div>
 
         <div className="min-w-0 flex-1">
-          <h3 className="font-semibold text-sm text-neutral-900 dark:text-neutral-100 truncate" title={widget.title}>
+          <h3 className="font-semibold text-xs sm:text-sm text-neutral-900 dark:text-neutral-100 truncate" title={widget.title}>
             {widget.title}
           </h3>
         </div>
@@ -112,7 +112,7 @@ export const WidgetHeader: FC<WidgetHeaderProps> = ({
           <button
             type="button"
             onClick={onExpand}
-            className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
+            className="p-1 sm:p-1.5 rounded-lg text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer shrink-0"
             title="Expand to Fullscreen"
           >
             <Maximize2 className="w-3.5 h-3.5" />
@@ -146,40 +146,40 @@ export const ChartModal: FC<ChartModalProps> = ({
   const Icon = widget.icon;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/70 backdrop-blur-xs animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-6 bg-black/70 backdrop-blur-xs animate-in fade-in duration-200">
       <div
-        className="bg-white dark:bg-[#1a1a1a] rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-2xl w-full max-w-6xl max-h-[92vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
+        className="bg-white dark:bg-[#1a1a1a] rounded-xl sm:rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-2xl w-full max-w-6xl max-h-[95vh] sm:max-h-[92vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="px-6 py-4 border-b border-neutral-200/80 dark:border-neutral-800 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-neutral-100 dark:bg-neutral-800/80 text-neutral-700 dark:text-neutral-300 flex items-center justify-center">
-              <Icon className="w-5 h-5" />
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-neutral-200/80 dark:border-neutral-800 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-neutral-100 dark:bg-neutral-800/80 text-neutral-700 dark:text-neutral-300 flex items-center justify-center shrink-0">
+              <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <div>
-              <h2 className="text-base font-semibold text-neutral-900 dark:text-neutral-100">
+            <div className="min-w-0">
+              <h2 className="text-sm sm:text-base font-semibold text-neutral-900 dark:text-neutral-100 truncate">
                 {widget.title}
               </h2>
-              <p className="text-xs text-neutral-400">
+              <p className="text-[11px] sm:text-xs text-neutral-400 truncate">
                 {widget.description}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             {headerActions}
             <button
               type="button"
               onClick={onClose}
-              className="p-2 rounded-lg text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
+              className="p-1.5 sm:p-2 rounded-lg text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
               title="Close Fullscreen View"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
           </div>
         </div>
 
-        <div className="p-6 overflow-y-auto flex-1">
+        <div className="p-3.5 sm:p-6 overflow-y-auto flex-1">
           {children}
         </div>
       </div>
@@ -236,13 +236,13 @@ export const CustomizeWidgetsModal: FC<CustomizeWidgetsModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
       <div
-        className="bg-white dark:bg-[#1a1a1a] rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
+        className="bg-white dark:bg-[#1a1a1a] rounded-xl sm:rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-2xl w-full max-w-2xl max-h-[94vh] sm:max-h-[85vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="p-5 border-b border-neutral-200/80 dark:border-neutral-800 flex items-center justify-between">
-          <h2 className="text-base font-semibold text-neutral-900 dark:text-neutral-100">
+        <div className="px-4 sm:px-5 py-3 sm:py-4 border-b border-neutral-200/80 dark:border-neutral-800 flex items-center justify-between">
+          <h2 className="text-sm sm:text-base font-semibold text-neutral-900 dark:text-neutral-100">
             Manage Cards
           </h2>
 
@@ -255,7 +255,7 @@ export const CustomizeWidgetsModal: FC<CustomizeWidgetsModalProps> = ({
           </button>
         </div>
 
-        <div className="p-5 overflow-y-auto space-y-6 flex-1">
+        <div className="p-3.5 sm:p-5 overflow-y-auto space-y-5 sm:space-y-6 flex-1">
           {/* Quick Presets */}
           <div className="space-y-2.5">
             <div className="flex items-center justify-between">

@@ -590,10 +590,10 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
   // Minimized Floating Pill UI (Preserves conversation state)
   if (isMinimized) {
     return (
-      <div className="fixed bottom-5 right-6 z-50 animate-in fade-in slide-in-from-bottom-2 duration-150">
+      <div className="fixed bottom-4 right-4 sm:bottom-5 sm:right-6 z-50 animate-in fade-in slide-in-from-bottom-2 duration-150">
         <div
           onClick={() => setIsMinimized(false)}
-          className="flex items-center gap-2.5 px-3.5 py-2 bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-2xl border border-black/10 dark:border-white/15 rounded-full shadow-[0_12px_40px_rgba(0,0,0,0.25)] hover:shadow-[0_16px_50px_rgba(0,0,0,0.35)] hover:scale-105 transition-all cursor-pointer select-none group"
+          className="flex items-center gap-2.5 px-3 sm:px-3.5 py-2 bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-2xl border border-black/10 dark:border-white/15 rounded-full shadow-[0_12px_40px_rgba(0,0,0,0.25)] hover:shadow-[0_16px_50px_rgba(0,0,0,0.35)] hover:scale-105 transition-all cursor-pointer select-none group"
           title="Click to expand AI chat"
         >
           <Sparkles className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400 shrink-0" />
@@ -618,13 +618,21 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
     );
   }
 
+  const isMobileScreen = typeof window !== 'undefined' && window.innerWidth < 768;
   const currentPos = getEffectivePosition();
   const windowStyle = isFullscreen
     ? {
-        left: '16px',
-        top: '16px',
-        width: 'calc(100vw - 32px)',
-        height: 'calc(100vh - 32px)',
+        left: '8px',
+        top: '8px',
+        width: 'calc(100vw - 16px)',
+        height: 'calc(100vh - 16px)',
+      }
+    : isMobileScreen
+    ? {
+        left: '8px',
+        top: '56px',
+        width: 'calc(100vw - 16px)',
+        height: 'calc(100vh - 68px)',
       }
     : {
         left: `${currentPos.x}px`,
@@ -637,14 +645,14 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
   return (
     <div
       style={windowStyle}
-      className={`fixed z-50 flex flex-col bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-2xl border border-black/[0.08] dark:border-white/[0.12] rounded-[22px] shadow-[0_24px_70px_rgba(0,0,0,0.28)] dark:shadow-[0_24px_70px_rgba(0,0,0,0.6)] overflow-hidden font-sans ${
+      className={`fixed z-50 flex flex-col bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-2xl border border-black/[0.08] dark:border-white/[0.12] rounded-2xl sm:rounded-[22px] shadow-[0_24px_70px_rgba(0,0,0,0.28)] dark:shadow-[0_24px_70px_rgba(0,0,0,0.6)] overflow-hidden font-sans ${
         isDragging || resizingDir
           ? 'transition-none select-none pointer-events-auto'
           : 'transition-[width,height,left,top] duration-150 ease-out'
       } ${isDragging ? 'shadow-[0_30px_90px_rgba(0,0,0,0.4)] ring-2 ring-[#2383e2]/30' : ''}`}
     >
-      {/* 8-Directional Resize Handles (Disabled in Fullscreen) */}
-      {!isFullscreen && (
+      {/* 8-Directional Resize Handles (Desktop only) */}
+      {!isFullscreen && !isMobileScreen && (
         <>
           <div
             onMouseDown={(e) => handleResizeStart(e, 'n')}
@@ -693,11 +701,11 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
 
       {/* macOS Window Header */}
       <div
-        onMouseDown={isFullscreen ? undefined : handleHeaderMouseDown}
+        onMouseDown={isFullscreen || isMobileScreen ? undefined : handleHeaderMouseDown}
         onDoubleClick={handleToggleFullscreen}
         title={isFullscreen ? 'Double-click to restore window' : 'Drag to move • Double-click for full screen'}
         className={`px-4 py-3 bg-[#f6f6f6]/90 dark:bg-[#252528]/90 border-b border-black/[0.06] dark:border-white/[0.08] backdrop-blur-xl flex items-center justify-between select-none ${
-          isFullscreen ? 'cursor-default' : isDragging ? 'cursor-grabbing' : 'cursor-grab'
+          isFullscreen || isMobileScreen ? 'cursor-default' : isDragging ? 'cursor-grabbing' : 'cursor-grab'
         }`}
       >
         {/* Left: macOS Traffic Lights */}

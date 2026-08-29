@@ -258,16 +258,16 @@ const NotionImportModalContent: FC<NotionImportModalContentProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 dark:bg-black/70 backdrop-blur-xs animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/50 dark:bg-black/70 backdrop-blur-xs animate-in fade-in duration-200">
       <div
-        className="bg-white dark:bg-[#202020] w-full max-w-4xl max-h-[92vh] flex flex-col rounded-2xl shadow-2xl border border-neutral-200/80 dark:border-neutral-800 text-neutral-900 dark:text-neutral-100 overflow-hidden transition-all"
+        className="bg-white dark:bg-[#202020] w-full max-w-4xl max-h-[95vh] sm:max-h-[92vh] flex flex-col rounded-xl sm:rounded-2xl shadow-2xl border border-neutral-200/80 dark:border-neutral-800 text-neutral-900 dark:text-neutral-100 overflow-hidden transition-all"
         role="dialog"
         aria-modal="true"
       >
         {/* Header */}
-        <div className="px-6 py-4 border-b border-neutral-100 dark:border-neutral-800/80 flex items-center justify-between bg-neutral-50/50 dark:bg-[#1a1a1a]/50">
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-neutral-100 dark:border-neutral-800/80 flex items-center justify-between bg-neutral-50/50 dark:bg-[#1a1a1a]/50">
           <div className="flex items-center gap-1.5 leading-none">
-            <h2 className="text-base font-semibold tracking-tight text-neutral-900 dark:text-neutral-100 leading-none">
+            <h2 className="text-sm sm:text-base font-semibold tracking-tight text-neutral-900 dark:text-neutral-100 leading-none">
               Import from Notion
             </h2>
             <div className="relative flex items-center" ref={helpRef}>
@@ -334,17 +334,17 @@ const NotionImportModalContent: FC<NotionImportModalContentProps> = ({
         )}
 
         {/* Modal Body */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           {/* STEP 1: Upload / Drop Zone */}
           {step === 'upload' && (
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               {/* Drop Target Area */}
               <div
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
                 onClick={() => fileInputRef.current?.click()}
-                className={`relative border-2 border-dashed rounded-2xl p-10 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-200 ${
+                className={`relative border-2 border-dashed rounded-xl sm:rounded-2xl p-6 sm:p-10 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-200 ${
                   isDragging
                     ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-950/20 scale-[1.008]'
                     : 'border-neutral-300 dark:border-neutral-700 hover:border-blue-400 dark:hover:border-blue-500/80 bg-neutral-50/40 dark:bg-[#1b1b1b]/40 hover:bg-blue-50/20 dark:hover:bg-[#222222]'

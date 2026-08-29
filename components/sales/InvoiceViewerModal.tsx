@@ -480,27 +480,27 @@ const InvoiceViewerModalContent: FC<{ sale: SaleItem; onClose: () => void }> = (
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200 invoice-modal-overlay">
-      <div className="bg-white dark:bg-[#202020] rounded-xl shadow-2xl border border-neutral-200 dark:border-neutral-800 w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh] invoice-modal-dialog">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200 invoice-modal-overlay">
+      <div className="bg-white dark:bg-[#202020] rounded-xl sm:rounded-2xl shadow-2xl border border-neutral-200 dark:border-neutral-800 w-full max-w-2xl overflow-hidden flex flex-col max-h-[95vh] sm:max-h-[90vh] invoice-modal-dialog">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between bg-neutral-50/50 dark:bg-neutral-900/50 invoice-modal-header no-print">
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between bg-neutral-50/50 dark:bg-neutral-900/50 invoice-modal-header no-print">
           <div className="flex items-center gap-2 min-w-0">
-            <div className="p-2 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-lg shrink-0">
-              <FileText className="w-5 h-5" />
+            <div className="p-1.5 sm:p-2 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-lg shrink-0">
+              <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div className="min-w-0">
-              <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 text-sm md:text-base truncate">
+              <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 text-xs sm:text-base truncate">
                 {invoiceName}
               </h3>
             </div>
           </div>
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
             {resolvedUrl && (
               <a
                 href={resolvedUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="p-2 text-neutral-500 hover:text-blue-600 dark:text-neutral-400 dark:hover:text-blue-400 hover:bg-neutral-200/60 dark:hover:bg-neutral-800 rounded-lg transition-colors cursor-pointer"
+                className="p-1.5 sm:p-2 text-neutral-500 hover:text-blue-600 dark:text-neutral-400 dark:hover:text-blue-400 hover:bg-neutral-200/60 dark:hover:bg-neutral-800 rounded-lg transition-colors cursor-pointer"
                 title="Open in new tab"
               >
                 <ExternalLink className="w-4 h-4" />
@@ -509,14 +509,14 @@ const InvoiceViewerModalContent: FC<{ sale: SaleItem; onClose: () => void }> = (
             <button
               onClick={handlePrint}
               disabled={isLoadingUrl}
-              className="p-2 text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 hover:bg-neutral-200/60 dark:hover:bg-neutral-800 rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-1.5 sm:p-2 text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 hover:bg-neutral-200/60 dark:hover:bg-neutral-800 rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               title="Print Document"
             >
               <Printer className="w-4 h-4" />
             </button>
             <button
               onClick={onClose}
-              className="p-2 text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 hover:bg-neutral-200/60 dark:hover:bg-neutral-800 rounded-lg transition-colors cursor-pointer"
+              className="p-1.5 sm:p-2 text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 hover:bg-neutral-200/60 dark:hover:bg-neutral-800 rounded-lg transition-colors cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
@@ -524,7 +524,7 @@ const InvoiceViewerModalContent: FC<{ sale: SaleItem; onClose: () => void }> = (
         </div>
 
         {/* Invoice Preview Body */}
-        <div className="p-6 overflow-y-auto space-y-6 invoice-printable-content">
+        <div className="p-4 sm:p-6 overflow-y-auto space-y-4 sm:space-y-6 invoice-printable-content">
           {sale.invoice_url ? (
             <div className="rounded-lg overflow-hidden border border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-950 flex flex-col items-center justify-center p-2 min-h-[220px]">
               {isLoadingUrl ? (
@@ -548,22 +548,22 @@ const InvoiceViewerModalContent: FC<{ sale: SaleItem; onClose: () => void }> = (
             </div>
           ) : (
             /* Digital Receipt Template */
-            <div className="bg-neutral-50 dark:bg-[#1a1a1a] p-6 rounded-xl border border-neutral-200/80 dark:border-neutral-800 font-sans space-y-6">
-              <div className="flex justify-between items-start border-b border-neutral-200 dark:border-neutral-800 pb-4">
+            <div className="bg-neutral-50 dark:bg-[#1a1a1a] p-4 sm:p-6 rounded-xl border border-neutral-200/80 dark:border-neutral-800 font-sans space-y-4 sm:space-y-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start border-b border-neutral-200 dark:border-neutral-800 pb-3 sm:pb-4 gap-2 sm:gap-4">
                 <div>
-                  <div className="text-xl font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-1.5">
+                  <div className="text-base sm:text-xl font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-1.5">
                     <span>🛒</span> {sale.marketplace} OFFICIAL RECEIPT
                   </div>
-                  <div className="text-xs text-neutral-500 mt-1">
+                  <div className="text-xs text-neutral-500 mt-0.5 sm:mt-1">
                     Tax Invoice / Order Statement
                   </div>
                 </div>
-                <div className="text-right">
+                <div className="text-left sm:text-right">
                   <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
                     <CheckCircle2 className="w-3.5 h-3.5" />
                     {sale.payment_status}
                   </span>
-                  <div className="text-xs text-neutral-400 mt-1.5">Date: {sale.date}</div>
+                  <div className="text-xs text-neutral-400 mt-1 sm:mt-1.5">Date: {sale.date}</div>
                 </div>
               </div>
 

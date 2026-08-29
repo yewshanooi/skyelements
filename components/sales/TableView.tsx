@@ -623,8 +623,8 @@ export const TableView: FC<TableViewProps> = ({
       />
 
       {/* Notion-style Data Table with Excel-like Inline Editing & Resizable Columns */}
-      <div className="border border-neutral-200/80 dark:border-neutral-800 rounded-xl bg-white dark:bg-[#191919] shadow-2xs">
-        <div ref={scrollContainerRef} className="overflow-x-auto rounded-xl">
+      <div className="border border-neutral-200/80 dark:border-neutral-800 rounded-xl bg-white dark:bg-[#191919] shadow-2xs overflow-hidden">
+        <div ref={scrollContainerRef} className="overflow-x-auto rounded-xl touch-scroll-x">
           <table
             className="text-left text-xs border-collapse select-text table-fixed"
             style={{ width: `${totalTableWidth}px`, minWidth: '100%' }}
@@ -952,7 +952,7 @@ export const TableView: FC<TableViewProps> = ({
                                 e.stopPropagation();
                                 onEditSale(sale);
                               }}
-                              className="shrink-0 opacity-0 group-hover/itemcell:opacity-100 group-hover:opacity-100 transition-opacity flex items-center gap-1 px-1.5 py-0.5 bg-white dark:bg-[#252525] hover:bg-neutral-100 dark:hover:bg-[#303030] border border-neutral-200/80 dark:border-neutral-700 rounded-md shadow-2xs text-[10px] font-semibold tracking-wider text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100 cursor-pointer select-none"
+                              className="shrink-0 opacity-100 sm:opacity-0 sm:group-hover/itemcell:opacity-100 sm:group-hover:opacity-100 transition-opacity flex items-center gap-1 px-1.5 py-0.5 bg-white dark:bg-[#252525] hover:bg-neutral-100 dark:hover:bg-[#303030] border border-neutral-200/80 dark:border-neutral-700 rounded-md shadow-2xs text-[10px] font-semibold tracking-wider text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100 cursor-pointer select-none"
                               title="Open edit order dialog"
                             >
                               <svg
@@ -1345,7 +1345,7 @@ export const TableView: FC<TableViewProps> = ({
 
                       {/* Actions */}
                       <td className="px-2 py-2 text-center">
-                        <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center justify-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                           <button
                             onClick={() => onEditSale(sale)}
                             className="p-1 text-neutral-400 hover:text-blue-600 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded transition-colors cursor-pointer"

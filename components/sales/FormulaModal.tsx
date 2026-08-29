@@ -512,14 +512,14 @@ const FormulaModalContent: FC<Omit<FormulaModalProps, 'isOpen'>> = ({
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150 select-none"
+      className="fixed inset-0 z-[60] flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150 select-none"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-xl bg-white dark:bg-[#1f1f1f] rounded-2xl shadow-2xl border border-neutral-200 dark:border-neutral-700 overflow-visible flex flex-col select-text"
+        className="w-full max-w-xl max-h-[95vh] bg-white dark:bg-[#1f1f1f] rounded-xl sm:rounded-2xl shadow-2xl border border-neutral-200 dark:border-neutral-700 overflow-y-auto overflow-x-hidden flex flex-col select-text"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-neutral-100 dark:border-neutral-800 rounded-t-2xl">
+        <div className="flex items-center justify-between px-4 sm:px-5 py-3 sm:py-3.5 border-b border-neutral-100 dark:border-neutral-800 rounded-t-xl sm:rounded-t-2xl">
           <div className="flex items-center gap-1.5 leading-none">
             <h2 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 font-sans leading-none">
               Edit formula
@@ -551,11 +551,11 @@ const FormulaModalContent: FC<Omit<FormulaModalProps, 'isOpen'>> = ({
                   </div>
 
                   {/* Full Functions List */}
-                  <div className="max-h-72 overflow-y-auto space-y-1.5 pr-0.5">
+                  <div className="max-h-72 overflow-y-auto space-y-2 pr-1">
                     {AVAILABLE_FUNCTIONS.map((fn) => (
                       <div
                         key={fn.name}
-                        className="p-2 rounded-xl bg-neutral-50 dark:bg-[#1c1c1c] border border-neutral-200/70 dark:border-neutral-800 space-y-1 hover:border-neutral-300 dark:hover:border-neutral-700 transition-colors"
+                        className="p-2 rounded-xl bg-neutral-50 dark:bg-[#1a1a1a] border border-neutral-200/60 dark:border-neutral-800 space-y-1.5"
                       >
                         <div className="flex items-center justify-between gap-1.5">
                           <span className="font-mono font-semibold text-xs text-pink-600 dark:text-pink-400">
@@ -597,7 +597,7 @@ const FormulaModalContent: FC<Omit<FormulaModalProps, 'isOpen'>> = ({
         </div>
 
         {/* Body Content */}
-        <div className="p-5 space-y-4 text-xs">
+        <div className="p-3.5 sm:p-5 space-y-3.5 sm:space-y-4 text-xs">
           {/* Formula Editor Container with Highlighted Backdrop and Autocomplete */}
           <div className="relative">
             <div

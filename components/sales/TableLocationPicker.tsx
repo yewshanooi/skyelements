@@ -176,34 +176,26 @@ export const TableLocationPicker: FC<TableLocationPickerProps> = ({
       return;
     }
 
-    const tileUrl = isDarkMode
-      ? 'https://a.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}@2x.png'
-      : 'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png';
+    const tileUrl = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 
     const map = new Map({
       container: miniMapRef.current,
       style: {
         version: 8,
         sources: {
-          'carto-tiles': {
+          'osm-tiles': {
             type: 'raster',
-            tiles: [
-              tileUrl,
-              tileUrl.replace('//a.', '//b.'),
-              tileUrl.replace('//a.', '//c.'),
-              tileUrl.replace('//a.', '//d.'),
-            ],
+            tiles: [tileUrl],
             tileSize: 256,
-            attribution: '© OpenStreetMap contributors, © CARTO',
           },
         },
         layers: [
           {
-            id: 'carto-layer',
+            id: 'osm-layer',
             type: 'raster',
-            source: 'carto-tiles',
+            source: 'osm-tiles',
             minzoom: 0,
-            maxzoom: 20,
+            maxzoom: 19,
           },
         ],
       },
@@ -338,6 +330,7 @@ export const TableLocationPicker: FC<TableLocationPickerProps> = ({
       setTimeout(() => setCopied(false), 1500);
     }
   };
+
 
   return (
     <>

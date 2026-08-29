@@ -867,7 +867,7 @@ export const ChartView: FC<ChartViewProps> = ({
         </div>
       ) : (
         /* Re-organizable Grid */
-        <div ref={gridContainerRef} className="grid grid-cols-12 gap-5">
+        <div ref={gridContainerRef} className="grid grid-cols-12 gap-3.5 sm:gap-5">
           {orderedVisibleWidgets.map((widget) => {
             const currentWidth = layout.widths[widget.id] || widget.defaultWidth;
             const colSpanClass = WIDTH_COL_SPAN_CLASS[currentWidth];
@@ -885,7 +885,7 @@ export const ChartView: FC<ChartViewProps> = ({
                 onDragOver={(e) => handleDragOver(e, widget.id)}
                 onDragLeave={handleDragLeave}
                 onDrop={(e) => handleDrop(e, widget.id)}
-                className={`${colSpanClass} transition-all duration-200 relative group`}
+                className={`${colSpanClass} transition-all duration-200 relative group min-w-0`}
               >
                 {/* Drop Indicator Bar */}
                 {isTarget && (
@@ -897,7 +897,7 @@ export const ChartView: FC<ChartViewProps> = ({
                 )}
 
                 <div
-                  className={`p-5 rounded-xl bg-white dark:bg-[#202020] border shadow-2xs transition-all h-full flex flex-col justify-between relative ${
+                  className={`p-3.5 sm:p-5 rounded-xl bg-white dark:bg-[#202020] border shadow-2xs transition-all h-full flex flex-col justify-between relative ${
                     isDragging
                       ? 'opacity-40 border-dashed border-blue-500 scale-[0.98]'
                       : isResizing
@@ -920,10 +920,10 @@ export const ChartView: FC<ChartViewProps> = ({
                     </div>
                   </div>
 
-                  {/* Bottom Right Corner Resize Grip */}
+                  {/* Bottom Right Corner Resize Grip (Desktop only) */}
                   <div
                     onPointerDown={(e) => handleResizeStart(e, widget)}
-                    className="absolute right-2 bottom-2 p-1 rounded-md cursor-se-resize flex items-center justify-center text-neutral-300 dark:text-neutral-600 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors z-20 touch-none select-none"
+                    className="hidden sm:flex absolute right-2 bottom-2 p-1 rounded-md cursor-se-resize items-center justify-center text-neutral-300 dark:text-neutral-600 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors z-20 touch-none select-none"
                     title="Click & drag to resize card width"
                   >
                     <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">

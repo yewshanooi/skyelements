@@ -144,37 +144,25 @@ export const MapView: FC<MapViewProps> = ({
     return unlocatedSales.filter((s) => s.location && s.location.trim().length > 0);
   }, [unlocatedSales]);
 
-  const getMapLibreStyle = (isDark: boolean) => {
-    const tileUrl = isDark
-      ? 'https://a.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}@2x.png'
-      : 'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png';
-
-    return {
-      version: 8 as const,
-      sources: {
-        'carto-tiles': {
-          type: 'raster' as const,
-          tiles: [
-            tileUrl,
-            tileUrl.replace('//a.', '//b.'),
-            tileUrl.replace('//a.', '//c.'),
-            tileUrl.replace('//a.', '//d.'),
-          ],
-          tileSize: 256,
-          attribution: '© OpenStreetMap contributors, © CARTO',
-        },
+  const getMapLibreStyle = (_isDark: boolean) => ({
+    version: 8 as const,
+    sources: {
+      'osm-tiles': {
+        type: 'raster' as const,
+        tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+        tileSize: 256,
       },
-      layers: [
-        {
-          id: 'carto-layer',
-          type: 'raster' as const,
-          source: 'carto-tiles',
-          minzoom: 0,
-          maxzoom: 20,
-        },
-      ],
-    };
-  };
+    },
+    layers: [
+      {
+        id: 'osm-layer',
+        type: 'raster' as const,
+        source: 'osm-tiles',
+        minzoom: 0,
+        maxzoom: 19,
+      },
+    ],
+  });
 
   const currentThemeRef = useRef<boolean | null>(null);
 
@@ -599,6 +587,7 @@ export const MapView: FC<MapViewProps> = ({
     }
   };
 
+
   return (
     <div className="space-y-6">
       {/* Notion Filter Bar for Map */}
@@ -620,15 +609,15 @@ export const MapView: FC<MapViewProps> = ({
         className={`relative rounded-xl border border-neutral-200/80 dark:border-neutral-800 bg-white dark:bg-[#191919] shadow-2xs overflow-hidden flex flex-col transition-all duration-200 ${
           isFullscreen
             ? 'fixed inset-0 z-50 h-screen w-screen rounded-none border-none'
-            : 'h-[620px]'
+            : 'h-[60vh] min-h-[380px] sm:h-[520px] md:h-[620px]'
         }`}
       >
         {/* Top Floating Action Bar */}
-        <div className="absolute top-3 right-16 z-20 flex items-center gap-2 pointer-events-none">
+        <div className="absolute top-2 sm:top-3 right-12 sm:right-16 z-20 flex items-center gap-1.5 sm:gap-2 pointer-events-none max-w-[calc(100%-60px)]">
           {/* Notion "No location (X)" Counter Pill */}
           <button
             onClick={() => setShowNoPlaceDrawer(true)}
-            className="pointer-events-auto px-3 py-1.5 text-xs font-medium bg-white/95 dark:bg-[#202020]/95 backdrop-blur-xs hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 rounded-lg shadow-md border border-neutral-200 dark:border-neutral-700 transition-colors flex items-center gap-1.5 cursor-pointer"
+            className="pointer-events-auto px-2.5 sm:px-3 py-1 sm:py-1.5 text-xs font-medium bg-white/95 dark:bg-[#202020]/95 backdrop-blur-xs hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 rounded-lg shadow-md border border-neutral-200 dark:border-neutral-700 transition-colors flex items-center gap-1.5 cursor-pointer shrink-0"
           >
             <MapPin className="w-3.5 h-3.5 text-neutral-400" />
             <span>No location ({unlocatedSales.length})</span>
@@ -637,7 +626,7 @@ export const MapView: FC<MapViewProps> = ({
           {/* Fit all pins / Center map button */}
           <button
             onClick={handleFitBounds}
-            className="pointer-events-auto p-2 bg-white/95 dark:bg-[#202020]/95 backdrop-blur-xs hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 rounded-lg shadow-md border border-neutral-200 dark:border-neutral-700 transition-colors cursor-pointer"
+            className="pointer-events-auto p-1.5 sm:p-2 bg-white/95 dark:bg-[#202020]/95 backdrop-blur-xs hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 rounded-lg shadow-md border border-neutral-200 dark:border-neutral-700 transition-colors cursor-pointer shrink-0"
             title="Fit to center / show all pins"
           >
             <LocateFixed className="w-3.5 h-3.5" />
@@ -646,7 +635,7 @@ export const MapView: FC<MapViewProps> = ({
           {/* Fullscreen toggle button */}
           <button
             onClick={toggleFullscreen}
-            className="pointer-events-auto p-2 bg-white/95 dark:bg-[#202020]/95 backdrop-blur-xs hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 rounded-lg shadow-md border border-neutral-200 dark:border-neutral-700 transition-colors cursor-pointer"
+            className="pointer-events-auto p-1.5 sm:p-2 bg-white/95 dark:bg-[#202020]/95 backdrop-blur-xs hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 rounded-lg shadow-md border border-neutral-200 dark:border-neutral-700 transition-colors cursor-pointer shrink-0"
             title={isFullscreen ? 'Exit Full Screen' : 'Full Screen'}
           >
             {isFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
@@ -658,7 +647,7 @@ export const MapView: FC<MapViewProps> = ({
 
         {/* Unlocated Items Drawer / Panel */}
         {showNoPlaceDrawer && (
-          <div className="absolute top-0 right-0 bottom-0 w-84 sm:w-96 bg-white/95 dark:bg-[#202020]/95 backdrop-blur-md border-l border-neutral-200 dark:border-neutral-800 shadow-2xl z-30 flex flex-col animate-in slide-in-from-right duration-200">
+          <div className="absolute top-0 right-0 bottom-0 w-full sm:w-96 max-w-full bg-white/95 dark:bg-[#202020]/95 backdrop-blur-md border-l border-neutral-200 dark:border-neutral-800 shadow-2xl z-30 flex flex-col animate-in slide-in-from-right duration-200">
             {/* Header */}
             <div className="p-4 border-b border-neutral-200 dark:border-neutral-800 space-y-2">
               <div className="flex items-center justify-between">

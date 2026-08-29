@@ -332,22 +332,21 @@ export const TimelineView: FC<TimelineViewProps> = ({
   }, [categories, categorySearch]);
 
   return (
-    <div className="space-y-4 -mt-2.5">
+    <div className="space-y-3 sm:space-y-3.5 pt-1.5 sm:pt-0">
       {/* Timeline Controls Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-white dark:bg-[#202020] border border-neutral-200/80 dark:border-neutral-800 rounded-xl shadow-2xs">
-        {/* Month Label & Breadcrumbs */}
-        <div className="flex items-center gap-3">
-          <div className="text-xs text-neutral-400 font-medium flex items-center gap-1">
-            <span>&raquo;</span>
-            <span>{monthNames[currentMonth === 0 ? 11 : currentMonth - 1]} {currentMonth === 0 ? currentYear - 1 : currentYear}</span>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4 p-2.5 sm:p-3 bg-white dark:bg-[#202020] border border-neutral-200/80 dark:border-neutral-800 rounded-xl shadow-2xs">
+        {/* Left: Month Year */}
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-600 dark:text-neutral-300 shrink-0">
+            <Calendar className="w-3.5 h-3.5 text-neutral-500 dark:text-neutral-400" />
           </div>
-          <span className="text-sm font-bold text-neutral-900 dark:text-neutral-100">
+          <span className="text-xs sm:text-sm font-bold text-neutral-900 dark:text-neutral-100 tracking-tight whitespace-nowrap">
             {monthNames[currentMonth]} {currentYear}
           </span>
         </div>
 
-        {/* Action controls */}
-        <div className="flex items-center gap-2 flex-wrap">
+        {/* Right: Category Selector & Today Navigator */}
+        <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-2.5 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-neutral-100 dark:border-neutral-800/80">
           {/* Custom Category Dropdown */}
           <div className="relative" ref={categoryDropdownRef}>
             <button
@@ -372,7 +371,7 @@ export const TimelineView: FC<TimelineViewProps> = ({
 
             {/* Custom Category Popover */}
             {isCategoryOpen && (
-              <div className="absolute right-0 top-full mt-1.5 z-50 w-60 p-1.5 bg-white dark:bg-[#202020] border border-neutral-200 dark:border-neutral-700 rounded-xl shadow-xl space-y-1 animate-in fade-in-50 zoom-in-95 duration-100 select-none">
+              <div className="absolute left-0 sm:left-auto sm:right-0 top-full mt-1.5 z-50 w-60 max-w-[calc(100vw-32px)] p-1.5 bg-white dark:bg-[#202020] border border-neutral-200 dark:border-neutral-700 rounded-xl shadow-xl space-y-1 animate-in fade-in-50 zoom-in-95 duration-100 select-none">
                 {/* Search box if there are options */}
                 {categories.length > 4 && (
                   <div className="relative px-1 pb-1 border-b border-neutral-100 dark:border-neutral-800/80">
@@ -449,25 +448,30 @@ export const TimelineView: FC<TimelineViewProps> = ({
             )}
           </div>
 
-          {/* Month Navigator */}
-          <div className="inline-flex items-center rounded-lg border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 text-xs">
+          {/* Month Navigator (Today selector) */}
+          <div className="inline-flex items-center rounded-lg border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 text-xs shadow-2xs shrink-0">
             <button
+              type="button"
               onClick={prevMonth}
               className="p-1.5 hover:bg-neutral-200/60 dark:hover:bg-neutral-800 rounded-l-lg transition-colors text-neutral-600 dark:text-neutral-300 cursor-pointer"
               title="Previous month"
+              aria-label="Previous month"
             >
               <ChevronLeft className="w-3.5 h-3.5" />
             </button>
             <button
+              type="button"
               onClick={setToday}
-              className="px-3 py-1 font-medium hover:bg-neutral-200/60 dark:hover:bg-neutral-800 transition-colors text-neutral-700 dark:text-neutral-200 cursor-pointer"
+              className="px-2.5 sm:px-3 py-1 font-medium hover:bg-neutral-200/60 dark:hover:bg-neutral-800 transition-colors text-neutral-700 dark:text-neutral-200 cursor-pointer"
             >
               Today
             </button>
             <button
+              type="button"
               onClick={nextMonth}
               className="p-1.5 hover:bg-neutral-200/60 dark:hover:bg-neutral-800 rounded-r-lg transition-colors text-neutral-600 dark:text-neutral-300 cursor-pointer"
               title="Next month"
+              aria-label="Next month"
             >
               <ChevronRight className="w-3.5 h-3.5" />
             </button>
@@ -479,7 +483,7 @@ export const TimelineView: FC<TimelineViewProps> = ({
       <div className="border border-neutral-200/80 dark:border-neutral-800 rounded-xl bg-white dark:bg-[#191919] shadow-2xs overflow-hidden">
         <div
           ref={scrollContainerRef}
-          className="overflow-x-auto relative min-h-[480px] scroll-smooth"
+          className="overflow-x-auto relative min-h-[380px] sm:min-h-[480px] scroll-smooth touch-scroll-x"
         >
           {/* Synchronized full-width timeline canvas */}
           <div

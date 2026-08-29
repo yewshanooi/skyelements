@@ -193,7 +193,7 @@ export const KanbanBoardView: FC<KanbanBoardViewProps> = ({
       />
 
       {/* 2-Column Store Board Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 pb-6">
         {STORE_COLUMNS.map((col) => {
           const colInfo = storeColumnData[col.id] || { sales: [], total: 0 };
           const colSales = colInfo.sales;
@@ -206,7 +206,7 @@ export const KanbanBoardView: FC<KanbanBoardViewProps> = ({
               onDragOver={(e) => handleDragOver(e, col.id)}
               onDragLeave={handleDragLeave}
               onDrop={(e) => handleDrop(e, col.id)}
-              className={`flex flex-col rounded-xl bg-neutral-100/60 dark:bg-[#1f1f1f]/80 border transition-all duration-200 p-4 min-h-[550px] max-h-[800px] shadow-xs ${
+              className={`flex flex-col rounded-xl bg-neutral-100/60 dark:bg-[#1f1f1f]/80 border transition-all duration-200 p-3 sm:p-4 min-h-[300px] md:min-h-[550px] max-h-[75vh] md:max-h-[800px] shadow-xs ${
                 isOver
                   ? 'border-blue-500/80 ring-2 ring-blue-500/20 bg-blue-50/20 dark:bg-blue-950/20'
                   : 'border-neutral-200/80 dark:border-neutral-800'
