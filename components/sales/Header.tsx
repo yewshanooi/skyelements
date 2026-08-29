@@ -122,44 +122,43 @@ export const Header: FC<HeaderProps> = ({
 
           {/* Top Right: (...) More Options Button with Dropdown (Ask AI, Import, Export, Logout, Theme) */}
           <div className="relative shrink-0 flex items-center gap-1.5" ref={moreMenuRef}>
-            {/* If items are selected on mobile, provide quick delete/deselect buttons */}
+            {/* If items are selected on mobile, provide quick delete/deselect buttons matching web version */}
             {selectedIdsCount > 0 && (
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5 sm:gap-2">
                 {onDeselectAll && (
                   <button
                     type="button"
                     onClick={onDeselectAll}
-                    className="px-2 py-1 text-[11px] font-medium text-neutral-600 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-800 rounded-lg"
+                    className="px-2.5 py-1.5 text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg text-xs font-medium transition-colors cursor-pointer animate-in fade-in zoom-in-95 duration-150 shrink-0"
                   >
-                    Deselect ({selectedIdsCount})
+                    Deselect
                   </button>
                 )}
                 {onBatchDelete && (
                   <button
                     type="button"
                     onClick={onBatchDelete}
-                    className="p-1.5 bg-red-600 text-white rounded-lg"
-                    title={`Delete ${selectedIdsCount} selected`}
+                    className="px-2.5 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-semibold shadow-xs transition-all cursor-pointer flex items-center gap-1.5 animate-in fade-in zoom-in-95 duration-150 shrink-0"
+                    title={`Delete ${selectedIdsCount} selected order${selectedIdsCount > 1 ? 's' : ''}`}
                   >
                     <Trash2 className="w-3.5 h-3.5" />
+                    <span className="bg-red-700/90 px-1.5 py-0.5 rounded text-[10px] font-mono leading-none">
+                      {selectedIdsCount}
+                    </span>
                   </button>
                 )}
               </div>
             )}
 
-            {/* The Apple Music style (...) Menu Button */}
+            {/* The (...) Menu Button */}
             <button
               type="button"
               onClick={() => setIsMoreMenuOpen((prev) => !prev)}
-              className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
-                isMoreMenuOpen
-                  ? 'bg-neutral-200 dark:bg-neutral-700 text-neutral-900 dark:text-white'
-                  : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700'
-              }`}
+              className="p-1.5 rounded-lg flex items-center justify-center text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100 transition-colors cursor-pointer"
               aria-label="More options"
               title="More options"
             >
-              <MoreHorizontal className="w-5 h-5" />
+              <MoreHorizontal className="w-6 h-6" />
             </button>
 
             {/* Apple Music Style Dropdown Popover */}

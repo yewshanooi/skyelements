@@ -192,6 +192,63 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
     posY: 0,
   });
 
+  // Mobile touch swipe-down to dismiss state & closing animation
+  const [isClosing, setIsClosing] = useState(false);
+  const [mobileDragOffsetY, setMobileDragOffsetY] = useState(0);
+  const [isMobileDragging, setIsMobileDragging] = useState(false);
+  const mobileTouchStartRef = useRef<{ y: number; time: number }>({ y: 0, time: 0 });
+
+  const handleMobileTouchStart = (e: React.TouchEvent) => {
+    if ((e.target as HTMLElement).closest('button, input, textarea, a') || isClosing) return;
+    mobileTouchStartRef.current = {
+      y: e.touches[0].clientY,
+      time: Date.now(),
+    };
+    setIsMobileDragging(true);
+  };
+
+  const handleMobileTouchMove = (e: React.TouchEvent) => {
+    if (!isMobileDragging || isClosing) return;
+    const currentY = e.touches[0].clientY;
+    const deltaY = currentY - mobileTouchStartRef.current.y;
+    if (deltaY > 0) {
+      setMobileDragOffsetY(deltaY);
+    } else {
+      setMobileDragOffsetY(deltaY * 0.15);
+    }
+  };
+
+  const handleCloseAndClear = () => {
+    if (isClosing) return;
+    setIsClosing(true);
+    setTimeout(() => {
+      handleClearChat();
+      setIsMinimized(false);
+      setIsFullscreen(false);
+      setIsClosing(false);
+      setMobileDragOffsetY(0);
+      onClose();
+    }, 280);
+  };
+
+  const handleMobileTouchEnd = () => {
+    if (!isMobileDragging || isClosing) return;
+    setIsMobileDragging(false);
+
+    const touchDuration = Date.now() - mobileTouchStartRef.current.time;
+    const deltaY = mobileDragOffsetY;
+
+    // Fast flick down or pulled down more than 60px
+    const isFlick = deltaY > 25 && touchDuration < 250;
+    const isPulledEnough = deltaY > 60;
+
+    if (isFlick || isPulledEnough) {
+      handleCloseAndClear();
+    } else {
+      setMobileDragOffsetY(0);
+    }
+  };
+
   // Calculate default position when not explicitly set
   const getEffectivePosition = () => {
     if (position) return position;
@@ -210,13 +267,6 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
     setIsFullscreen(false);
     localStorage.removeItem('sales_ai_window_pos');
     localStorage.removeItem('sales_ai_window_size');
-  };
-
-  const handleCloseAndClear = () => {
-    handleClearChat();
-    setIsMinimized(false);
-    setIsFullscreen(false);
-    onClose();
   };
 
   const handleMinimize = () => {
@@ -620,19 +670,17 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
 
   const isMobileScreen = typeof window !== 'undefined' && window.innerWidth < 768;
   const currentPos = getEffectivePosition();
-  const windowStyle = isFullscreen
+
+  // Desktop-only floating & resizable geometry
+  const desktopWindowStyle: React.CSSProperties = isFullscreen
     ? {
         left: '8px',
         top: '8px',
         width: 'calc(100vw - 16px)',
         height: 'calc(100vh - 16px)',
-      }
-    : isMobileScreen
-    ? {
-        left: '8px',
-        top: '56px',
-        width: 'calc(100vw - 16px)',
-        height: 'calc(100vh - 68px)',
+        opacity: isClosing ? 0 : 1,
+        transform: isClosing ? 'scale(0.96)' : 'scale(1)',
+        transition: 'opacity 0.22s ease, transform 0.22s ease',
       }
     : {
         left: `${currentPos.x}px`,
@@ -640,17 +688,56 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
         width: `${size.width}px`,
         height: `${size.height}px`,
         willChange: isDragging || resizingDir ? 'left, top, width, height' : 'auto',
+        opacity: isClosing ? 0 : 1,
+        transform: isClosing ? 'scale(0.96)' : 'scale(1)',
+        transition: isClosing
+          ? 'opacity 0.22s ease, transform 0.22s ease'
+          : isDragging || resizingDir
+          ? 'none'
+          : 'width 0.15s ease-out, height 0.15s ease-out, left 0.15s ease-out, top 0.15s ease-out',
       };
 
+  const mobileSheetStyle: React.CSSProperties = {
+    transform: isClosing
+      ? 'translateY(100%)'
+      : isMobileDragging
+      ? `translateY(${Math.max(0, mobileDragOffsetY)}px)`
+      : 'translateY(0px)',
+    transition: isMobileDragging
+      ? 'none'
+      : 'transform 0.28s cubic-bezier(0.32, 0.72, 0, 1)',
+  };
+
+  const backdropOpacity = isClosing
+    ? 0
+    : isMobileDragging
+    ? Math.max(0, 1 - mobileDragOffsetY / 300)
+    : 1;
+
   return (
-    <div
-      style={windowStyle}
-      className={`fixed z-50 flex flex-col bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-2xl border border-black/[0.08] dark:border-white/[0.12] rounded-2xl sm:rounded-[22px] shadow-[0_24px_70px_rgba(0,0,0,0.28)] dark:shadow-[0_24px_70px_rgba(0,0,0,0.6)] overflow-hidden font-sans ${
-        isDragging || resizingDir
-          ? 'transition-none select-none pointer-events-auto'
-          : 'transition-[width,height,left,top] duration-150 ease-out'
-      } ${isDragging ? 'shadow-[0_30px_90px_rgba(0,0,0,0.4)] ring-2 ring-[#2383e2]/30' : ''}`}
-    >
+    <>
+      {/* Mobile Backdrop Scrim (Clean dark overlay without background blur trap) */}
+      <div
+        style={{
+          opacity: backdropOpacity,
+          transition: isMobileDragging ? 'none' : 'opacity 0.28s ease',
+          pointerEvents: isClosing ? 'none' : 'auto',
+        }}
+        className="fixed inset-0 bg-black/40 dark:bg-black/60 z-40 md:hidden"
+        onClick={handleCloseAndClear}
+      />
+
+      {/* Main AI Assistant Dialog (Fixed iOS Bottom Sheet on Mobile with Swipe Down to Dismiss, Floating Draggable Window on Desktop) */}
+      <div
+        style={isMobileScreen ? mobileSheetStyle : desktopWindowStyle}
+        className={`fixed z-50 flex flex-col bg-white/98 dark:bg-[#1c1c1e]/98 backdrop-blur-2xl border border-black/[0.08] dark:border-white/[0.12] overflow-hidden font-sans
+          /* Fixed iOS Bottom Sheet Layout on Mobile */
+          inset-x-0 bottom-0 top-12 rounded-t-[28px] shadow-[0_-8px_32px_rgba(0,0,0,0.2)] dark:shadow-[0_-8px_32px_rgba(0,0,0,0.6)] animate-in slide-in-from-bottom-4 duration-200
+          /* Floating Draggable & Resizable Window Layout on Desktop (md+) */
+          md:inset-auto md:rounded-[22px] md:shadow-[0_24px_70px_rgba(0,0,0,0.28)] md:dark:shadow-[0_24px_70px_rgba(0,0,0,0.6)] md:animate-none
+          ${isDragging || resizingDir ? 'transition-none select-none pointer-events-auto' : ''}
+          ${isDragging ? 'shadow-[0_30px_90px_rgba(0,0,0,0.4)] ring-2 ring-[#2383e2]/30' : ''}`}
+      >
       {/* 8-Directional Resize Handles (Desktop only) */}
       {!isFullscreen && !isMobileScreen && (
         <>
@@ -699,13 +786,57 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
         </>
       )}
 
-      {/* macOS Window Header */}
+      {/* 1. Mobile iOS Navigation Header (iOS Sheet UI with Touch Swipe Down to Dismiss) */}
       <div
-        onMouseDown={isFullscreen || isMobileScreen ? undefined : handleHeaderMouseDown}
+        onTouchStart={handleMobileTouchStart}
+        onTouchMove={handleMobileTouchMove}
+        onTouchEnd={handleMobileTouchEnd}
+        onTouchCancel={handleMobileTouchEnd}
+        className="block md:hidden bg-[#fbfbfd]/95 dark:bg-[#1c1c1e]/95 border-b border-neutral-200/80 dark:border-neutral-800 backdrop-blur-xl select-none touch-none cursor-grab active:cursor-grabbing"
+      >
+        {/* Apple HIG Sheet Grabber (36px x 5px, centered with 5px top offset) */}
+        <div className="pt-2 pb-1 flex items-center justify-center pointer-events-none">
+          <div className="w-9 h-[5px] bg-neutral-300 dark:bg-neutral-600 rounded-full" />
+        </div>
+
+        <div className="px-4 pb-2.5 flex items-center justify-between">
+          {/* Left: Sparkles & Title */}
+          <div className="flex items-center gap-2 pointer-events-none">
+            <Sparkles className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+            <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
+              AI Assistant
+            </h3>
+          </div>
+
+          {/* Right: Clear Chat & iOS Close Button */}
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={handleClearChat}
+              className="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-500 hover:text-red-500 dark:text-neutral-400 dark:hover:text-red-400 flex items-center justify-center transition-colors cursor-pointer"
+              title="Clear Chat History"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={handleCloseAndClear}
+              className="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-600 dark:text-neutral-300 flex items-center justify-center transition-colors cursor-pointer"
+              title="Close"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* 2. Desktop macOS Window Header */}
+      <div
+        onMouseDown={isFullscreen ? undefined : handleHeaderMouseDown}
         onDoubleClick={handleToggleFullscreen}
         title={isFullscreen ? 'Double-click to restore window' : 'Drag to move • Double-click for full screen'}
-        className={`px-4 py-3 bg-[#f6f6f6]/90 dark:bg-[#252528]/90 border-b border-black/[0.06] dark:border-white/[0.08] backdrop-blur-xl flex items-center justify-between select-none ${
-          isFullscreen || isMobileScreen ? 'cursor-default' : isDragging ? 'cursor-grabbing' : 'cursor-grab'
+        className={`hidden md:flex px-4 py-3 bg-[#f6f6f6]/90 dark:bg-[#252528]/90 border-b border-black/[0.06] dark:border-white/[0.08] backdrop-blur-xl items-center justify-between select-none ${
+          isFullscreen ? 'cursor-default' : isDragging ? 'cursor-grabbing' : 'cursor-grab'
         }`}
       >
         {/* Left: macOS Traffic Lights */}
@@ -1007,7 +1138,7 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center justify-between text-[10px] text-neutral-400 dark:text-neutral-500 px-1.5 pt-2.5 pb-0.5 font-normal">
+          <div className="hidden md:flex items-center justify-between text-[10px] text-neutral-400 dark:text-neutral-500 px-1.5 pt-2.5 pb-0.5 font-normal">
             <span>
               <kbd className="px-1 py-0.5 bg-black/[0.04] dark:bg-white/[0.08] rounded font-mono text-[9px] border border-black/[0.04] dark:border-white/[0.06]">Enter</kbd> to send
             </span>
@@ -1018,5 +1149,6 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
         </div>
       </div>
     </div>
-  );
+  </>
+);
 };
