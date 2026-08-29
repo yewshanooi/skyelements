@@ -536,7 +536,7 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
         isAiOpen={isAiOpen}
       />
 
-      <main className="flex-1 px-2.5 sm:px-4 md:px-6 py-3 sm:py-4 w-full max-w-full min-w-0">
+      <main className="flex-1 px-2.5 sm:px-4 md:px-6 py-3 sm:py-4 pb-28 sm:pb-32 md:pb-6 w-full max-w-full min-w-0">
         {isLoading || !isClientReady ? (
           <div className="flex flex-col items-center justify-center py-24 space-y-3">
             <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />

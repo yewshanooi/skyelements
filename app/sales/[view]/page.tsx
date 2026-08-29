@@ -7,26 +7,10 @@ import { fetchSalesAction } from "@/services/sales/salesActions";
 
 const VALID_VIEWS: ViewMode[] = ['table', 'board', 'chart', 'timeline', 'map'];
 
-const VIEW_TITLES: Record<ViewMode, string> = {
-  table: 'Table',
-  board: 'Board',
-  chart: 'Chart',
-  timeline: 'Timeline',
-  map: 'Map',
+export const metadata: Metadata = {
+  title: "Sales Dashboard",
+  description: "Comprehensive multi-view sales analytics, Notion tables, and AI Assistant.",
 };
-
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ view: string }>;
-}): Promise<Metadata> {
-  const { view } = await params;
-  const title = VIEW_TITLES[view as ViewMode] || 'Sales Dashboard';
-  return {
-    title: `Sales Dashboard | ${title}`,
-    description: "Comprehensive multi-view sales analytics, Notion tables, and AI Assistant.",
-  };
-}
 
 export default async function SalesViewPage({
   params,
