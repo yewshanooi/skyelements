@@ -34,6 +34,60 @@ export async function fetchSalesAction(): Promise<SaleItem[]> {
 }
 
 /**
+ * Helper to resolve geocoded coordinates with fallback and normalization
+ */
+async function resolveCoordinates(
+  location?: string | null,
+  lat?: number,
+  lng?: number
+): Promise<{ lat: number | null; lng: number | null }> {
+  let finalLat = lat;
+  let finalLng = lng;
+
+  if (location && (finalLat === undefined || finalLng === undefined || isNaN(finalLat) || isNaN(finalLng))) {
+    try {
+      const coords = await geocodeAddress(location);
+      if (coords) {
+        finalLat = coords.lat;
+        finalLng = coords.lng;
+      }
+    } catch (err) {
+      console.warn('[salesActions] Geocoding fallback error:', err);
+    }
+  }
+
+  if (finalLat !== undefined && finalLng !== undefined && !isNaN(finalLat) && !isNaN(finalLng)) {
+    const norm = normalizeCoordinates(finalLat, finalLng);
+    if (norm) {
+      return { lat: norm.lat, lng: norm.lng };
+    }
+    return { lat: finalLat, lng: finalLng };
+  }
+
+  return { lat: null, lng: null };
+}
+
+/**
+ * Helper to remove attached invoice files from private Supabase Storage
+ */
+async function cleanupInvoiceFiles(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  invoiceUrls: (string | null | undefined)[]
+): Promise<void> {
+  try {
+    const paths = invoiceUrls
+      .map((url) => extractStoragePath(url, 'invoices'))
+      .filter((p): p is string => Boolean(p));
+
+    if (paths.length > 0) {
+      await supabase.storage.from('invoices').remove(paths);
+    }
+  } catch (err) {
+    console.warn('[salesActions] Could not clean up invoice storage:', err);
+  }
+}
+
+/**
  * Server Action: Create a new sale
  */
 export async function createSaleAction(sale: Omit<SaleItem, 'id'>): Promise<SaleItem> {
@@ -44,30 +98,7 @@ export async function createSaleAction(sale: Omit<SaleItem, 'id'>): Promise<Sale
     throw new Error('You must be signed in to create sales records.');
   }
 
-  let lat = sale.latitude;
-  let lng = sale.longitude;
-
-  // Auto-geocode on server if location is provided and coordinates are missing
-  if (sale.location && (!lat || !lng || isNaN(lat) || isNaN(lng))) {
-    try {
-      const coords = await geocodeAddress(sale.location);
-      if (coords) {
-        lat = coords.lat;
-        lng = coords.lng;
-      }
-    } catch (err) {
-      console.warn('[createSaleAction] Geocoding fallback error:', err);
-    }
-  }
-
-  if (lat !== undefined && lng !== undefined) {
-    const norm = normalizeCoordinates(lat, lng);
-    if (norm) {
-      lat = norm.lat;
-      lng = norm.lng;
-    }
-  }
-
+  const { lat, lng } = await resolveCoordinates(sale.location, sale.latitude, sale.longitude);
   const calculatedSales = Number((sale.subtotal - sale.cost).toFixed(2));
 
   const { data, error } = await supabase
@@ -89,8 +120,8 @@ export async function createSaleAction(sale: Omit<SaleItem, 'id'>): Promise<Sale
       invoice_url: sale.invoice_url || null,
       invoice_name: sale.invoice_name || null,
       location: sale.location || null,
-      latitude: lat ?? null,
-      longitude: lng ?? null,
+      latitude: lat,
+      longitude: lng,
       notes: sale.notes || null,
     })
     .select(SALES_SELECT_COLUMNS)
@@ -120,37 +151,21 @@ export async function updateSaleAction(
     throw new Error('You must be signed in to update sales records.');
   }
 
-  // If location changed and no coordinates provided, auto-geocode on server
-  let lat = updates.latitude;
-  let lng = updates.longitude;
-  if (updates.location && (lat === undefined || lng === undefined)) {
-    try {
-      const coords = await geocodeAddress(updates.location);
-      if (coords) {
-        lat = coords.lat;
-        lng = coords.lng;
-      }
-    } catch (err) {
-      console.warn('[updateSaleAction] Geocoding error:', err);
-    }
-  }
-
-  if (lat !== undefined && lng !== undefined) {
-    const norm = normalizeCoordinates(lat, lng);
-    if (norm) {
-      lat = norm.lat;
-      lng = norm.lng;
-    }
-  }
-
   const dbPayload: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(updates)) {
     if (key === 'id' || key === 'sales' || key === 'created_at' || key === 'user_id') continue;
     dbPayload[key] = value === undefined ? null : value;
   }
 
-  if (lat !== undefined) dbPayload.latitude = lat;
-  if (lng !== undefined) dbPayload.longitude = lng;
+  if (updates.location !== undefined || updates.latitude !== undefined || updates.longitude !== undefined) {
+    const { lat, lng } = await resolveCoordinates(
+      updates.location,
+      updates.latitude,
+      updates.longitude
+    );
+    if (lat !== null || updates.latitude !== undefined) dbPayload.latitude = lat;
+    if (lng !== null || updates.longitude !== undefined) dbPayload.longitude = lng;
+  }
 
   const { data, error } = await supabase
     .from('sales')
@@ -182,22 +197,15 @@ export async function deleteSaleAction(id: string): Promise<void> {
   }
 
   // 1. Fetch sale to check for attached invoice
-  try {
-    const { data: sale } = await supabase
-      .from('sales')
-      .select('invoice_url')
-      .eq('id', id)
-      .eq('user_id', user.id)
-      .maybeSingle();
+  const { data: sale } = await supabase
+    .from('sales')
+    .select('invoice_url')
+    .eq('id', id)
+    .eq('user_id', user.id)
+    .maybeSingle();
 
-    if (sale?.invoice_url) {
-      const path = extractStoragePath(sale.invoice_url, 'invoices');
-      if (path) {
-        await supabase.storage.from('invoices').remove([path]);
-      }
-    }
-  } catch (err) {
-    console.warn('[deleteSaleAction] Could not clean up invoice storage:', err);
+  if (sale?.invoice_url) {
+    await cleanupInvoiceFiles(supabase, [sale.invoice_url]);
   }
 
   // 2. Delete sale record
@@ -230,24 +238,14 @@ export async function batchDeleteSalesAction(ids: string[]): Promise<void> {
   }
 
   // 1. Fetch sales to find attached invoices
-  try {
-    const { data: sales } = await supabase
-      .from('sales')
-      .select('invoice_url')
-      .in('id', ids)
-      .eq('user_id', user.id);
+  const { data: sales } = await supabase
+    .from('sales')
+    .select('invoice_url')
+    .in('id', ids)
+    .eq('user_id', user.id);
 
-    if (sales && sales.length > 0) {
-      const paths = sales
-        .map((s) => extractStoragePath(s.invoice_url, 'invoices'))
-        .filter((p): p is string => Boolean(p));
-
-      if (paths.length > 0) {
-        await supabase.storage.from('invoices').remove(paths);
-      }
-    }
-  } catch (err) {
-    console.warn('[batchDeleteSalesAction] Could not clean up invoice storage:', err);
+  if (sales && sales.length > 0) {
+    await cleanupInvoiceFiles(supabase, sales.map((s) => s.invoice_url));
   }
 
   // 2. Delete records
@@ -378,7 +376,7 @@ export async function deleteInvoiceFileAction(
 
   try {
     const supabase = await createClient();
-    const { data, error } = await supabase.storage
+    const { error } = await supabase.storage
       .from('invoices')
       .remove([path]);
 
@@ -410,7 +408,7 @@ export async function deleteInvoiceFilesAction(
 
   try {
     const supabase = await createClient();
-    const { data, error } = await supabase.storage
+    const { error } = await supabase.storage
       .from('invoices')
       .remove(paths);
 

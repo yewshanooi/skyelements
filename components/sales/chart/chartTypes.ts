@@ -51,20 +51,6 @@ export const WIDTH_COL_SPAN_CLASS: Record<WidgetWidth, string> = {
   '4/4': 'col-span-12',
 };
 
-export const WIDTH_LABELS: Record<WidgetWidth, string> = {
-  '1/4': '1/4 Width',
-  '2/4': '2/4 Width',
-  '3/4': '3/4 Width',
-  '4/4': '4/4 Width',
-};
-
-export const WIDTH_SHORT_LABELS: Record<WidgetWidth, string> = {
-  '1/4': '1/4',
-  '2/4': '2/4',
-  '3/4': '3/4',
-  '4/4': '4/4',
-};
-
 export const normalizeWidgetWidth = (w: unknown, fallback: WidgetWidth = '4/4'): WidgetWidth => {
   if (w === '1/4' || w === 'third' || w === 'fourth') return '1/4';
   if (w === '2/4' || w === 'half') return '2/4';

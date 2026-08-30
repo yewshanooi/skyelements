@@ -14,16 +14,10 @@ interface TagPillProps {
 export const TagPill: FC<TagPillProps> = ({ text = '', type, color, className = '' }) => {
   const safeText = typeof text === 'string' ? text : String(text || '');
   const [customColor, setCustomColor] = useState<string | undefined>(() => getOptionColor(safeText, type));
-  const [prevSafeText, setPrevSafeText] = useState(safeText);
-  const [prevType, setPrevType] = useState(type);
-
-  if (prevSafeText !== safeText || prevType !== type) {
-    setPrevSafeText(safeText);
-    setPrevType(type);
-    setCustomColor(getOptionColor(safeText, type));
-  }
 
   useEffect(() => {
+    setCustomColor(getOptionColor(safeText, type));
+
     const handleColorChange = () => {
       setCustomColor(getOptionColor(safeText, type));
     };

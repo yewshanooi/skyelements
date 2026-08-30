@@ -22,7 +22,7 @@ import {
   Pencil,
 } from 'lucide-react';
 import { NotionFilterBar } from './NotionFilterBar';
-import { filterSales, DEFAULT_EMPTY_FILTERS, type FilterState, type PropertyType } from '@/lib/sales/filterUtils';
+import { filterSales, DEFAULT_EMPTY_FILTERS, type FilterState } from '@/lib/sales/filterUtils';
 import type {
   WidgetConfig,
   WidgetWidth,
@@ -196,6 +196,9 @@ const DEFAULT_LAYOUT: WidgetLayoutState = {
   hidden: {},
 };
 
+const WIDGET_CONFIG_MAP = new Map(ALL_WIDGET_CONFIGS.map((w) => [w.id, w]));
+
+
 export const ChartView: FC<ChartViewProps> = ({
   sales,
   filters: propFilters,
@@ -254,19 +257,21 @@ export const ChartView: FC<ChartViewProps> = ({
   }, [overviewKpiLayout]);
 
   // Widget specific subcontrols persistence
-  const [subcontrols, setSubcontrols] = useState<{
+  interface ChartSubcontrolsState {
     trendGranularity: 'daily' | 'weekly' | 'monthly';
     trendChartType: 'area' | 'bar' | 'line';
     trendMetric: 'all' | 'profit' | 'revenue' | 'cumulative';
     donutBreakdown: 'items' | 'categories' | 'marketplace' | 'payment';
     categorySortBy: 'revenue' | 'profit' | 'margin';
-  }>(() => {
-    const defaults = {
-      trendGranularity: 'monthly' as const,
-      trendChartType: 'area' as const,
-      trendMetric: 'all' as const,
-      donutBreakdown: 'items' as const,
-      categorySortBy: 'revenue' as const,
+  }
+
+  const [subcontrols, setSubcontrols] = useState<ChartSubcontrolsState>(() => {
+    const defaults: ChartSubcontrolsState = {
+      trendGranularity: 'monthly',
+      trendChartType: 'area',
+      trendMetric: 'all',
+      donutBreakdown: 'items',
+      categorySortBy: 'revenue',
     };
     if (typeof window !== 'undefined') {
       try {
@@ -277,45 +282,30 @@ export const ChartView: FC<ChartViewProps> = ({
     return defaults;
   });
 
-  const trendGranularity = subcontrols.trendGranularity;
-  const setTrendGranularity = (v: 'daily' | 'weekly' | 'monthly' | ((prev: 'daily' | 'weekly' | 'monthly') => 'daily' | 'weekly' | 'monthly')) => {
+  const setSubcontrol = <K extends keyof ChartSubcontrolsState>(
+    key: K,
+    v: ChartSubcontrolsState[K] | ((prev: ChartSubcontrolsState[K]) => ChartSubcontrolsState[K])
+  ) => {
     setSubcontrols((prev) => ({
       ...prev,
-      trendGranularity: typeof v === 'function' ? v(prev.trendGranularity) : v,
+      [key]: typeof v === 'function' ? (v as (p: ChartSubcontrolsState[K]) => ChartSubcontrolsState[K])(prev[key]) : v,
     }));
   };
+
+  const trendGranularity = subcontrols.trendGranularity;
+  const setTrendGranularity = (v: 'daily' | 'weekly' | 'monthly' | ((prev: 'daily' | 'weekly' | 'monthly') => 'daily' | 'weekly' | 'monthly')) => setSubcontrol('trendGranularity', v);
 
   const trendChartType = subcontrols.trendChartType;
-  const setTrendChartType = (v: 'area' | 'bar' | 'line' | ((prev: 'area' | 'bar' | 'line') => 'area' | 'bar' | 'line')) => {
-    setSubcontrols((prev) => ({
-      ...prev,
-      trendChartType: typeof v === 'function' ? v(prev.trendChartType) : v,
-    }));
-  };
+  const setTrendChartType = (v: 'area' | 'bar' | 'line' | ((prev: 'area' | 'bar' | 'line') => 'area' | 'bar' | 'line')) => setSubcontrol('trendChartType', v);
 
   const trendMetric = subcontrols.trendMetric;
-  const setTrendMetric = (v: 'all' | 'profit' | 'revenue' | 'cumulative' | ((prev: 'all' | 'profit' | 'revenue' | 'cumulative') => 'all' | 'profit' | 'revenue' | 'cumulative')) => {
-    setSubcontrols((prev) => ({
-      ...prev,
-      trendMetric: typeof v === 'function' ? v(prev.trendMetric) : v,
-    }));
-  };
+  const setTrendMetric = (v: 'all' | 'profit' | 'revenue' | 'cumulative' | ((prev: 'all' | 'profit' | 'revenue' | 'cumulative') => 'all' | 'profit' | 'revenue' | 'cumulative')) => setSubcontrol('trendMetric', v);
 
   const donutBreakdown = subcontrols.donutBreakdown;
-  const setDonutBreakdown = (v: 'items' | 'categories' | 'marketplace' | 'payment' | ((prev: 'items' | 'categories' | 'marketplace' | 'payment') => 'items' | 'categories' | 'marketplace' | 'payment')) => {
-    setSubcontrols((prev) => ({
-      ...prev,
-      donutBreakdown: typeof v === 'function' ? v(prev.donutBreakdown) : v,
-    }));
-  };
+  const setDonutBreakdown = (v: 'items' | 'categories' | 'marketplace' | 'payment' | ((prev: 'items' | 'categories' | 'marketplace' | 'payment') => 'items' | 'categories' | 'marketplace' | 'payment')) => setSubcontrol('donutBreakdown', v);
 
   const categorySortBy = subcontrols.categorySortBy;
-  const setCategorySortBy = (v: 'revenue' | 'profit' | 'margin' | ((prev: 'revenue' | 'profit' | 'margin') => 'revenue' | 'profit' | 'margin')) => {
-    setSubcontrols((prev) => ({
-      ...prev,
-      categorySortBy: typeof v === 'function' ? v(prev.categorySortBy) : v,
-    }));
-  };
+  const setCategorySortBy = (v: 'revenue' | 'profit' | 'margin' | ((prev: 'revenue' | 'profit' | 'margin') => 'revenue' | 'profit' | 'margin')) => setSubcontrol('categorySortBy', v);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -714,15 +704,11 @@ export const ChartView: FC<ChartViewProps> = ({
     setIsCustomizeModalOpen(false);
   };
 
-  const widgetConfigMap = useMemo(() => {
-    return new Map(ALL_WIDGET_CONFIGS.map((w) => [w.id, w]));
-  }, []);
-
   const orderedVisibleWidgets = useMemo(() => {
     return layout.order
-      .map((id) => widgetConfigMap.get(id))
+      .map((id) => WIDGET_CONFIG_MAP.get(id))
       .filter((w): w is WidgetConfig => Boolean(w && !layout.hidden[w.id]));
-  }, [layout.order, layout.hidden, widgetConfigMap]);
+  }, [layout.order, layout.hidden]);
 
   // Render widget dispatcher
   const renderWidgetContent = (widgetId: string, isModal = false, currentWidth: WidgetWidth = '4/4') => {
@@ -828,10 +814,6 @@ export const ChartView: FC<ChartViewProps> = ({
       <NotionFilterBar
         storageKeyPrefix="chart"
         showSort={false}
-        showSearch={true}
-        showNewButton={false}
-        salesCount={sales.length}
-        filteredCount={filteredSales.length}
         filters={filters}
         onFiltersChange={setFilters}
         extraRightActions={
@@ -847,8 +829,28 @@ export const ChartView: FC<ChartViewProps> = ({
         }
       />
 
-      {/* Zero State if no matching filters */}
-      {filteredSales.length === 0 ? (
+      {/* Zero State if no active cards toggled */}
+      {orderedVisibleWidgets.length === 0 ? (
+        <div className="p-12 text-center rounded-xl bg-white dark:bg-[#1f1f1f] border border-dashed border-neutral-200 dark:border-neutral-800 space-y-3">
+          <PieIcon className="w-10 h-10 text-neutral-300 dark:text-neutral-600 mx-auto" />
+          <h3 className="text-sm font-semibold text-neutral-800 dark:text-neutral-200">
+            No active cards toggled
+          </h3>
+          <p className="text-xs text-neutral-400 max-w-sm mx-auto">
+            Select cards or choose a layout preset to view your charts.
+          </p>
+          <div className="flex items-center justify-center gap-2 pt-1">
+            <button
+              type="button"
+              onClick={handleResetLayout}
+              className="px-3.5 py-1.5 rounded-lg text-xs font-medium bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Reset to Default</span>
+            </button>
+          </div>
+        </div>
+      ) : filteredSales.length === 0 ? (
         <div className="p-12 text-center rounded-xl bg-white dark:bg-[#1f1f1f] border border-dashed border-neutral-200 dark:border-neutral-800 space-y-3">
           <Layers2 className="w-10 h-10 text-neutral-300 dark:text-neutral-600 mx-auto" />
           <h3 className="text-sm font-semibold text-neutral-800 dark:text-neutral-200">
@@ -858,6 +860,7 @@ export const ChartView: FC<ChartViewProps> = ({
             Try adjusting your active filters to view metrics and charts.
           </p>
           <button
+            type="button"
             onClick={handleResetFilters}
             className="px-3.5 py-1.5 rounded-lg text-xs font-medium bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 transition-colors inline-flex items-center gap-1.5 cursor-pointer"
           >
@@ -950,7 +953,7 @@ export const ChartView: FC<ChartViewProps> = ({
 
       {/* Fullscreen Expand Chart Modal */}
       <ChartModal
-        widget={expandedWidgetId ? widgetConfigMap.get(expandedWidgetId) || null : null}
+        widget={expandedWidgetId ? WIDGET_CONFIG_MAP.get(expandedWidgetId) || null : null}
         isOpen={Boolean(expandedWidgetId)}
         onClose={() => {
           setExpandedWidgetId(null);

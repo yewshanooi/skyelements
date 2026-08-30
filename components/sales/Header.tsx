@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from 'react';
-import type { FC, ReactNode } from 'react';
+import type { FC } from 'react';
 import {
   Table2,
   PieChart as PieIcon,
@@ -42,6 +42,21 @@ interface HeaderProps {
   onToggleAi?: () => void;
   isAiOpen?: boolean;
 }
+
+interface ViewTabConfig {
+  id: ViewMode;
+  label: string;
+  Icon: typeof Table2;
+}
+
+const VIEWS: ViewTabConfig[] = [
+  { id: 'table', label: 'Table', Icon: Table2 },
+  { id: 'board', label: 'Board', Icon: LayoutGrid },
+  { id: 'chart', label: 'Chart', Icon: PieIcon },
+  { id: 'timeline', label: 'Timeline', Icon: Calendar },
+  { id: 'map', label: 'Map', Icon: MapPin },
+];
+
 
 export const Header: FC<HeaderProps> = ({
   activeView,
@@ -96,15 +111,7 @@ export const Header: FC<HeaderProps> = ({
     };
   }, []);
 
-  const views: { id: ViewMode; label: string; icon: ReactNode }[] = [
-    { id: 'table', label: 'Table', icon: <Table2 className="w-5 h-5 md:w-3.5 md:h-3.5 shrink-0" /> },
-    { id: 'board', label: 'Board', icon: <LayoutGrid className="w-5 h-5 md:w-3.5 md:h-3.5 shrink-0" /> },
-    { id: 'chart', label: 'Chart', icon: <PieIcon className="w-5 h-5 md:w-3.5 md:h-3.5 shrink-0" /> },
-    { id: 'timeline', label: 'Timeline', icon: <Calendar className="w-5 h-5 md:w-3.5 md:h-3.5 shrink-0" /> },
-    { id: 'map', label: 'Map', icon: <MapPin className="w-5 h-5 md:w-3.5 md:h-3.5 shrink-0" /> },
-  ];
-
-  const currentViewLabel = views.find((v) => v.id === activeView)?.label || 'Table';
+  const currentViewLabel = VIEWS.find((v) => v.id === activeView)?.label || 'Table';
 
   return (
     <>
@@ -197,7 +204,7 @@ export const Header: FC<HeaderProps> = ({
                         : 'hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-800 dark:text-neutral-200'
                     }`}
                   >
-                    <Sparkles className={`w-4 h-4 ${isAiOpen ? 'text-purple-600 dark:text-purple-400' : 'text-purple-600 dark:text-purple-400'}`} />
+                    <Sparkles className="w-4 h-4 text-purple-600 dark:text-purple-400" />
                     <span className="flex-1">Ask AI</span>
                     {isAiOpen && (
                       <span className="text-[10px] bg-purple-100 dark:bg-purple-900/60 text-purple-700 dark:text-purple-300 px-1.5 py-0.5 rounded-full font-semibold">
@@ -418,8 +425,9 @@ export const Header: FC<HeaderProps> = ({
         <div className="px-6 py-2.5 flex items-center justify-between gap-2 overflow-hidden">
           {/* Left: View Tabs */}
           <div className="flex items-center gap-1 overflow-x-auto no-scrollbar touch-scroll-x py-0.5 min-w-0 flex-initial">
-            {views.map((v) => {
+            {VIEWS.map((v) => {
               const isActive = activeView === v.id;
+              const TabIcon = v.Icon;
               return (
                 <button
                   key={v.id}
@@ -430,7 +438,7 @@ export const Header: FC<HeaderProps> = ({
                       : 'text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800/80'
                   }`}
                 >
-                  {v.icon}
+                  <TabIcon className="w-5 h-5 md:w-3.5 md:h-3.5 shrink-0" />
                   <span>{v.label}</span>
                 </button>
               );
@@ -502,8 +510,9 @@ export const Header: FC<HeaderProps> = ({
           className="pointer-events-auto flex items-center gap-0.5 p-1 bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-xl border border-neutral-200/90 dark:border-neutral-800/90 rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.14)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
           aria-label="Sales View Navigation"
         >
-          {views.map((v) => {
+          {VIEWS.map((v) => {
             const isActive = activeView === v.id;
+            const TabIcon = v.Icon;
             return (
               <button
                 key={v.id}
@@ -516,7 +525,7 @@ export const Header: FC<HeaderProps> = ({
                 }`}
                 title={v.label}
               >
-                {v.icon}
+                <TabIcon className="w-5 h-5 md:w-3.5 md:h-3.5 shrink-0" />
                 <span className="text-[10px] leading-tight mt-0.5 tracking-tight font-medium">
                   {v.label}
                 </span>

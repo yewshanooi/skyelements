@@ -166,18 +166,6 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
     [filters, syncFiltersToUrl]
   );
 
-  const handleSelectTimelineCategory = useCallback(
-    (category: string) => {
-      const updated = {
-        ...filters,
-        categories: category === 'all' ? [] : [category],
-      };
-      setFilters(updated);
-      syncFiltersToUrl(updated);
-    },
-    [filters, syncFiltersToUrl]
-  );
-
   // Debounced search change handler for smooth typing & URL update
   const debounceSearchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleSearchChange = useCallback(
@@ -556,7 +544,6 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
                   onEditSale={handleOpenEdit}
                   onUpdateSale={handleUpdateSaleInline}
                   onDeleteSale={handleDelete}
-                  onOpenNewSale={handleOpenNew}
                   onViewInvoice={(sale) => setInvoiceSale(sale)}
                   onSelectMapPin={handleSelectMapPin}
                   selectedIds={selectedIds}
@@ -583,7 +570,6 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
                   currentMonth={timelineMonth}
                   onChangeYearMonth={handleTimelineYearMonthChange}
                   onSelectSale={handleOpenEdit}
-                  onOpenNewSale={handleOpenNew}
                 />
               )}
 
@@ -593,7 +579,6 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
                   filters={filters}
                   onFiltersChange={handleFiltersChange}
                   onSelectSale={handleOpenEdit}
-                  onOpenNewSale={handleOpenNew}
                   onUpdateSaleLocation={handleUpdateLocation}
                   selectedSalePin={selectedMapSale}
                 />

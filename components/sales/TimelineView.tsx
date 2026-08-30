@@ -5,7 +5,6 @@ import type { FC } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
-  ChevronDown,
   Calendar,
   FileText,
 } from 'lucide-react';
@@ -18,17 +17,20 @@ interface TimelineViewProps {
   sales: SaleItem[];
   filters?: FilterState;
   onFiltersChange?: (filters: FilterState) => void;
-  selectedCategory?: string;
-  onSelectCategory?: (category: string) => void;
   currentYear?: number;
   currentMonth?: number;
   onChangeYearMonth?: (year: number, month: number) => void;
   onSelectSale: (sale: SaleItem) => void;
-  onOpenNewSale?: () => void;
 }
 
 const COLUMN_WIDTH = 48;
 const WEEKDAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
 
 function normalizeDate(raw?: string): string {
   if (!raw) return '';
@@ -41,8 +43,6 @@ export const TimelineView: FC<TimelineViewProps> = ({
   sales,
   filters: propFilters,
   onFiltersChange: propOnFiltersChange,
-  selectedCategory: propCategory,
-  onSelectCategory: propOnSelectCategory,
   currentYear: propYear,
   currentMonth: propMonth,
   onChangeYearMonth,
@@ -57,7 +57,6 @@ export const TimelineView: FC<TimelineViewProps> = ({
   const [internalMonth, setInternalMonth] = useState<number>(today.getMonth());
   const [internalFilters, setInternalFilters] = useState<FilterState>(() => ({
     ...DEFAULT_EMPTY_FILTERS,
-    categories: propCategory && propCategory !== 'all' ? [propCategory] : [],
   }));
 
   const currentYear = propYear ?? internalYear;
@@ -70,12 +69,9 @@ export const TimelineView: FC<TimelineViewProps> = ({
         propOnFiltersChange(newFilters);
       } else {
         setInternalFilters(newFilters);
-        if (propOnSelectCategory) {
-          propOnSelectCategory(newFilters.categories[0] || 'all');
-        }
       }
     },
-    [propOnFiltersChange, propOnSelectCategory]
+    [propOnFiltersChange]
   );
 
   const setYearMonth = (y: number, m: number) => {
@@ -127,10 +123,6 @@ export const TimelineView: FC<TimelineViewProps> = ({
     }
   };
 
-  const monthNames = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December',
-  ];
 
   // Number of days in selected month and previous month
   const daysInMonth = useMemo(() => {
@@ -312,10 +304,6 @@ export const TimelineView: FC<TimelineViewProps> = ({
       <NotionFilterBar
         storageKeyPrefix="timeline"
         showSort={false}
-        showSearch={false}
-        showNewButton={false}
-        salesCount={sales.length}
-        filteredCount={relevantSales.length}
         filters={activeFilters}
         onFiltersChange={handleFiltersChange}
         defaultVisibleProps={['category']}
@@ -326,7 +314,7 @@ export const TimelineView: FC<TimelineViewProps> = ({
               className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full text-xs font-medium bg-neutral-100 hover:bg-neutral-200/70 dark:bg-neutral-800 dark:hover:bg-neutral-700/70 text-neutral-700 dark:text-neutral-300 border border-neutral-200/80 dark:border-neutral-700/80 transition-all cursor-default shadow-2xs shrink-0"
             >
               <Calendar className="w-3.5 h-3.5 text-neutral-500 dark:text-neutral-400" />
-              <span>{monthNames[currentMonth]} {currentYear}</span>
+              <span>{MONTH_NAMES[currentMonth]} {currentYear}</span>
             </button>
             <div className="h-4 w-px bg-neutral-200 dark:bg-neutral-800 mx-0.5 shrink-0" />
           </>

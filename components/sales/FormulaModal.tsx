@@ -311,10 +311,76 @@ const FormulaModalContent: FC<Omit<FormulaModalProps, 'isOpen'>> = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const backdropRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const previewPickerRef = useRef<HTMLDivElement>(null);
+  const previewButtonRef = useRef<HTMLButtonElement>(null);
+  const previewPopoverRef = useRef<HTMLDivElement>(null);
   const previewSearchInputRef = useRef<HTMLInputElement>(null);
   const helpButtonRef = useRef<HTMLButtonElement>(null);
   const helpPopoverRef = useRef<HTMLDivElement>(null);
+
+  const [previewCoords, setPreviewCoords] = useState<{
+    top?: number;
+    bottom?: number;
+    left: number;
+    placement: 'bottom' | 'top';
+  } | null>(null);
+
+  const computePreviewPosition = useCallback(() => {
+    if (!previewButtonRef.current || typeof window === 'undefined') return;
+    const parentRect = previewButtonRef.current.getBoundingClientRect();
+    if (parentRect.width === 0 && parentRect.height === 0) return;
+
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const popoverWidth = previewPopoverRef.current?.offsetWidth || 288;
+    const popoverHeight = previewPopoverRef.current?.offsetHeight || 280;
+
+    const spaceBelow = viewportHeight - parentRect.bottom;
+    const spaceAbove = parentRect.top;
+
+    let placement: 'bottom' | 'top' = 'bottom';
+    if (spaceBelow < Math.min(popoverHeight, 260) && (spaceAbove > spaceBelow || spaceAbove > 180)) {
+      placement = 'top';
+    }
+
+    let left = parentRect.left;
+    if (left + popoverWidth > viewportWidth - 12) {
+      left = parentRect.right - popoverWidth;
+    }
+    left = Math.max(12, Math.min(left, viewportWidth - popoverWidth - 12));
+
+    if (placement === 'top') {
+      setPreviewCoords({
+        bottom: viewportHeight - parentRect.top + 4,
+        left,
+        placement: 'top',
+      });
+    } else {
+      setPreviewCoords({
+        top: parentRect.bottom + 4,
+        left,
+        placement: 'bottom',
+      });
+    }
+  }, []);
+
+  useLayoutEffect(() => {
+    if (isPreviewPickerOpen) {
+      computePreviewPosition();
+    }
+  }, [isPreviewPickerOpen, computePreviewPosition, previewSearchQuery]);
+
+  useEffect(() => {
+    if (!isPreviewPickerOpen) return;
+    const handleScrollOrResize = () => {
+      computePreviewPosition();
+    };
+    window.addEventListener('resize', handleScrollOrResize);
+    window.addEventListener('scroll', handleScrollOrResize, true);
+    return () => {
+      window.removeEventListener('resize', handleScrollOrResize);
+      window.removeEventListener('scroll', handleScrollOrResize, true);
+    };
+  }, [isPreviewPickerOpen, computePreviewPosition]);
 
   const [helpCoords, setHelpCoords] = useState<{
     top?: number;
@@ -407,7 +473,12 @@ const FormulaModalContent: FC<Omit<FormulaModalProps, 'isOpen'>> = ({
       ) {
         setIsDropdownOpen(false);
       }
-      if (previewPickerRef.current && !previewPickerRef.current.contains(target)) {
+      if (
+        previewPopoverRef.current &&
+        !previewPopoverRef.current.contains(target) &&
+        previewButtonRef.current &&
+        !previewButtonRef.current.contains(target)
+      ) {
         setIsPreviewPickerOpen(false);
       }
       if (
@@ -947,72 +1018,87 @@ const FormulaModalContent: FC<Omit<FormulaModalProps, 'isOpen'>> = ({
             {/* Preview With Dropdown Selector */}
             <div className="flex items-center gap-2">
               <span className="text-neutral-500 dark:text-neutral-400 text-xs">Preview with</span>
-              <div className="relative inline-block" ref={previewPickerRef}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsPreviewPickerOpen(!isPreviewPickerOpen);
-                    setPreviewSearchQuery('');
-                  }}
-                  className="px-2.5 py-1 bg-transparent hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg text-xs font-medium text-neutral-700 dark:text-neutral-300 flex items-center gap-1.5 cursor-pointer max-w-[320px] transition-colors"
-                >
-                  <FileText className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
-                  <span className="truncate">{previewItem.item || 'Untitled Order'}</span>
-                  <ChevronDown className="w-3.5 h-3.5 text-neutral-400 shrink-0 ml-0.5" />
-                </button>
-
-                {/* Custom "Preview with" Dropdown Popover matching Sales Dashboard Popovers */}
-                {isPreviewPickerOpen && (
-                  <div className="absolute left-0 top-full mt-1.5 z-50 w-72 max-w-[calc(100vw-32px)] bg-white dark:bg-[#202020] border border-neutral-200 dark:border-neutral-700 rounded-xl shadow-xl p-2 space-y-2 animate-in fade-in zoom-in-95 duration-100">
-                    <div className="relative">
-                      <input
-                        ref={previewSearchInputRef}
-                        type="text"
-                        value={previewSearchQuery}
-                        onChange={(e) => setPreviewSearchQuery(e.target.value)}
-                        placeholder="Search"
-                        className="w-full px-3 py-1.5 text-xs bg-white dark:bg-[#181818] border border-blue-500 ring-2 ring-blue-500/20 rounded-lg outline-none text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400"
-                      />
-                    </div>
-
-                    <div className="max-h-56 overflow-y-auto space-y-0.5">
-                      {filteredPreviewSales.length === 0 ? (
-                        <div className="p-3 text-center text-xs text-neutral-400">
-                          No matching orders found
-                        </div>
-                      ) : (
-                        filteredPreviewSales.map((s) => {
-                          const isSelected = s.id === selectedItemId;
-                          return (
-                            <button
-                              key={s.id}
-                              type="button"
-                              onClick={() => {
-                                setSelectedItemId(s.id);
-                                setIsPreviewPickerOpen(false);
-                              }}
-                              className={`w-full flex items-center justify-between px-2.5 py-1.5 text-left text-xs rounded-lg transition-colors cursor-pointer group ${
-                                isSelected
-                                  ? 'bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 font-medium'
-                                  : 'hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300'
-                              }`}
-                            >
-                              <div className="flex items-center gap-2 min-w-0 flex-1">
-                                <FileText className="w-3.5 h-3.5 text-neutral-400 group-hover:text-neutral-600 dark:group-hover:text-neutral-300 shrink-0" />
-                                <span className="truncate">{s.item || 'Untitled Order'}</span>
-                              </div>
-                              {isSelected && (
-                                <Check className="w-3.5 h-3.5 text-neutral-800 dark:text-neutral-200 shrink-0 ml-2" />
-                              )}
-                            </button>
-                          );
-                        })
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
+              <button
+                ref={previewButtonRef}
+                type="button"
+                onClick={() => {
+                  setIsPreviewPickerOpen(!isPreviewPickerOpen);
+                  setPreviewSearchQuery('');
+                }}
+                className="px-2.5 py-1 bg-transparent hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg text-xs font-medium text-neutral-700 dark:text-neutral-300 flex items-center gap-1.5 cursor-pointer max-w-[320px] transition-colors"
+              >
+                <FileText className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+                <span className="truncate">{previewItem.item || 'Untitled Order'}</span>
+                <ChevronDown className="w-3.5 h-3.5 text-neutral-400 shrink-0 ml-0.5" />
+              </button>
             </div>
+
+            {/* Portal-rendered Preview With Dropdown Popover */}
+            {typeof document !== 'undefined' &&
+              isPreviewPickerOpen &&
+              previewCoords &&
+              createPortal(
+                <div
+                  ref={previewPopoverRef}
+                  onClick={(e) => e.stopPropagation()}
+                  style={{
+                    position: 'fixed',
+                    zIndex: 70,
+                    ...(previewCoords.placement === 'top'
+                      ? { bottom: `${previewCoords.bottom}px` }
+                      : { top: `${previewCoords.top}px` }),
+                    left: `${previewCoords.left}px`,
+                  }}
+                  className="w-72 max-w-[calc(100vw-24px)] bg-white dark:bg-[#202020] border border-neutral-200 dark:border-neutral-700 rounded-xl shadow-2xl p-2 space-y-2 animate-in fade-in-50 zoom-in-95 duration-100 text-xs select-none"
+                >
+                  <div className="relative">
+                    <input
+                      ref={previewSearchInputRef}
+                      type="text"
+                      value={previewSearchQuery}
+                      onChange={(e) => setPreviewSearchQuery(e.target.value)}
+                      placeholder="Search"
+                      className="w-full px-3 py-1.5 text-xs bg-white dark:bg-[#181818] border border-blue-500 ring-2 ring-blue-500/20 rounded-lg outline-none text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400"
+                    />
+                  </div>
+
+                  <div className="max-h-56 overflow-y-auto space-y-0.5 overscroll-contain">
+                    {filteredPreviewSales.length === 0 ? (
+                      <div className="p-3 text-center text-xs text-neutral-400">
+                        No matching orders found
+                      </div>
+                    ) : (
+                      filteredPreviewSales.map((s) => {
+                        const isSelected = s.id === selectedItemId;
+                        return (
+                          <button
+                            key={s.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedItemId(s.id);
+                              setIsPreviewPickerOpen(false);
+                            }}
+                            className={`w-full flex items-center justify-between px-2.5 py-1.5 text-left text-xs rounded-lg transition-colors cursor-pointer group ${
+                              isSelected
+                                ? 'bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 font-medium'
+                                : 'hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              <FileText className="w-3.5 h-3.5 text-neutral-400 group-hover:text-neutral-600 dark:group-hover:text-neutral-300 shrink-0" />
+                              <span className="truncate">{s.item || 'Untitled Order'}</span>
+                            </div>
+                            {isSelected && (
+                              <Check className="w-3.5 h-3.5 text-neutral-800 dark:text-neutral-200 shrink-0 ml-2" />
+                            )}
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>,
+                document.body
+              )}
 
             {/* Evaluated Value & Type Badge */}
             <div className="flex items-center justify-between pt-1">

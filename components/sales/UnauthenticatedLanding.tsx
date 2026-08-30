@@ -50,7 +50,7 @@ export const UnauthenticatedLanding: FC<UnauthenticatedLandingProps> = ({ onOpen
           <h1 className="scroll-m-20 text-3xl text-center font-semibold text-balance">
             Sales Dashboard
           </h1>
-          <p className="text-muted-foreground text-center text-l max-w-3xl">
+          <p className="text-muted-foreground text-center text-base sm:text-lg max-w-3xl">
             Manage sales, track revenue analytics, and organize orders across multiple channels.
           </p>
         </div>

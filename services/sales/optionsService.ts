@@ -235,33 +235,10 @@ export const DEFAULT_TYPE_OPTION_COLORS: Record<NormalizedOptionType, Record<str
   },
 };
 
-export const DEFAULT_OPTION_COLORS: Record<string, string> = {
-  Shopee: 'tag-orange',
-  Carousell: 'tag-red',
-  'Online Banking': 'tag-yellow',
-  'E-Wallet': 'tag-blue',
-  'E-Wallet - Business': 'tag-blue',
-  'Shopee - ShopeePay Balance': 'tag-orange',
-  'Shopee - Online Banking': 'tag-orange',
-  'Shopee - Apple Pay': 'tag-orange',
-  'Shopee - Credit / Debit Card': 'tag-orange',
-  'Shopee - Cash Payment at Physical Stores': 'tag-orange',
-  'Shopee - Cash on Delivery': 'tag-orange',
-  'Shopee - SPayLater': 'tag-orange',
-  'Trading Card Games': 'tag-gray',
-  'Gift Cards': 'tag-gray',
-  'Collectibles': 'tag-gray',
-  'Virtual Items': 'tag-gray',
-  'Virtual Services': 'tag-gray',
-  'Miniatures': 'tag-gray',
-  'Books': 'tag-gray',
-  'Electronics': 'tag-gray',
-  'On Hold': 'tag-red',
-  Processing: 'tag-yellow',
-  Paid: 'tag-green',
-  Shipped: 'tag-yellow',
-  Delivered: 'tag-green',
-};
+export const DEFAULT_OPTION_COLORS: Record<string, string> = Object.assign(
+  {},
+  ...Object.values(DEFAULT_TYPE_OPTION_COLORS)
+);
 
 export function resolveOptionTagClass(optionName: string, type?: OptionType | string): string {
   if (!optionName) return 'tag-default';

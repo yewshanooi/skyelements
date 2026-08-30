@@ -265,10 +265,6 @@ export function matchesDateFilter(dateStr?: string, dateFilter?: DateFilterConfi
   return true;
 }
 
-export function matchesSaleFilter(sale: SaleItem, filters: FilterState): boolean {
-  return filterSales([sale], filters).length > 0;
-}
-
 /**
  * Highly optimized batch filter using pre-allocated Set lookups and precomputed search query.
  */

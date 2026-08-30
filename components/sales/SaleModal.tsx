@@ -62,11 +62,34 @@ interface SaleFormData {
   notes: string;
 }
 
+function parseFormQuantity(val: number | string): number {
+  const parsed = parseInt(String(val), 10);
+  return isNaN(parsed) ? 0 : Math.max(0, parsed);
+}
+
+function parseFormAmount(val: number | string): number {
+  const parsed = parseFloat(String(val));
+  return isNaN(parsed) ? 0 : Math.max(0, parsed);
+}
+
+function toSaleItem(formData: SaleFormData, calculatedSales: number, id: string): SaleItem {
+  return {
+    ...formData,
+    quantity: parseFormQuantity(formData.quantity),
+    cost: parseFormAmount(formData.cost),
+    subtotal: parseFormAmount(formData.subtotal),
+    sales: calculatedSales,
+    id,
+  } as SaleItem;
+}
+
+
 function getInitialFormData(
   initialData?: SaleItem | null,
   defaultStore?: StoreType | string
 ): SaleFormData {
   if (initialData) {
+    const coords = normalizeCoordinates(initialData.latitude, initialData.longitude);
     return {
       quantity:
         initialData.quantity !== undefined && initialData.quantity !== null
@@ -86,8 +109,8 @@ function getInitialFormData(
       payment_status: (initialData.payment_status || '') as PaymentStatus,
       sales: initialData.sales ?? 0,
       subtotal: initialData.subtotal === 0 ? '' : (initialData.subtotal ?? ''),
-      latitude: normalizeCoordinates(initialData.latitude, initialData.longitude)?.lat ?? undefined,
-      longitude: normalizeCoordinates(initialData.latitude, initialData.longitude)?.lng ?? undefined,
+      latitude: coords?.lat ?? undefined,
+      longitude: coords?.lng ?? undefined,
       notes: initialData.notes || '',
     };
   }
@@ -179,13 +202,10 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
   }, [activeOptionPicker, isDatePickerOpen, isLocationPickerOpen, isFormulaModalOpen, onClose]);
 
   const calculatedSales = useMemo(() => {
-    return evaluateSalesFormula(customFormula, {
-      ...formData,
-      quantity: isNaN(parseInt(String(formData.quantity), 10)) ? 0 : Math.max(0, parseInt(String(formData.quantity), 10)),
-      cost: Number(formData.cost) || 0,
-      subtotal: Number(formData.subtotal) || 0,
-      id: initialData?.id || 'temp',
-    } as SaleItem);
+    return evaluateSalesFormula(
+      customFormula,
+      toSaleItem(formData, 0, initialData?.id || 'temp')
+    );
   }, [customFormula, formData, initialData?.id]);
 
   const handleFileUpload = async (e: ChangeEvent<HTMLInputElement>) => {
@@ -245,14 +265,9 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
     try {
       const dataToSave: Omit<SaleItem, 'id'> = {
         ...formData,
-        category: formData.category,
-        marketplace: formData.marketplace,
-        order_status: formData.order_status,
-        payment_method: formData.payment_method,
-        payment_status: formData.payment_status,
-        quantity: isNaN(parseInt(String(formData.quantity), 10)) ? 0 : Math.max(0, parseInt(String(formData.quantity), 10)),
-        cost: Math.max(0, parseFloat(String(formData.cost)) || 0),
-        subtotal: Math.max(0, parseFloat(String(formData.subtotal)) || 0),
+        quantity: parseFormQuantity(formData.quantity),
+        cost: parseFormAmount(formData.cost),
+        subtotal: parseFormAmount(formData.subtotal),
         sales: calculatedSales,
       };
       if (initialData?.id) {
@@ -503,14 +518,7 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
                 </div>
                 {isLocationPickerOpen && (
                   <TableLocationPicker
-                    sale={{
-                      ...formData,
-                      quantity: isNaN(parseInt(String(formData.quantity), 10)) ? 0 : Math.max(0, parseInt(String(formData.quantity), 10)),
-                      cost: Math.max(0, parseFloat(String(formData.cost)) || 0),
-                      subtotal: Math.max(0, parseFloat(String(formData.subtotal)) || 0),
-                      sales: calculatedSales,
-                      id: initialData?.id || 'temp',
-                    } as SaleItem}
+                    sale={toSaleItem(formData, calculatedSales, initialData?.id || 'temp')}
                     onSaveLocation={(loc, lat, lng) => {
                       const norm = normalizeCoordinates(lat, lng);
                       setFormData((prev) => ({
@@ -525,16 +533,17 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
                       onOpenFullMap
                         ? () => {
                             const norm = normalizeCoordinates(formData.latitude, formData.longitude);
-                            onOpenFullMap({
-                              ...formData,
-                              quantity: isNaN(parseInt(String(formData.quantity), 10)) ? 0 : Math.max(0, parseInt(String(formData.quantity), 10)),
-                              cost: Math.max(0, parseFloat(String(formData.cost)) || 0),
-                              subtotal: Math.max(0, parseFloat(String(formData.subtotal)) || 0),
-                              sales: calculatedSales,
-                              latitude: norm?.lat ?? formData.latitude,
-                              longitude: norm?.lng ?? formData.longitude,
-                              id: initialData?.id || 'temp',
-                            } as SaleItem);
+                            onOpenFullMap(
+                              toSaleItem(
+                                {
+                                  ...formData,
+                                  latitude: norm?.lat ?? formData.latitude,
+                                  longitude: norm?.lng ?? formData.longitude,
+                                },
+                                calculatedSales,
+                                initialData?.id || 'temp'
+                              )
+                            );
                             onClose();
                           }
                         : undefined
@@ -810,16 +819,7 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
         <FormulaModal
           isOpen={isFormulaModalOpen}
           onClose={() => setIsFormulaModalOpen(false)}
-          sales={[
-            {
-              ...formData,
-              quantity: isNaN(parseInt(String(formData.quantity), 10)) ? 0 : Math.max(0, parseInt(String(formData.quantity), 10)),
-              cost: Math.max(0, parseFloat(String(formData.cost)) || 0),
-              subtotal: Math.max(0, parseFloat(String(formData.subtotal)) || 0),
-              sales: calculatedSales,
-              id: initialData?.id || 'current_item',
-            } as SaleItem,
-          ]}
+          sales={[toSaleItem(formData, calculatedSales, initialData?.id || 'current_item')]}
           currentFormula={customFormula}
           onSaveFormula={(newFormula) => {
             setCustomFormula(newFormula);

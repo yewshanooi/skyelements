@@ -20,8 +20,7 @@ import type { SaleItem } from '@/types/sales';
 import { geocodeAddress, searchLocations, type LocationSuggestion } from '@/services/sales/geocodeService';
 import { normalizeCoordinates, extractEmbeddedCoordinates } from '@/lib/sales/locationParser';
 import { NotionFilterBar } from './NotionFilterBar';
-import { filterSales, type FilterState, type PropertyType } from '@/lib/sales/filterUtils';
-import { useTheme } from '@/lib/sales/useTheme';
+import { filterSales, type FilterState } from '@/lib/sales/filterUtils';
 import { useBodyScrollLock } from '@/lib/sales/useBodyScrollLock';
 
 interface MapViewProps {
@@ -29,12 +28,44 @@ interface MapViewProps {
   filters?: FilterState;
   onFiltersChange?: (filters: FilterState) => void;
   onSelectSale: (sale: SaleItem) => void;
-  onOpenNewSale?: () => void;
   onUpdateSaleLocation: (saleId: string, location: string, lat: number, lng: number) => Promise<void>;
   selectedSalePin?: SaleItem | null;
 }
 
 const STORAGE_KEY_MAP_VIEWPORT = 'sales_dashboard_map_viewport_v1';
+
+const MAP_STYLE = {
+  version: 8 as const,
+  sources: {
+    'osm-tiles': {
+      type: 'raster' as const,
+      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+      tileSize: 256,
+    },
+  },
+  layers: [
+    {
+      id: 'osm-layer',
+      type: 'raster' as const,
+      source: 'osm-tiles',
+      minzoom: 0,
+      maxzoom: 19,
+    },
+  ],
+};
+
+function computeSalesBounds(sales: SaleItem[]): LngLatBounds | null {
+  const bounds = new LngLatBounds();
+  let count = 0;
+  for (const s of sales) {
+    const norm = normalizeCoordinates(s.latitude, s.longitude);
+    if (norm) {
+      bounds.extend([norm.lng, norm.lat]);
+      count++;
+    }
+  }
+  return count > 0 ? bounds : null;
+}
 
 interface MapViewport {
   center: [number, number];
@@ -75,11 +106,9 @@ export const MapView: FC<MapViewProps> = ({
   filters: propFilters,
   onFiltersChange: propOnFiltersChange,
   onSelectSale,
-  onOpenNewSale,
   onUpdateSaleLocation,
   selectedSalePin,
 }) => {
-  const { isDarkMode } = useTheme();
   const mapWrapperRef = useRef<HTMLDivElement>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<Map | null>(null);
@@ -146,28 +175,6 @@ export const MapView: FC<MapViewProps> = ({
     return unlocatedSales.filter((s) => s.location && s.location.trim().length > 0);
   }, [unlocatedSales]);
 
-  const getMapLibreStyle = (_isDark: boolean) => ({
-    version: 8 as const,
-    sources: {
-      'osm-tiles': {
-        type: 'raster' as const,
-        tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-        tileSize: 256,
-      },
-    },
-    layers: [
-      {
-        id: 'osm-layer',
-        type: 'raster' as const,
-        source: 'osm-tiles',
-        minzoom: 0,
-        maxzoom: 19,
-      },
-    ],
-  });
-
-  const currentThemeRef = useRef<boolean | null>(null);
-
   // Initialize Map
   useEffect(() => {
     if (!mapContainerRef.current) return;
@@ -177,15 +184,9 @@ export const MapView: FC<MapViewProps> = ({
       const defaultCenter: [number, number] = [108.5, 3.8]; // Central Malaysia / Borneo overview
       const defaultZoom = 5.2;
 
-      const initialIsDark = typeof document !== 'undefined'
-        ? document.documentElement.classList.contains('dark') || isDarkMode
-        : isDarkMode;
-
-      currentThemeRef.current = initialIsDark;
-
       const map = new Map({
         container: mapContainerRef.current,
-        style: getMapLibreStyle(initialIsDark),
+        style: MAP_STYLE,
         center: savedViewport ? savedViewport.center : defaultCenter,
         zoom: savedViewport ? savedViewport.zoom : defaultZoom,
         attributionControl: false,
@@ -224,14 +225,6 @@ export const MapView: FC<MapViewProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Sync map tiles style whenever dark mode is toggled
-  useEffect(() => {
-    if (!mapInstanceRef.current) return;
-    if (currentThemeRef.current === isDarkMode) return;
-
-    currentThemeRef.current = isDarkMode;
-    mapInstanceRef.current.setStyle(getMapLibreStyle(isDarkMode), { diff: false });
-  }, [isDarkMode]);
 
   // Update Markers whenever located sales change
   useEffect(() => {
@@ -331,16 +324,8 @@ export const MapView: FC<MapViewProps> = ({
     const savedViewport = getSavedViewport();
     if (!savedViewport && !hasInitializedBoundsRef.current && locatedSales.length > 0 && !selectedSalePin) {
       hasInitializedBoundsRef.current = true;
-      const bounds = new LngLatBounds();
-      let extendedCount = 0;
-      locatedSales.forEach((s) => {
-        const norm = normalizeCoordinates(s.latitude, s.longitude);
-        if (norm) {
-          bounds.extend([norm.lng, norm.lat]);
-          extendedCount++;
-        }
-      });
-      if (extendedCount > 0) {
+      const bounds = computeSalesBounds(locatedSales);
+      if (bounds) {
         map.fitBounds(bounds, { padding: 60, maxZoom: 12, duration: 600 });
       }
     }
@@ -438,17 +423,8 @@ export const MapView: FC<MapViewProps> = ({
     const map = mapInstanceRef.current;
     if (!map || locatedSales.length === 0) return;
 
-    const bounds = new LngLatBounds();
-    let extendedCount = 0;
-    locatedSales.forEach((s) => {
-      const norm = normalizeCoordinates(s.latitude, s.longitude);
-      if (norm) {
-        bounds.extend([norm.lng, norm.lat]);
-        extendedCount++;
-      }
-    });
-
-    if (extendedCount > 0) {
+    const bounds = computeSalesBounds(locatedSales);
+    if (bounds) {
       map.fitBounds(bounds, { padding: 60, maxZoom: 10, duration: 600 });
     }
   };
@@ -595,13 +571,8 @@ export const MapView: FC<MapViewProps> = ({
       <NotionFilterBar
         storageKeyPrefix="map"
         showSort={false}
-        showSearch={true}
-        showNewButton={false}
-        salesCount={sales.length}
-        filteredCount={filteredSales.length}
         filters={filters}
         onFiltersChange={setFilters}
-        onOpenNewSale={onOpenNewSale}
       />
 
       {/* Map Card */}

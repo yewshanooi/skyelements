@@ -69,8 +69,9 @@ export const computeTrendData = (
 ): TrendDataPoint[] => {
   const timeMap = new Map<string, { key: string; label: string; subtotal: number; cost: number; profit: number; orders: number }>();
 
-  filteredSales.forEach((s) => {
-    if (!s.date) return;
+  for (let i = 0; i < filteredSales.length; i++) {
+    const s = filteredSales[i];
+    if (!s.date) continue;
     let key = s.date.slice(0, 7); // Default Monthly: YYYY-MM
     let label = key;
 
@@ -100,7 +101,7 @@ export const computeTrendData = (
     existing.profit += s.sales || 0;
     existing.orders += 1;
     timeMap.set(key, existing);
-  });
+  }
 
   const sorted = Array.from(timeMap.values()).sort((a, b) => a.key.localeCompare(b.key));
 
@@ -491,30 +492,29 @@ export interface DayOfWeekPoint {
   avgTicket: number;
 }
 
-/**
- * Aggregates weekly velocity patterns by day of the week.
- */
+const DAYS_OF_WEEK_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const DAYS_OF_WEEK_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
 export const computeDayOfWeekData = (filteredSales: SaleItem[]): DayOfWeekPoint[] => {
-  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  const shortDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const counts = days.map((day, idx) => ({
-    day: shortDays[idx],
-    fullDay: day,
+  const counts = Array.from({ length: 7 }, (_, idx) => ({
+    day: DAYS_OF_WEEK_SHORT[idx],
+    fullDay: DAYS_OF_WEEK_FULL[idx],
     orders: 0,
     revenue: 0,
     profit: 0,
   }));
 
-  filteredSales.forEach((s) => {
-    if (!s.date) return;
+  for (let i = 0; i < filteredSales.length; i++) {
+    const s = filteredSales[i];
+    if (!s.date) continue;
     const d = new Date(s.date);
     const dayIdx = d.getDay();
-    if (counts[dayIdx]) {
+    if (!isNaN(dayIdx) && counts[dayIdx]) {
       counts[dayIdx].orders += 1;
       counts[dayIdx].revenue += s.subtotal || 0;
       counts[dayIdx].profit += s.sales || 0;
     }
-  });
+  }
 
   return counts.map((c) => ({
     ...c,

@@ -100,7 +100,6 @@ interface TableViewProps {
   onEditSale: (sale: SaleItem) => void;
   onUpdateSale?: (saleId: string, updates: Partial<SaleItem>) => Promise<void>;
   onDeleteSale: (id: string) => void;
-  onOpenNewSale: () => void;
   onViewInvoice: (sale: SaleItem) => void;
   onSelectMapPin?: (sale: SaleItem) => void;
   selectedIds?: string[];
@@ -118,7 +117,6 @@ export const TableView: FC<TableViewProps> = ({
   onEditSale,
   onUpdateSale,
   onDeleteSale,
-  onOpenNewSale,
   onViewInvoice,
   onSelectMapPin,
   selectedIds: controlledSelectedIds,
@@ -174,7 +172,7 @@ export const TableView: FC<TableViewProps> = ({
         if (savedFormula && savedFormula !== 'round( # Subtotal (in MYR) - # Cost(s) , 2)') {
           return savedFormula.replace(/round\(\s+#/g, 'round(#');
         }
-      } catch {}
+      } catch { }
     }
     return DEFAULT_FORMULA;
   });
@@ -190,47 +188,28 @@ export const TableView: FC<TableViewProps> = ({
           const parsed = JSON.parse(storedWidths);
           return { ...DEFAULT_COLUMN_WIDTHS, ...parsed };
         }
-      } catch {}
+      } catch { }
     }
     return { ...DEFAULT_COLUMN_WIDTHS };
   });
   const [resizingCol, setResizingCol] = useState<ColumnId | null>(null);
   const dragOccurredRef = useRef(false);
 
-  const isHydratedRef = useRef(true);
-
-  // Hydrate preferences from localStorage on mount
+  // Listen to custom formula storage changes
   useEffect(() => {
-    try {
+    const handleStorage = () => {
       const savedFormula = localStorage.getItem(STORAGE_KEY_FORMULA);
-      if (savedFormula && savedFormula !== 'round( # Subtotal (in MYR) - # Cost(s) , 2)') {
+      if (savedFormula) {
         setCustomFormula(savedFormula.replace(/round\(\s+#/g, 'round(#'));
       }
-    } catch {}
-
-    try {
-      const storedWidths = localStorage.getItem(STORAGE_KEY_COLUMN_WIDTHS);
-      if (storedWidths) {
-        const parsed = JSON.parse(storedWidths);
-        setColumnWidths((prev) => ({ ...prev, ...parsed }));
-      }
-    } catch {}
-
-    isHydratedRef.current = true;
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
   }, []);
 
-  // Persist formula and column widths (only after hydration)
+  // Persist column widths
   useEffect(() => {
-    if (!isHydratedRef.current || typeof window === 'undefined') return;
-    try {
-      localStorage.setItem(STORAGE_KEY_FORMULA, customFormula);
-    } catch {
-      /* ignore storage error */
-    }
-  }, [customFormula]);
-
-  useEffect(() => {
-    if (!isHydratedRef.current || typeof window === 'undefined') return;
+    if (typeof window === 'undefined') return;
     try {
       localStorage.setItem(STORAGE_KEY_COLUMN_WIDTHS, JSON.stringify(columnWidths));
     } catch {
@@ -415,16 +394,14 @@ export const TableView: FC<TableViewProps> = ({
         onTouchStart={(e) => handleStartResizeTouch(e, colId)}
         onDoubleClick={(e) => handleResetColumnWidth(e, colId)}
         title="Drag to resize column (Double-click to reset)"
-        className={`absolute right-0 top-0 bottom-0 w-3 -mr-1.5 cursor-col-resize flex items-center justify-center z-20 select-none group/resizer hover:bg-transparent ${
-          isResizing ? 'pointer-events-auto' : ''
-        }`}
+        className={`absolute right-0 top-0 bottom-0 w-3 -mr-1.5 cursor-col-resize flex items-center justify-center z-20 select-none group/resizer hover:bg-transparent ${isResizing ? 'pointer-events-auto' : ''
+          }`}
       >
         <div
-          className={`w-[2px] h-full transition-all duration-150 ${
-            isResizing
-              ? 'bg-blue-600 dark:bg-blue-400 scale-x-150 shadow-[0_0_6px_rgba(59,130,246,0.6)]'
-              : 'bg-transparent group-hover/resizer:bg-blue-500/80 dark:group-hover/resizer:bg-blue-400/80'
-          }`}
+          className={`w-[2px] h-full transition-all duration-150 ${isResizing
+            ? 'bg-blue-600 dark:bg-blue-400 scale-x-150 shadow-[0_0_6px_rgba(59,130,246,0.6)]'
+            : 'bg-transparent group-hover/resizer:bg-blue-500/80 dark:group-hover/resizer:bg-blue-400/80'
+            }`}
         />
       </div>
     );
@@ -619,7 +596,6 @@ export const TableView: FC<TableViewProps> = ({
         onFiltersChange={onFiltersChange}
         isAnyColumnResized={isAnyColumnResized}
         onResetColumnWidths={handleResetAllColumnWidths}
-        onOpenNewSale={onOpenNewSale}
       />
 
       {/* Notion-style Data Table with Excel-like Inline Editing & Resizable Columns */}
@@ -699,7 +675,7 @@ export const TableView: FC<TableViewProps> = ({
                   title="Click to sort by category"
                 >
                   <div className="flex items-center gap-1.5 overflow-hidden">
-                    <span>🏷️</span>
+                    <span>🗄️</span>
                     <span className="truncate">Category</span>
                     {renderSortIcon('category')}
                   </div>
@@ -782,12 +758,13 @@ export const TableView: FC<TableViewProps> = ({
                     if (dragOccurredRef.current) return;
                     setIsFormulaModalOpen(true);
                   }}
-                  className="px-3 py-2 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-950/40 border-r border-neutral-200/60 dark:border-neutral-800 group whitespace-nowrap text-right relative select-none"
+                  className="px-3 py-2 cursor-pointer hover:bg-neutral-200/40 dark:hover:bg-neutral-800/40 border-r border-neutral-200/60 dark:border-neutral-800 group whitespace-nowrap text-right relative select-none"
                   title="Click to edit formula for Sales (in MYR)"
                 >
-                  <div className="flex items-center justify-end gap-1 text-blue-600 dark:text-blue-400 overflow-hidden">
-                    <Calculator className="w-3.5 h-3.5 shrink-0" />
-                    <span className="truncate">Sales (in MYR) 𝑓</span>
+                  <div className="flex items-center justify-end gap-1 overflow-hidden">
+                    <span className="truncate">
+                      💰 Sales (in MYR) <span className="text-blue-600 dark:text-blue-400">𝑓</span>
+                    </span>
                   </div>
                   {renderResizeHandle('sales')}
                 </th>
@@ -825,9 +802,6 @@ export const TableView: FC<TableViewProps> = ({
                 </th>
 
                 <th className="px-2 py-2 text-center whitespace-nowrap relative select-none">
-                  <div className="flex items-center justify-center gap-1">
-                    <span>Actions</span>
-                  </div>
                   {renderResizeHandle('actions')}
                 </th>
               </tr>
@@ -874,9 +848,8 @@ export const TableView: FC<TableViewProps> = ({
                   return (
                     <tr
                       key={sale.id}
-                      className={`hover:bg-neutral-50/80 dark:hover:bg-[#202020]/80 transition-colors group ${
-                        isSelected ? 'bg-blue-50/40 dark:bg-blue-950/20' : ''
-                      } ${isRowActive ? 'relative z-30' : ''}`}
+                      className={`hover:bg-neutral-50/80 dark:hover:bg-[#202020]/80 transition-colors group ${isSelected ? 'bg-blue-50/40 dark:bg-blue-950/20' : ''
+                        } ${isRowActive ? 'relative z-30' : ''}`}
                     >
                       {/* Checkbox */}
                       <td
@@ -980,9 +953,8 @@ export const TableView: FC<TableViewProps> = ({
                               : { saleId: sale.id, field: 'category' }
                           )
                         }
-                        className={`px-3 py-2 border-r border-neutral-200/60 dark:border-neutral-800 relative cursor-pointer hover:bg-neutral-100/60 dark:hover:bg-neutral-800/40 transition-colors select-none ${
-                          activeOptionPicker?.saleId === sale.id && activeOptionPicker?.field === 'category' ? 'z-30' : ''
-                        }`}
+                        className={`px-3 py-2 border-r border-neutral-200/60 dark:border-neutral-800 relative cursor-pointer hover:bg-neutral-100/60 dark:hover:bg-neutral-800/40 transition-colors select-none ${activeOptionPicker?.saleId === sale.id && activeOptionPicker?.field === 'category' ? 'z-30' : ''
+                          }`}
                       >
                         <div className="flex items-center min-h-[22px] w-full min-w-0">
                           {sale.category ? (
@@ -1011,9 +983,8 @@ export const TableView: FC<TableViewProps> = ({
                               : { saleId: sale.id, field: 'marketplace' }
                           )
                         }
-                        className={`px-3 py-2 border-r border-neutral-200/60 dark:border-neutral-800 relative cursor-pointer hover:bg-neutral-100/60 dark:hover:bg-neutral-800/40 transition-colors select-none ${
-                          activeOptionPicker?.saleId === sale.id && activeOptionPicker?.field === 'marketplace' ? 'z-30' : ''
-                        }`}
+                        className={`px-3 py-2 border-r border-neutral-200/60 dark:border-neutral-800 relative cursor-pointer hover:bg-neutral-100/60 dark:hover:bg-neutral-800/40 transition-colors select-none ${activeOptionPicker?.saleId === sale.id && activeOptionPicker?.field === 'marketplace' ? 'z-30' : ''
+                          }`}
                       >
                         <div className="flex items-center min-h-[22px] w-full min-w-0">
                           {sale.marketplace ? (
@@ -1042,9 +1013,8 @@ export const TableView: FC<TableViewProps> = ({
                               : { saleId: sale.id, field: 'payment_method' }
                           )
                         }
-                        className={`px-3 py-2 border-r border-neutral-200/60 dark:border-neutral-800 relative cursor-pointer hover:bg-neutral-100/60 dark:hover:bg-neutral-800/40 transition-colors select-none ${
-                          activeOptionPicker?.saleId === sale.id && activeOptionPicker?.field === 'payment_method' ? 'z-30' : ''
-                        }`}
+                        className={`px-3 py-2 border-r border-neutral-200/60 dark:border-neutral-800 relative cursor-pointer hover:bg-neutral-100/60 dark:hover:bg-neutral-800/40 transition-colors select-none ${activeOptionPicker?.saleId === sale.id && activeOptionPicker?.field === 'payment_method' ? 'z-30' : ''
+                          }`}
                       >
                         <div className="flex items-center min-h-[22px] w-full min-w-0">
                           {sale.payment_method ? (
@@ -1097,9 +1067,8 @@ export const TableView: FC<TableViewProps> = ({
                         onClick={() =>
                           setActiveDatePickerSaleId(activeDatePickerSaleId === sale.id ? null : sale.id)
                         }
-                        className={`px-3 py-2 border-r border-neutral-200/60 dark:border-neutral-800 font-mono text-neutral-600 dark:text-neutral-400 whitespace-nowrap relative cursor-pointer hover:bg-neutral-100/60 dark:hover:bg-neutral-800/40 transition-colors select-none ${
-                          activeDatePickerSaleId === sale.id ? 'z-30' : ''
-                        }`}
+                        className={`px-3 py-2 border-r border-neutral-200/60 dark:border-neutral-800 font-mono text-neutral-600 dark:text-neutral-400 whitespace-nowrap relative cursor-pointer hover:bg-neutral-100/60 dark:hover:bg-neutral-800/40 transition-colors select-none ${activeDatePickerSaleId === sale.id ? 'z-30' : ''
+                          }`}
                       >
                         <div className="flex items-center min-h-[22px] w-full min-w-0">
                           <span className="truncate">{formatDateDisplay(sale.date) || '-'}</span>
@@ -1194,9 +1163,8 @@ export const TableView: FC<TableViewProps> = ({
                               : { saleId: sale.id, field: 'order_status' }
                           )
                         }
-                        className={`px-3 py-2 border-r border-neutral-200/60 dark:border-neutral-800 relative cursor-pointer hover:bg-neutral-100/60 dark:hover:bg-neutral-800/40 transition-colors select-none ${
-                          activeOptionPicker?.saleId === sale.id && activeOptionPicker?.field === 'order_status' ? 'z-30' : ''
-                        }`}
+                        className={`px-3 py-2 border-r border-neutral-200/60 dark:border-neutral-800 relative cursor-pointer hover:bg-neutral-100/60 dark:hover:bg-neutral-800/40 transition-colors select-none ${activeOptionPicker?.saleId === sale.id && activeOptionPicker?.field === 'order_status' ? 'z-30' : ''
+                          }`}
                       >
                         <div className="flex items-center min-h-[22px] w-full min-w-0">
                           {sale.order_status ? (
@@ -1225,9 +1193,8 @@ export const TableView: FC<TableViewProps> = ({
                               : { saleId: sale.id, field: 'payment_status' }
                           )
                         }
-                        className={`px-3 py-2 border-r border-neutral-200/60 dark:border-neutral-800 relative cursor-pointer hover:bg-neutral-100/60 dark:hover:bg-neutral-800/40 transition-colors select-none ${
-                          activeOptionPicker?.saleId === sale.id && activeOptionPicker?.field === 'payment_status' ? 'z-30' : ''
-                        }`}
+                        className={`px-3 py-2 border-r border-neutral-200/60 dark:border-neutral-800 relative cursor-pointer hover:bg-neutral-100/60 dark:hover:bg-neutral-800/40 transition-colors select-none ${activeOptionPicker?.saleId === sale.id && activeOptionPicker?.field === 'payment_status' ? 'z-30' : ''
+                          }`}
                       >
                         <div className="flex items-center min-h-[22px] w-full min-w-0">
                           {sale.payment_status ? (
@@ -1307,15 +1274,13 @@ export const TableView: FC<TableViewProps> = ({
                             activeLocationPickerSaleId === sale.id ? null : sale.id
                           )
                         }
-                        className={`px-3 py-2 border-r border-neutral-200/60 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 relative cursor-pointer hover:bg-neutral-100/60 dark:hover:bg-neutral-800/40 transition-colors select-none ${
-                          activeLocationPickerSaleId === sale.id ? 'z-30' : ''
-                        }`}
+                        className={`px-3 py-2 border-r border-neutral-200/60 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 relative cursor-pointer hover:bg-neutral-100/60 dark:hover:bg-neutral-800/40 transition-colors select-none ${activeLocationPickerSaleId === sale.id ? 'z-30' : ''
+                          }`}
                       >
                         <div className="flex items-center gap-1 max-w-full min-w-0 min-h-[22px] w-full">
                           <MapPin
-                            className={`w-3.5 h-3.5 shrink-0 ${
-                              sale.location ? 'text-red-500' : 'text-neutral-400'
-                            }`}
+                            className={`w-3.5 h-3.5 shrink-0 ${sale.location ? 'text-red-500' : 'text-neutral-400'
+                              }`}
                           />
                           <span className="truncate text-xs" title={sale.location || 'Pin location'}>
                             {sale.location || '-'}

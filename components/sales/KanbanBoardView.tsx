@@ -48,6 +48,13 @@ const STORE_COLUMNS: ColumnConfig[] = [
   },
 ];
 
+function formatDayMonth(dateStr?: string): string {
+  if (!dateStr) return '';
+  const parts = dateStr.split('-');
+  return parts.length === 3 ? `${parts[2]}/${parts[1]}` : dateStr;
+}
+
+
 export const KanbanBoardView: FC<KanbanBoardViewProps> = ({
   sales,
   filters,
@@ -164,32 +171,17 @@ export const KanbanBoardView: FC<KanbanBoardViewProps> = ({
     setDraggedId(null);
   };
 
-  const formatDate = (dateStr?: string) => {
-    if (!dateStr) return '';
-    try {
-      const parts = dateStr.split('-');
-      if (parts.length === 3) {
-        return `${parts[2]}/${parts[1]}`;
-      }
-      return dateStr;
-    } catch {
-      return dateStr;
-    }
-  };
 
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Notion Filter & Sort Toolbar for Board View */}
       <NotionFilterBar
         storageKeyPrefix="board"
-        salesCount={sales.length}
-        filteredCount={filteredAndSortedSales.length}
         sortField={sortField}
         sortOrder={sortOrder}
         onSortChange={setSort}
         filters={filters}
         onFiltersChange={onFiltersChange}
-        onOpenNewSale={(defaultStore) => onOpenNewSale(defaultStore)}
       />
 
       {/* 2-Column Store Board Grid */}
@@ -289,7 +281,7 @@ export const KanbanBoardView: FC<KanbanBoardViewProps> = ({
                                 <span className="text-neutral-300 dark:text-neutral-700">•</span>
                                 <span className="flex items-center gap-0.5 text-[10px] text-neutral-400">
                                   <Calendar className="w-2.5 h-2.5" />
-                                  {formatDate(sale.date)}
+                                  {formatDayMonth(sale.date)}
                                 </span>
                               </>
                             )}

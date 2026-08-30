@@ -46,11 +46,6 @@ interface NotionFilterBarProps {
   onResetColumnWidths?: () => void;
   extraLeftActions?: React.ReactNode;
   extraRightActions?: React.ReactNode;
-  showSearch?: boolean;
-  showNewButton?: boolean;
-  salesCount?: number;
-  filteredCount?: number;
-  onOpenNewSale?: (defaultStore?: string) => void;
 }
 
 const SORT_FIELD_OPTIONS: { id: SortField; label: string }[] = [
@@ -129,58 +124,32 @@ export const NotionFilterBar: FC<NotionFilterBarProps> = ({
         const stored = localStorage.getItem(storageKey);
         if (stored !== null) {
           const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) return parsed;
+        }
+      } catch { }
+    }
+    return [...defaultVisibleProps];
+  });
+
+  const [prevStorageKey, setPrevStorageKey] = useState(storageKey);
+  if (prevStorageKey !== storageKey) {
+    setPrevStorageKey(storageKey);
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem(storageKey);
+        if (stored !== null) {
+          const parsed = JSON.parse(stored);
           if (Array.isArray(parsed)) {
-            const merged = [...parsed];
-            if (filters.categories?.length > 0 && !merged.includes('category')) merged.push('category');
-            if (filters.stores?.length > 0 && !merged.includes('store')) merged.push('store');
-            if (filters.orderStatuses?.length > 0 && !merged.includes('orderStatus')) merged.push('orderStatus');
-            if (filters.paymentStatuses?.length > 0 && !merged.includes('paymentStatus')) merged.push('paymentStatus');
-            if (filters.paymentMethods?.length > 0 && !merged.includes('paymentMethod')) merged.push('paymentMethod');
-            if (
-              (filters.dateFilter?.startDate || filters.dateFilter?.endDate || (filters.dateRange && filters.dateRange !== 'all')) &&
-              !merged.includes('date')
-            ) {
-              merged.push('date');
-            }
-            return merged;
+            setVisibleFilterProps(parsed);
           }
         }
       } catch { }
     }
-    const initial = [...defaultVisibleProps];
-    if (filters.categories?.length > 0 && !initial.includes('category')) initial.push('category');
-    if (filters.stores?.length > 0 && !initial.includes('store')) initial.push('store');
-    if (filters.orderStatuses?.length > 0 && !initial.includes('orderStatus')) initial.push('orderStatus');
-    if (filters.paymentStatuses?.length > 0 && !initial.includes('paymentStatus')) initial.push('paymentStatus');
-    if (filters.paymentMethods?.length > 0 && !initial.includes('paymentMethod')) initial.push('paymentMethod');
-    if (
-      (filters.dateFilter?.startDate || filters.dateFilter?.endDate || (filters.dateRange && filters.dateRange !== 'all')) &&
-      !initial.includes('date')
-    ) {
-      initial.push('date');
-    }
-    return initial;
-  });
-
-  const isHydratedRef = useRef(true);
-
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(storageKey);
-      if (stored !== null) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) {
-          setVisibleFilterProps(parsed);
-        }
-      }
-    } catch {
-      /* ignore storage error */
-    }
-  }, [storageKey]);
+  }
 
   // Persist visibleFilterProps to localStorage
   useEffect(() => {
-    if (!isHydratedRef.current || typeof window === 'undefined') return;
+    if (typeof window === 'undefined') return;
     try {
       localStorage.setItem(storageKey, JSON.stringify(visibleFilterProps));
     } catch {
