@@ -28,6 +28,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion"
 import { ThemeToggle } from "./theme-client";
+import { useBodyScrollLock } from "@/lib/sales/useBodyScrollLock";
 
 interface NavigationBarProps {
   forceShow?: boolean
@@ -38,6 +39,8 @@ export function NavigationBar({ forceShow = false }: NavigationBarProps = {}) {
   const [elevatedZ, setElevatedZ] = React.useState(false)
   const pathname = usePathname()
 
+  useBodyScrollLock(mobileMenuOpen)
+
   React.useEffect(() => {
     if (mobileMenuOpen) {
       setElevatedZ(true)
@@ -45,17 +48,6 @@ export function NavigationBar({ forceShow = false }: NavigationBarProps = {}) {
       // Keep elevated z-index until Sheet close animation finishes
       const timer = setTimeout(() => setElevatedZ(false), 350)
       return () => clearTimeout(timer)
-    }
-  }, [mobileMenuOpen])
-
-  React.useEffect(() => {
-    if (mobileMenuOpen) {
-      document.body.style.overflow = 'hidden'
-    } else {
-      document.body.style.overflow = ''
-    }
-    return () => {
-      document.body.style.overflow = ''
     }
   }, [mobileMenuOpen])
 

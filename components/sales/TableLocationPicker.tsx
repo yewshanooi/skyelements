@@ -433,7 +433,7 @@ export const TableLocationPicker: FC<TableLocationPickerProps> = ({
                       if (e.key === 'Enter') handleSearchAndSelect(searchQuery);
                     }}
                     className="w-full pl-8 pr-7 py-1.5 text-xs bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 focus:outline-hidden focus:ring-1 focus:ring-blue-500/40"
-                    autoFocus
+                    autoFocus={typeof window !== 'undefined' ? window.innerWidth >= 768 : false}
                   />
                   {searchQuery && (
                     <button

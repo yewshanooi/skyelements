@@ -247,9 +247,9 @@ export const Header: FC<HeaderProps> = ({
                 >
                   <div className="flex items-center gap-2.5">
                     {isDarkMode ? (
-                      <Sun className="w-4 h-4 text-amber-500" />
+                      <Moon className="w-4 h-4 text-indigo-400" />
                     ) : (
-                      <Moon className="w-4 h-4 text-indigo-500" />
+                      <Sun className="w-4 h-4 text-amber-500" />
                     )}
                     <span>Theme</span>
                   </div>
@@ -408,8 +408,8 @@ export const Header: FC<HeaderProps> = ({
               className="p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-md text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200 transition-colors cursor-pointer"
               title="Toggle Theme"
             >
-              <Sun className="w-3.5 h-3.5 hidden dark:block" />
-              <Moon className="w-3.5 h-3.5 block dark:hidden" />
+              <Sun className="w-3.5 h-3.5 block dark:hidden" />
+              <Moon className="w-3.5 h-3.5 hidden dark:block" />
             </button>
           </div>
         </div>
@@ -493,7 +493,10 @@ export const Header: FC<HeaderProps> = ({
       {/* =========================================================================
           3. FLOATING BOTTOM BAR (Apple Music UI: Navigation Capsule + Search Bubble)
          ========================================================================= */}
-      <div className="fixed bottom-4 sm:bottom-6 inset-x-0 z-40 flex items-center justify-center gap-2.5 px-3 pointer-events-none select-none md:hidden">
+      <div
+        className="fixed inset-x-0 z-40 flex items-center justify-center gap-2.5 px-3 pointer-events-none select-none md:hidden transform-gpu will-change-transform"
+        style={{ bottom: 'max(1rem, env(safe-area-inset-bottom, 1rem))' }}
+      >
         {/* Navigation Capsule Pill */}
         <nav
           className="pointer-events-auto flex items-center gap-0.5 p-1 bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-xl border border-neutral-200/90 dark:border-neutral-800/90 rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.14)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
@@ -543,13 +546,15 @@ export const Header: FC<HeaderProps> = ({
 
           {/* Floating Search Sheet Popover above the bottom bar */}
           {isMobileSearchOpen && (
-            <div className="fixed bottom-20 inset-x-3 sm:inset-x-auto sm:w-96 mx-auto bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-xl border border-neutral-200/90 dark:border-neutral-700/80 rounded-2xl shadow-2xl p-2.5 z-50 animate-in fade-in slide-in-from-bottom-3 duration-200 pointer-events-auto">
+            <div
+              className="fixed inset-x-3 sm:inset-x-auto sm:w-96 mx-auto bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-xl border border-neutral-200/90 dark:border-neutral-700/80 rounded-2xl shadow-2xl p-2.5 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200 pointer-events-auto transform-gpu will-change-transform"
+              style={{ bottom: 'calc(max(1rem, env(safe-area-inset-bottom, 1rem)) + 3.375rem)' }}
+            >
               <div className="flex items-center gap-2">
                 <div className="relative flex-1 flex items-center">
                   <Search className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none" />
                   <input
                     type="text"
-                    autoFocus
                     placeholder="Search..."
                     value={searchQuery}
                     onChange={(e) => onSearchChange && onSearchChange(e.target.value)}

@@ -30,8 +30,8 @@ export const CategoryProfitabilityWidget: FC<CategoryProfitabilityWidgetProps> =
   currentWidth = '2/4',
   isModal = false,
 }) => {
-  const heightClass = isModal ? 'h-[450px]' : currentWidth === '1/4' ? 'h-[260px]' : 'h-[280px]';
-  const yAxisWidth = currentWidth === '1/4' ? 65 : 85;
+  const heightClass = isModal ? 'h-[280px] sm:h-[380px]' : currentWidth === '1/4' ? 'h-[230px]' : 'h-[270px]';
+  const yAxisWidth = currentWidth === '1/4' ? 65 : 80;
 
   return (
     <div className="space-y-3 min-w-0">
@@ -45,19 +45,19 @@ export const CategoryProfitabilityWidget: FC<CategoryProfitabilityWidgetProps> =
       </div>
 
       <div className={`w-full ${heightClass}`}>
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
           <BarChart
             data={data}
             layout="vertical"
-            margin={{ top: 5, right: 15, left: currentWidth === '1/4' ? -10 : 10, bottom: 5 }}
+            margin={{ top: 5, right: 15, left: currentWidth === '1/4' ? -10 : 0, bottom: 5 }}
           >
             <CartesianGrid strokeDasharray="3 3" opacity={0.12} />
-            <XAxis type="number" stroke="#888888" fontSize={10} tickFormatter={(v) => v >= 1000 ? `RM ${(v/1000).toFixed(0)}k` : `RM ${v}`} />
+            <XAxis type="number" stroke="#888888" fontSize={9} tickFormatter={(v) => v >= 1000 ? `RM ${(v/1000).toFixed(0)}k` : `RM ${v}`} />
             <YAxis
               dataKey="category"
               type="category"
               stroke="#888888"
-              fontSize={10}
+              fontSize={9}
               width={yAxisWidth}
               tickLine={false}
               tickFormatter={(v) => (currentWidth === '1/4' && v.length > 8 ? `${v.slice(0, 7)}...` : v)}

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect, useCallback, useLayoutEffect } from 'react';
+import { createPortal } from 'react-dom';
 import type { FC, ChangeEvent, KeyboardEvent } from 'react';
 import {
   X,
@@ -20,6 +21,7 @@ import {
   evaluateFormulaDetails,
   type FormulaColumnDef,
 } from '@/lib/sales/formulaEngine';
+import { useBodyScrollLock } from '@/lib/sales/useBodyScrollLock';
 
 
 export interface FormulaModalProps {
@@ -311,7 +313,77 @@ const FormulaModalContent: FC<Omit<FormulaModalProps, 'isOpen'>> = ({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const previewPickerRef = useRef<HTMLDivElement>(null);
   const previewSearchInputRef = useRef<HTMLInputElement>(null);
-  const helpRef = useRef<HTMLDivElement>(null);
+  const helpButtonRef = useRef<HTMLButtonElement>(null);
+  const helpPopoverRef = useRef<HTMLDivElement>(null);
+
+  const [helpCoords, setHelpCoords] = useState<{
+    top?: number;
+    bottom?: number;
+    left?: number;
+    placement?: 'top' | 'bottom';
+    isMobile?: boolean;
+  } | null>(null);
+
+  const computeHelpPosition = useCallback(() => {
+    if (!helpButtonRef.current || typeof window === 'undefined') return;
+    if (window.innerWidth < 640) {
+      setHelpCoords({ isMobile: true });
+      return;
+    }
+    const rect = helpButtonRef.current.getBoundingClientRect();
+    const popoverWidth = 384;
+    const popoverHeight = 360;
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    const spaceBelow = viewportHeight - rect.bottom;
+    const spaceAbove = rect.top;
+
+    let placement: 'bottom' | 'top' = 'bottom';
+    if (spaceBelow < Math.min(popoverHeight, 280) && (spaceAbove > spaceBelow || spaceAbove > 200)) {
+      placement = 'top';
+    }
+
+    let left = rect.left;
+    if (left + popoverWidth > viewportWidth - 16) {
+      left = viewportWidth - popoverWidth - 16;
+    }
+    left = Math.max(16, left);
+
+    if (placement === 'top') {
+      setHelpCoords({
+        bottom: viewportHeight - rect.top + 6,
+        left,
+        placement: 'top',
+        isMobile: false,
+      });
+    } else {
+      setHelpCoords({
+        top: rect.bottom + 6,
+        left,
+        placement: 'bottom',
+        isMobile: false,
+      });
+    }
+  }, []);
+
+  useLayoutEffect(() => {
+    if (isHelpOpen) {
+      computeHelpPosition();
+    }
+  }, [isHelpOpen, computeHelpPosition]);
+
+  useEffect(() => {
+    if (!isHelpOpen) return;
+    const handleResize = () => computeHelpPosition();
+    const handleScroll = () => computeHelpPosition();
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('scroll', handleScroll, true);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('scroll', handleScroll, true);
+    };
+  }, [isHelpOpen, computeHelpPosition]);
 
   // Focus search input when Preview With picker opens
   useEffect(() => {
@@ -325,7 +397,7 @@ const FormulaModalContent: FC<Omit<FormulaModalProps, 'isOpen'>> = ({
 
   // Click outside listener for all popovers
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
       const target = e.target as Node;
       if (
         dropdownRef.current &&
@@ -338,12 +410,21 @@ const FormulaModalContent: FC<Omit<FormulaModalProps, 'isOpen'>> = ({
       if (previewPickerRef.current && !previewPickerRef.current.contains(target)) {
         setIsPreviewPickerOpen(false);
       }
-      if (helpRef.current && !helpRef.current.contains(target)) {
+      if (
+        helpPopoverRef.current &&
+        !helpPopoverRef.current.contains(target) &&
+        helpButtonRef.current &&
+        !helpButtonRef.current.contains(target)
+      ) {
         setIsHelpOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
   }, []);
 
   const previewItem: SaleItem = useMemo(() => {
@@ -512,20 +593,26 @@ const FormulaModalContent: FC<Omit<FormulaModalProps, 'isOpen'>> = ({
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-[60] flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150 select-none"
+      onTouchMove={(e) => {
+        if (e.target === e.currentTarget) {
+          e.preventDefault();
+        }
+      }}
+      className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150 select-none overscroll-none"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-xl max-h-[95vh] bg-white dark:bg-[#1f1f1f] rounded-xl sm:rounded-2xl shadow-2xl border border-neutral-200 dark:border-neutral-700 overflow-y-auto overflow-x-hidden flex flex-col select-text"
+        className="w-full max-w-xl max-h-[75dvh] sm:max-h-[85vh] bg-white dark:bg-[#1f1f1f] rounded-xl sm:rounded-2xl shadow-2xl border border-neutral-200 dark:border-neutral-700 overflow-hidden flex flex-col select-text overscroll-contain my-auto"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 sm:px-5 py-3 sm:py-3.5 border-b border-neutral-100 dark:border-neutral-800 rounded-t-xl sm:rounded-t-2xl">
+        <div className="flex items-center justify-between px-4 sm:px-5 py-3 sm:py-3.5 border-b border-neutral-100 dark:border-neutral-800 rounded-t-xl sm:rounded-t-2xl shrink-0">
           <div className="flex items-center gap-1.5 leading-none">
             <h2 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 font-sans leading-none">
               Edit formula
             </h2>
-            <div className="relative flex items-center" ref={helpRef}>
+            <div className="flex items-center">
               <button
+                ref={helpButtonRef}
                 type="button"
                 onClick={() => setIsHelpOpen(!isHelpOpen)}
                 className="flex items-center justify-center p-1 rounded-full text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
@@ -533,29 +620,53 @@ const FormulaModalContent: FC<Omit<FormulaModalProps, 'isOpen'>> = ({
               >
                 <HelpCircle className="w-4 h-4" />
               </button>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1 rounded-full text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
 
-              {/* All Available Functions Reference Popover */}
-              {isHelpOpen && (
-                <div className="absolute left-0 top-full mt-2 z-50 w-96 max-w-[calc(100vw-32px)] bg-white dark:bg-[#222222] border border-neutral-200 dark:border-neutral-700 rounded-2xl shadow-2xl p-3.5 space-y-2.5 text-xs animate-in fade-in zoom-in-95 duration-100">
-                  <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-2">
-                    <span className="font-semibold text-neutral-900 dark:text-neutral-100">
+        {/* Portal-rendered Formula Reference Popover */}
+        {typeof document !== 'undefined' &&
+          isHelpOpen &&
+          helpCoords &&
+          createPortal(
+            helpCoords.isMobile ? (
+              <>
+                {/* Mobile Backdrop Scrim */}
+                <div
+                  className="fixed inset-0 bg-black/60 z-[70] overscroll-none touch-none animate-in fade-in duration-150"
+                  onClick={() => setIsHelpOpen(false)}
+                />
+
+                <div
+                  ref={helpPopoverRef}
+                  onClick={(e) => e.stopPropagation()}
+                  className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-[71] max-w-sm mx-auto bg-white dark:bg-[#222222] border border-neutral-200 dark:border-neutral-700 rounded-2xl shadow-2xl p-4 space-y-3 text-xs animate-in fade-in zoom-in-95 duration-100 max-h-[82vh] flex flex-col select-none"
+                >
+                  <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-2.5 shrink-0">
+                    <span className="font-semibold text-neutral-900 dark:text-neutral-100 text-sm">
                       Formula Reference
                     </span>
                     <button
                       type="button"
                       onClick={() => setIsHelpOpen(false)}
-                      className="text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 p-1 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 cursor-pointer"
+                      className="p-1 rounded-lg text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 cursor-pointer transition-colors"
                     >
-                      <X className="w-3.5 h-3.5" />
+                      <X className="w-4 h-4" />
                     </button>
                   </div>
 
                   {/* Full Functions List */}
-                  <div className="max-h-72 overflow-y-auto space-y-2 pr-1">
+                  <div className="max-h-[60vh] overflow-y-auto overscroll-contain space-y-2 pr-1 flex-1">
                     {AVAILABLE_FUNCTIONS.map((fn) => (
                       <div
                         key={fn.name}
-                        className="p-2 rounded-xl bg-neutral-50 dark:bg-[#1a1a1a] border border-neutral-200/60 dark:border-neutral-800 space-y-1.5"
+                        className="p-2.5 rounded-xl bg-neutral-50 dark:bg-[#1a1a1a] border border-neutral-200/60 dark:border-neutral-800 space-y-1.5"
                       >
                         <div className="flex items-center justify-between gap-1.5">
                           <span className="font-mono font-semibold text-xs text-pink-600 dark:text-pink-400">
@@ -585,19 +696,75 @@ const FormulaModalContent: FC<Omit<FormulaModalProps, 'isOpen'>> = ({
                     ))}
                   </div>
                 </div>
-              )}
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-1 rounded-full text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+              </>
+            ) : (
+              <div
+                ref={helpPopoverRef}
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  position: 'fixed',
+                  zIndex: 70,
+                  ...(helpCoords.placement === 'top'
+                    ? { bottom: `${helpCoords.bottom}px` }
+                    : { top: `${helpCoords.top}px` }),
+                  left: `${helpCoords.left}px`,
+                }}
+                className="w-96 max-w-[calc(100vw-32px)] bg-white dark:bg-[#222222] border border-neutral-200 dark:border-neutral-700 rounded-2xl shadow-2xl p-3.5 space-y-2.5 text-xs animate-in fade-in-50 zoom-in-95 duration-100 flex flex-col select-none max-h-[460px]"
+              >
+                <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-2 shrink-0">
+                  <span className="font-semibold text-neutral-900 dark:text-neutral-100 text-xs">
+                    Formula Reference
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setIsHelpOpen(false)}
+                    className="p-1 rounded-md text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 cursor-pointer transition-colors"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                {/* Full Functions List */}
+                <div className="max-h-72 overflow-y-auto overscroll-contain space-y-2 pr-1 flex-1">
+                  {AVAILABLE_FUNCTIONS.map((fn) => (
+                    <div
+                      key={fn.name}
+                      className="p-2 rounded-xl bg-neutral-50 dark:bg-[#1a1a1a] border border-neutral-200/60 dark:border-neutral-800 space-y-1.5"
+                    >
+                      <div className="flex items-center justify-between gap-1.5">
+                        <span className="font-mono font-semibold text-xs text-pink-600 dark:text-pink-400">
+                          {fn.signature}
+                        </span>
+                        <span className="px-1.5 py-0.2 bg-neutral-200/60 dark:bg-neutral-800 text-[10px] text-neutral-500 dark:text-neutral-400 rounded font-mono shrink-0">
+                          {fn.category}
+                        </span>
+                      </div>
+
+                      <p className="text-[11px] text-neutral-600 dark:text-neutral-400 leading-snug">
+                        {fn.description}
+                      </p>
+
+                      <div
+                        onClick={() => {
+                          setFormula(fn.example);
+                          setIsHelpOpen(false);
+                        }}
+                        className="p-1.5 rounded-lg bg-white dark:bg-[#242424] hover:bg-blue-50 dark:hover:bg-blue-950/50 border border-neutral-200/60 dark:border-neutral-700/60 text-[10.5px] font-mono text-neutral-700 dark:text-neutral-300 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer transition-colors flex items-center justify-between group"
+                        title="Click to use this formula"
+                      >
+                        <span className="truncate pr-2">{fn.example}</span>
+                        <ArrowRight className="w-3 h-3 text-blue-500 opacity-60 group-hover:opacity-100 transition-opacity shrink-0" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ),
+            document.body
+          )}
 
         {/* Body Content */}
-        <div className="p-3.5 sm:p-5 space-y-3.5 sm:space-y-4 text-xs">
+        <div className="p-3.5 sm:p-5 space-y-3.5 sm:space-y-4 text-xs overflow-y-auto flex-1 overscroll-contain">
           {/* Formula Editor Container with Highlighted Backdrop and Autocomplete */}
           <div className="relative">
             <div
@@ -907,6 +1074,8 @@ export const FormulaModal: FC<FormulaModalProps> = ({
   currentFormula = DEFAULT_FORMULA,
   onSaveFormula,
 }) => {
+  useBodyScrollLock(isOpen);
+
   if (!isOpen) return null;
 
   return (

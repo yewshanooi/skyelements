@@ -372,7 +372,7 @@ export const TableOptionPicker: FC<TableOptionPickerProps> = ({
                 }
               }}
               className="w-full pl-8 pr-2 py-1.5 text-xs bg-neutral-50 dark:bg-[#282828] border border-neutral-200 dark:border-neutral-700 rounded-lg text-neutral-800 dark:text-neutral-200 placeholder-neutral-400 dark:placeholder-neutral-500 focus:outline-hidden focus:ring-1 focus:ring-blue-500/40"
-              autoFocus
+              autoFocus={typeof window !== 'undefined' ? window.innerWidth >= 768 : false}
             />
           </div>
 

@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { X } from "lucide-react";
 import { AuthCard, type AuthMode } from "./AuthCard";
+import { useBodyScrollLock } from "@/lib/sales/useBodyScrollLock";
 
 interface AuthDialogProps {
   isOpen: boolean;
@@ -17,6 +18,8 @@ export function AuthDialog({
   defaultMode = 'login',
   redirectTo = '/lithium',
 }: AuthDialogProps) {
+  useBodyScrollLock(isOpen);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -25,11 +28,9 @@ export function AuthDialog({
     };
     if (isOpen) {
       window.addEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = 'hidden';
     }
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = '';
     };
   }, [isOpen, onClose]);
 
@@ -37,14 +38,19 @@ export function AuthDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200 overscroll-none"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
+      }}
+      onTouchMove={(e) => {
+        if (e.target === e.currentTarget) {
+          e.preventDefault();
+        }
       }}
       role="dialog"
       aria-modal="true"
     >
-      <div className="relative w-full max-w-sm animate-in zoom-in-95 duration-200">
+      <div className="relative w-full max-w-sm animate-in zoom-in-95 duration-200 overscroll-contain">
         <button
           type="button"
           onClick={onClose}

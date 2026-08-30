@@ -28,6 +28,7 @@ import {
   type ChatMessage,
 } from '@/services/sales/geminiService';
 import { AiMarkdown } from './AiMarkdown';
+import { useBodyScrollLock } from '@/lib/sales/useBodyScrollLock';
 
 interface AiAssistantDrawerProps {
   isOpen: boolean;
@@ -139,6 +140,8 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
   // Floating Window Geometry (Position & Dimensions)
   const [isMinimized, setIsMinimized] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useBodyScrollLock(isOpen && !isMinimized);
 
   const [position, setPosition] = useState<{ x: number; y: number } | null>(() => {
     try {
@@ -723,14 +726,15 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
           transition: isMobileDragging ? 'none' : 'opacity 0.28s ease',
           pointerEvents: isClosing ? 'none' : 'auto',
         }}
-        className="fixed inset-0 bg-black/40 dark:bg-black/60 z-40 md:hidden"
+        className="fixed inset-0 bg-black/40 dark:bg-black/60 z-40 md:hidden overscroll-none touch-none"
         onClick={handleCloseAndClear}
+        onTouchMove={(e) => e.preventDefault()}
       />
 
       {/* Main AI Assistant Dialog (Fixed iOS Bottom Sheet on Mobile with Swipe Down to Dismiss, Floating Draggable Window on Desktop) */}
       <div
         style={isMobileScreen ? mobileSheetStyle : desktopWindowStyle}
-        className={`fixed z-50 flex flex-col bg-white/98 dark:bg-[#1c1c1e]/98 backdrop-blur-2xl border border-black/[0.08] dark:border-white/[0.12] overflow-hidden font-sans
+        className={`fixed z-50 flex flex-col bg-white/98 dark:bg-[#1c1c1e]/98 backdrop-blur-2xl border border-black/[0.08] dark:border-white/[0.12] overflow-hidden font-sans overscroll-contain
           /* Fixed iOS Bottom Sheet Layout on Mobile */
           inset-x-0 bottom-0 top-12 rounded-t-[28px] shadow-[0_-8px_32px_rgba(0,0,0,0.2)] dark:shadow-[0_-8px_32px_rgba(0,0,0,0.6)] animate-in slide-in-from-bottom-4 duration-200
           /* Floating Draggable & Resizable Window Layout on Desktop (md+) */
@@ -906,7 +910,7 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
       </div>
 
       {/* Message Stream */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#fbfbfd] dark:bg-[#161618]">
+      <div className="flex-1 overflow-y-auto overscroll-contain p-4 space-y-4 bg-[#fbfbfd] dark:bg-[#161618]">
         <div className={`flex flex-col space-y-4 ${isFullscreen ? 'max-w-3xl mx-auto w-full' : 'w-full'}`}>
           {messages.map((msg) => {
             const isUser = msg.role === 'user';
@@ -1076,7 +1080,7 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
       {/* Suggested Quick Action Chips */}
       {messages.length <= 3 && !isLoading && (
         <div className="px-3.5 py-2 bg-[#f6f6f6]/80 dark:bg-[#1e1e20]/80 border-t border-black/[0.04] dark:border-white/[0.06]">
-          <div className={`flex gap-1.5 overflow-x-auto pb-0.5 no-scrollbar ${isFullscreen ? 'max-w-3xl mx-auto w-full' : ''}`}>
+          <div className={`flex gap-1.5 overflow-x-auto overscroll-x-contain pb-0.5 no-scrollbar ${isFullscreen ? 'max-w-3xl mx-auto w-full' : ''}`}>
             {quickPrompts.map((qp, idx) => (
               <button
                 key={idx}

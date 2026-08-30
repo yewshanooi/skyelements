@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback, useLayoutEffect } from 'react';
+import { createPortal } from 'react-dom';
 import type { FC, DragEvent, ChangeEvent } from 'react';
 import {
   X,
@@ -33,6 +34,7 @@ import {
   type ImportResult,
 } from '@/services/sales/notionImportService';
 import type JSZip from 'jszip';
+import { useBodyScrollLock } from '@/lib/sales/useBodyScrollLock';
 
 interface NotionImportModalProps {
   isOpen: boolean;
@@ -90,18 +92,97 @@ const NotionImportModalContent: FC<NotionImportModalContentProps> = ({
   const [isHelpOpen, setIsHelpOpen] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const helpRef = useRef<HTMLDivElement>(null);
+  const helpButtonRef = useRef<HTMLButtonElement>(null);
+  const helpPopoverRef = useRef<HTMLDivElement>(null);
+
+  const [helpCoords, setHelpCoords] = useState<{
+    top?: number;
+    bottom?: number;
+    left?: number;
+    placement?: 'top' | 'bottom';
+    isMobile?: boolean;
+  } | null>(null);
+
+  const computeHelpPosition = useCallback(() => {
+    if (!helpButtonRef.current || typeof window === 'undefined') return;
+    if (window.innerWidth < 640) {
+      setHelpCoords({ isMobile: true });
+      return;
+    }
+    const rect = helpButtonRef.current.getBoundingClientRect();
+    const popoverWidth = 384;
+    const popoverHeight = 220;
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    const spaceBelow = viewportHeight - rect.bottom;
+    const spaceAbove = rect.top;
+
+    let placement: 'bottom' | 'top' = 'bottom';
+    if (spaceBelow < Math.min(popoverHeight, 200) && (spaceAbove > spaceBelow || spaceAbove > 180)) {
+      placement = 'top';
+    }
+
+    let left = rect.left;
+    if (left + popoverWidth > viewportWidth - 16) {
+      left = viewportWidth - popoverWidth - 16;
+    }
+    left = Math.max(16, left);
+
+    if (placement === 'top') {
+      setHelpCoords({
+        bottom: viewportHeight - rect.top + 6,
+        left,
+        placement: 'top',
+        isMobile: false,
+      });
+    } else {
+      setHelpCoords({
+        top: rect.bottom + 6,
+        left,
+        placement: 'bottom',
+        isMobile: false,
+      });
+    }
+  }, []);
+
+  useLayoutEffect(() => {
+    if (isHelpOpen) {
+      computeHelpPosition();
+    }
+  }, [isHelpOpen, computeHelpPosition]);
+
+  useEffect(() => {
+    if (!isHelpOpen) return;
+    const handleResize = () => computeHelpPosition();
+    const handleScroll = () => computeHelpPosition();
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('scroll', handleScroll, true);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('scroll', handleScroll, true);
+    };
+  }, [isHelpOpen, computeHelpPosition]);
 
   // Click outside listener for help popover
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
       const target = e.target as Node;
-      if (helpRef.current && !helpRef.current.contains(target)) {
+      if (
+        helpPopoverRef.current &&
+        !helpPopoverRef.current.contains(target) &&
+        helpButtonRef.current &&
+        !helpButtonRef.current.contains(target)
+      ) {
         setIsHelpOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
   }, []);
 
   // Handle ESC key
@@ -258,9 +339,16 @@ const NotionImportModalContent: FC<NotionImportModalContentProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/50 dark:bg-black/70 backdrop-blur-xs animate-in fade-in duration-200">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-4 bg-black/50 dark:bg-black/70 backdrop-blur-xs animate-in fade-in duration-200 overscroll-none"
+      onTouchMove={(e) => {
+        if (e.target === e.currentTarget) {
+          e.preventDefault();
+        }
+      }}
+    >
       <div
-        className="bg-white dark:bg-[#202020] w-full max-w-4xl max-h-[95vh] sm:max-h-[92vh] flex flex-col rounded-xl sm:rounded-2xl shadow-2xl border border-neutral-200/80 dark:border-neutral-800 text-neutral-900 dark:text-neutral-100 overflow-hidden transition-all"
+        className="bg-white dark:bg-[#202020] w-full max-w-4xl max-h-[76dvh] sm:max-h-[88vh] flex flex-col rounded-xl sm:rounded-2xl shadow-2xl border border-neutral-200/80 dark:border-neutral-800 text-neutral-900 dark:text-neutral-100 overflow-hidden transition-all overscroll-contain my-auto"
         role="dialog"
         aria-modal="true"
       >
@@ -270,8 +358,9 @@ const NotionImportModalContent: FC<NotionImportModalContentProps> = ({
             <h2 className="text-sm sm:text-base font-semibold tracking-tight text-neutral-900 dark:text-neutral-100 leading-none">
               Import from Notion
             </h2>
-            <div className="relative flex items-center" ref={helpRef}>
+            <div className="flex items-center">
               <button
+                ref={helpButtonRef}
                 type="button"
                 onClick={() => setIsHelpOpen(!isHelpOpen)}
                 className="flex items-center justify-center p-1 rounded-full text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
@@ -279,31 +368,6 @@ const NotionImportModalContent: FC<NotionImportModalContentProps> = ({
               >
                 <Info className="w-4 h-4" />
               </button>
-
-              {/* How to export from Notion info popover */}
-              {isHelpOpen && (
-                <div className="absolute left-0 top-full mt-2 z-50 w-96 max-w-[calc(100vw-48px)] bg-white dark:bg-[#222222] border border-neutral-200 dark:border-neutral-700 rounded-2xl shadow-2xl p-3.5 space-y-2.5 text-xs animate-in fade-in zoom-in-95 duration-100">
-                  <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-2">
-                    <span className="font-semibold text-neutral-900 dark:text-neutral-100">
-                      How to export from Notion
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setIsHelpOpen(false)}
-                      className="text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 p-1 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 cursor-pointer"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-
-                  <div className="text-xs text-neutral-600 dark:text-neutral-300 leading-relaxed">
-                    Open your database page in Notion, click the{' '}
-                    <span className="font-mono bg-neutral-100 dark:bg-neutral-800 px-1 py-0.5 rounded text-[11px] font-semibold border border-neutral-200 dark:border-neutral-700">•••</span>{' '}
-                    menu in the top right &rarr; <span className="font-medium text-neutral-800 dark:text-neutral-200">Export</span> &rarr; select{' '}
-                    <span className="font-semibold text-neutral-900 dark:text-neutral-100">Markdown &amp; CSV</span> with subpages &rarr; click Export to download your ZIP file.
-                  </div>
-                </div>
-              )}
             </div>
           </div>
 
@@ -317,6 +381,91 @@ const NotionImportModalContent: FC<NotionImportModalContentProps> = ({
             <X className="w-4 h-4" />
           </button>
         </div>
+
+        {/* Portal-rendered Notion Export Info Popover */}
+        {typeof document !== 'undefined' &&
+          isHelpOpen &&
+          helpCoords &&
+          createPortal(
+            helpCoords.isMobile ? (
+              <>
+                {/* Mobile Backdrop Scrim */}
+                <div
+                  className="fixed inset-0 bg-black/60 z-[70] overscroll-none touch-none animate-in fade-in duration-150"
+                  onClick={() => setIsHelpOpen(false)}
+                />
+
+                <div
+                  ref={helpPopoverRef}
+                  onClick={(e) => e.stopPropagation()}
+                  className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-[71] max-w-sm mx-auto bg-white dark:bg-[#222222] border border-neutral-200 dark:border-neutral-700 rounded-2xl shadow-2xl p-4 space-y-3 text-xs animate-in fade-in zoom-in-95 duration-100 select-none"
+                >
+                  <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-2.5 shrink-0">
+                    <span className="font-semibold text-neutral-900 dark:text-neutral-100 text-sm">
+                      How to export from Notion
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setIsHelpOpen(false)}
+                      className="p-1 rounded-lg text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 cursor-pointer transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <div className="text-xs text-neutral-600 dark:text-neutral-300 leading-relaxed space-y-2">
+                    <p>
+                      Open your database page in Notion, click the{' '}
+                      <span className="font-mono bg-neutral-100 dark:bg-neutral-800 px-1 py-0.5 rounded text-[11px] font-semibold border border-neutral-200 dark:border-neutral-700">•••</span>{' '}
+                      menu in the top right &rarr; <span className="font-medium text-neutral-800 dark:text-neutral-200">Export</span>.
+                    </p>
+                    <p>
+                      Select <span className="font-semibold text-neutral-900 dark:text-neutral-100">Markdown &amp; CSV</span> with subpages &rarr; click <strong>Export</strong> to download your ZIP file.
+                    </p>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div
+                ref={helpPopoverRef}
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  position: 'fixed',
+                  zIndex: 70,
+                  ...(helpCoords.placement === 'top'
+                    ? { bottom: `${helpCoords.bottom}px` }
+                    : { top: `${helpCoords.top}px` }),
+                  left: `${helpCoords.left}px`,
+                }}
+                className="w-96 max-w-[calc(100vw-32px)] bg-white dark:bg-[#222222] border border-neutral-200 dark:border-neutral-700 rounded-2xl shadow-2xl p-4 space-y-2.5 text-xs animate-in fade-in-50 zoom-in-95 duration-100 select-none"
+              >
+                <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-2 shrink-0">
+                  <span className="font-semibold text-neutral-900 dark:text-neutral-100 text-xs">
+                    How to export from Notion
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setIsHelpOpen(false)}
+                    className="p-1 rounded-md text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 cursor-pointer transition-colors"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <div className="text-xs text-neutral-600 dark:text-neutral-300 leading-relaxed space-y-2">
+                  <p>
+                    Open your database page in Notion, click the{' '}
+                    <span className="font-mono bg-neutral-100 dark:bg-neutral-800 px-1 py-0.5 rounded text-[11px] font-semibold border border-neutral-200 dark:border-neutral-700">•••</span>{' '}
+                    menu in the top right &rarr; <span className="font-medium text-neutral-800 dark:text-neutral-200">Export</span>.
+                  </p>
+                  <p>
+                    Select <span className="font-semibold text-neutral-900 dark:text-neutral-100">Markdown &amp; CSV</span> with subpages &rarr; click <strong>Export</strong> to download your ZIP file.
+                  </p>
+                </div>
+              </div>
+            ),
+            document.body
+          )}
 
         {/* Error Notification Banner */}
         {errorMessage && (
@@ -334,7 +483,7 @@ const NotionImportModalContent: FC<NotionImportModalContentProps> = ({
         )}
 
         {/* Modal Body */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+        <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6">
           {/* STEP 1: Upload / Drop Zone */}
           {step === 'upload' && (
             <div className="space-y-4 sm:space-y-6">
@@ -895,6 +1044,8 @@ export const NotionImportModal: FC<NotionImportModalProps> = ({
   userId,
   onImportComplete,
 }) => {
+  useBodyScrollLock(isOpen);
+
   if (!isOpen) return null;
 
   return (

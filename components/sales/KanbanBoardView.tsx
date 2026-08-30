@@ -178,7 +178,7 @@ export const KanbanBoardView: FC<KanbanBoardViewProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Notion Filter & Sort Toolbar for Board View */}
       <NotionFilterBar
         storageKeyPrefix="board"

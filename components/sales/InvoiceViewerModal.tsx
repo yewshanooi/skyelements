@@ -5,6 +5,7 @@ import type { FC } from 'react';
 import { X, FileText, Printer, CheckCircle2, ExternalLink, Loader2 } from 'lucide-react';
 import type { SaleItem } from '@/types/sales';
 import { getInvoiceSignedUrlAction } from '@/services/sales/salesActions';
+import { useBodyScrollLock } from '@/lib/sales/useBodyScrollLock';
 
 interface InvoiceViewerModalProps {
   sale: SaleItem | null;
@@ -480,8 +481,15 @@ const InvoiceViewerModalContent: FC<{ sale: SaleItem; onClose: () => void }> = (
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200 invoice-modal-overlay">
-      <div className="bg-white dark:bg-[#202020] rounded-xl sm:rounded-2xl shadow-2xl border border-neutral-200 dark:border-neutral-800 w-full max-w-2xl overflow-hidden flex flex-col max-h-[95vh] sm:max-h-[90vh] invoice-modal-dialog">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200 invoice-modal-overlay overscroll-none"
+      onTouchMove={(e) => {
+        if (e.target === e.currentTarget) {
+          e.preventDefault();
+        }
+      }}
+    >
+      <div className="bg-white dark:bg-[#202020] rounded-xl sm:rounded-2xl shadow-2xl border border-neutral-200 dark:border-neutral-800 w-full max-w-2xl overflow-hidden flex flex-col max-h-[76dvh] sm:max-h-[88vh] invoice-modal-dialog overscroll-contain my-auto">
         {/* Header */}
         <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between bg-neutral-50/50 dark:bg-neutral-900/50 invoice-modal-header no-print">
           <div className="flex items-center gap-2 min-w-0">
@@ -524,7 +532,7 @@ const InvoiceViewerModalContent: FC<{ sale: SaleItem; onClose: () => void }> = (
         </div>
 
         {/* Invoice Preview Body */}
-        <div className="p-4 sm:p-6 overflow-y-auto space-y-4 sm:space-y-6 invoice-printable-content">
+        <div className="p-4 sm:p-6 overflow-y-auto overscroll-contain space-y-4 sm:space-y-6 invoice-printable-content">
           {sale.invoice_url ? (
             <div className="rounded-lg overflow-hidden border border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-950 flex flex-col items-center justify-center p-2 min-h-[220px]">
               {isLoadingUrl ? (
@@ -655,6 +663,8 @@ const InvoiceViewerModalContent: FC<{ sale: SaleItem; onClose: () => void }> = (
 };
 
 export const InvoiceViewerModal: FC<InvoiceViewerModalProps> = ({ sale, onClose }) => {
+  useBodyScrollLock(Boolean(sale));
+
   if (!sale) return null;
   return <InvoiceViewerModalContent key={`${sale.id}-${sale.invoice_url || ''}`} sale={sale} onClose={onClose} />;
 };

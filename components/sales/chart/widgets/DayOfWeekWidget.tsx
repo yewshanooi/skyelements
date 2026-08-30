@@ -24,16 +24,16 @@ export const DayOfWeekWidget: FC<DayOfWeekWidgetProps> = ({
   currentWidth = '2/4',
   isModal = false,
 }) => {
-  const dayHeight = isModal ? 'h-[360px]' : currentWidth === '1/4' ? 'h-[190px]' : 'h-[220px]';
+  const dayHeight = isModal ? 'h-[240px] sm:h-[320px]' : currentWidth === '1/4' ? 'h-[180px]' : 'h-[210px]';
 
   return (
     <div className="space-y-3 min-w-0">
       <div className={`w-full ${dayHeight}`}>
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
+        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+          <BarChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" opacity={0.12} />
-            <XAxis dataKey="day" stroke="#888888" fontSize={10} tickLine={false} tickFormatter={(v) => v.slice(0, 3)} />
-            <YAxis stroke="#888888" fontSize={10} tickLine={false} width={35} tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : `${v}`} />
+            <XAxis dataKey="day" stroke="#888888" fontSize={9} tickLine={false} tickFormatter={(v) => v.slice(0, 3)} />
+            <YAxis stroke="#888888" fontSize={9} tickLine={false} width={30} tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : `${v}`} />
             <Tooltip
               cursor={{ fill: 'rgba(128, 128, 128, 0.08)' }}
               isAnimationActive={false}

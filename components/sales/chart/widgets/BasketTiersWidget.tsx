@@ -25,7 +25,7 @@ export const BasketTiersWidget: FC<BasketTiersWidgetProps> = ({
   currentWidth = '2/4',
   isModal = false,
 }) => {
-  const basketHeight = isModal ? 'h-[360px]' : currentWidth === '1/4' ? 'h-[170px]' : 'h-[200px]';
+  const basketHeight = isModal ? 'h-[240px] sm:h-[320px]' : currentWidth === '1/4' ? 'h-[160px]' : 'h-[190px]';
   const basketGridCols =
     currentWidth === '1/4'
       ? 'grid grid-cols-2 sm:grid-cols-3 gap-1.5'
@@ -34,11 +34,11 @@ export const BasketTiersWidget: FC<BasketTiersWidgetProps> = ({
   return (
     <div className="space-y-3 min-w-0">
       <div className={`w-full ${basketHeight}`}>
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+          <BarChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" opacity={0.12} />
             <XAxis dataKey="key" stroke="#888888" fontSize={9} tickLine={false} interval={0} />
-            <YAxis stroke="#888888" fontSize={10} tickLine={false} width={30} />
+            <YAxis stroke="#888888" fontSize={9} tickLine={false} width={26} />
             <Tooltip
               cursor={{ fill: 'rgba(128, 128, 128, 0.08)' }}
               isAnimationActive={false}

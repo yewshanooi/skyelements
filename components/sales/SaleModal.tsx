@@ -30,6 +30,7 @@ import { evaluateSalesFormula, DEFAULT_FORMULA, STORAGE_KEY_FORMULA } from '@/li
 import { useAuth } from '@/lib/sales/AuthContext';
 import { uploadInvoiceFile } from '@/services/sales/salesService';
 import { deleteInvoiceFileAction } from '@/services/sales/salesActions';
+import { useBodyScrollLock } from '@/lib/sales/useBodyScrollLock';
 
 interface SaleModalProps {
   isOpen: boolean;
@@ -273,11 +274,16 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-6 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150 select-none"
+      onTouchMove={(e) => {
+        if (e.target === e.currentTarget) {
+          e.preventDefault();
+        }
+      }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150 select-none overscroll-none"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-white dark:bg-[#202020] text-[#37352f] dark:text-[#d4d4d4] rounded-xl sm:rounded-2xl shadow-2xl border border-neutral-200/90 dark:border-neutral-700 w-full max-w-2xl max-h-[94vh] sm:max-h-[88vh] flex flex-col overflow-hidden select-text"
+        className="bg-white dark:bg-[#202020] text-[#37352f] dark:text-[#d4d4d4] rounded-xl sm:rounded-2xl shadow-2xl border border-neutral-200/90 dark:border-neutral-700 w-full max-w-2xl max-h-[75dvh] sm:max-h-[85vh] flex flex-col overflow-hidden select-text overscroll-contain my-auto"
       >
         {/* Top Notion Actions Bar */}
         <div className="px-4 sm:px-6 py-3 sm:py-3.5 flex items-center justify-between border-b border-neutral-200/70 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/50 text-neutral-400">
@@ -298,7 +304,7 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
         </div>
 
         {/* Scrollable Form Content */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-4 sm:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto overscroll-contain px-4 sm:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
           {errorMsg && (
             <div className="p-3 text-xs bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 rounded-lg">
               {errorMsg}
@@ -313,7 +319,7 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
               placeholder="Untitled Order"
               value={formData.item}
               onChange={(e) => setFormData({ ...formData, item: e.target.value })}
-              className="w-full text-xl sm:text-3xl font-bold tracking-tight bg-transparent border-none outline-hidden text-neutral-900 dark:text-neutral-100 placeholder-neutral-300 dark:placeholder-neutral-600 focus:ring-0 p-0 overflow-y-hidden leading-normal"
+              className="w-full text-xl sm:text-3xl font-semibold tracking-tight bg-transparent border-none outline-hidden text-neutral-900 dark:text-neutral-100 placeholder-neutral-300 dark:placeholder-neutral-600 focus:ring-0 p-0 overflow-y-hidden leading-normal"
             />
           </div>
 
@@ -834,6 +840,8 @@ export const SaleModal: FC<SaleModalProps> = ({
   defaultStore,
   onOpenFullMap,
 }) => {
+  useBodyScrollLock(isOpen);
+
   if (!isOpen) return null;
 
   return (

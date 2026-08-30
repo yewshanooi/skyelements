@@ -58,24 +58,25 @@ export const SalesDonutWidget: FC<SalesDonutWidgetProps> = ({
   currentWidth = '2/4',
   isModal = false,
 }) => {
-  const innerRadius = isModal ? 115 : currentWidth === '1/4' ? 52 : currentWidth === '2/4' ? 68 : 82;
-  const outerRadius = isModal ? 160 : currentWidth === '1/4' ? 76 : currentWidth === '2/4' ? 98 : 118;
-  const heightClass = isModal ? 'h-[430px] sm:h-[460px]' : currentWidth === '1/4' ? 'h-[250px]' : 'h-[290px]';
+  const isMobileScreen = typeof window !== 'undefined' ? window.innerWidth < 640 : false;
+  const innerRadius = isModal ? (isMobileScreen ? 60 : 100) : currentWidth === '1/4' ? 48 : currentWidth === '2/4' ? 62 : 78;
+  const outerRadius = isModal ? (isMobileScreen ? 88 : 140) : currentWidth === '1/4' ? 70 : currentWidth === '2/4' ? 90 : 110;
+  const heightClass = isModal ? 'h-[250px] sm:h-[380px]' : currentWidth === '1/4' ? 'h-[240px]' : 'h-[280px]';
 
   const centerTextClass = isModal
-    ? 'text-2xl sm:text-3xl font-extrabold'
+    ? 'text-base sm:text-2xl font-extrabold'
     : currentWidth === '1/4'
-    ? 'text-sm sm:text-base font-bold'
+    ? 'text-xs sm:text-sm font-bold'
     : currentWidth === '2/4'
-    ? 'text-base sm:text-lg font-bold'
-    : 'text-xl font-extrabold';
+    ? 'text-sm sm:text-base font-bold'
+    : 'text-lg font-extrabold';
 
   const legendItems = isModal ? data : data.slice(0, 6);
 
   return (
     <div className={`min-w-0 ${isModal ? 'space-y-1 sm:space-y-1' : 'space-y-3'}`}>
       {/* Category Toggles */}
-      <div className={`flex flex-wrap items-center justify-between gap-1.5 text-xs ${isModal ? '-mt-2 sm:-mt-3' : ''}`}>
+      <div className={`flex flex-wrap items-center justify-between gap-1.5 text-xs ${isModal ? '-mt-1 sm:-mt-2' : ''}`}>
         <span className="text-neutral-400 text-[11px]">Dimension:</span>
         <SegmentedControl
           options={BREAKDOWN_OPTIONS}
@@ -88,7 +89,7 @@ export const SalesDonutWidget: FC<SalesDonutWidgetProps> = ({
       <div className="relative flex flex-col items-center justify-center">
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-0 px-2 text-center">
           <span
-            className={`${centerTextClass} font-mono tracking-tight text-neutral-900 dark:text-neutral-100 truncate max-w-[130px] sm:max-w-[180px] leading-tight`}
+            className={`${centerTextClass} font-mono tracking-tight text-neutral-900 dark:text-neutral-100 truncate max-w-[100px] sm:max-w-[160px] leading-tight`}
             title={`RM ${totalSales.toFixed(2)}`}
           >
             RM {totalSales.toFixed(2)}
@@ -99,7 +100,7 @@ export const SalesDonutWidget: FC<SalesDonutWidgetProps> = ({
         </div>
 
         <div className={`relative z-10 w-full ${heightClass}`}>
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
             <PieChart>
               <Tooltip
                 isAnimationActive={false}
@@ -131,7 +132,7 @@ export const SalesDonutWidget: FC<SalesDonutWidgetProps> = ({
                 outerRadius={outerRadius}
                 paddingAngle={2}
                 dataKey="value"
-                label={isModal ? renderCustomDonutLabel : false}
+                label={isModal && !isMobileScreen ? renderCustomDonutLabel : false}
                 animationDuration={800}
               >
                 {data.map((_entry, index) => (
@@ -148,7 +149,7 @@ export const SalesDonutWidget: FC<SalesDonutWidgetProps> = ({
       </div>
 
       {/* Quick legend pills */}
-      <div className={`flex flex-wrap gap-1.5 justify-center ${isModal ? '' : 'max-h-24 overflow-y-auto'} pt-1`}>
+      <div className={`flex flex-wrap gap-1.5 justify-center max-h-24 overflow-y-auto pt-1 scrollbar-thin`}>
         {legendItems.map((entry, idx) => (
           <div
             key={entry.name}

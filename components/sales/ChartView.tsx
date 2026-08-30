@@ -272,7 +272,7 @@ export const ChartView: FC<ChartViewProps> = ({
       try {
         const stored = localStorage.getItem('sales_dashboard_chart_subcontrols_v1');
         if (stored) return { ...defaults, ...JSON.parse(stored) };
-      } catch {}
+      } catch { }
     }
     return defaults;
   });
@@ -321,7 +321,7 @@ export const ChartView: FC<ChartViewProps> = ({
     if (typeof window === 'undefined') return;
     try {
       localStorage.setItem('sales_dashboard_chart_subcontrols_v1', JSON.stringify(subcontrols));
-    } catch {}
+    } catch { }
   }, [subcontrols]);
 
   // Load layout from localStorage or fallback to default
@@ -823,7 +823,7 @@ export const ChartView: FC<ChartViewProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Top Notion Filter Bar with Integrated Card Controls */}
       <NotionFilterBar
         storageKeyPrefix="chart"
@@ -890,20 +890,18 @@ export const ChartView: FC<ChartViewProps> = ({
                 {/* Drop Indicator Bar */}
                 {isTarget && (
                   <div
-                    className={`absolute inset-y-0 w-1.5 bg-blue-500 rounded-full z-30 pointer-events-none shadow-md animate-pulse ${
-                      dropPosition === 'before' ? '-left-3' : '-right-3'
-                    }`}
+                    className={`absolute inset-y-0 w-1.5 bg-blue-500 rounded-full z-30 pointer-events-none shadow-md animate-pulse ${dropPosition === 'before' ? '-left-3' : '-right-3'
+                      }`}
                   />
                 )}
 
                 <div
-                  className={`p-3.5 sm:p-5 rounded-xl bg-white dark:bg-[#202020] border shadow-2xs transition-all h-full flex flex-col justify-between relative ${
-                    isDragging
-                      ? 'opacity-40 border-dashed border-blue-500 scale-[0.98]'
-                      : isResizing
+                  className={`p-3.5 sm:p-5 rounded-xl bg-white dark:bg-[#202020] border shadow-2xs transition-all h-full flex flex-col justify-between relative ${isDragging
+                    ? 'opacity-40 border-dashed border-blue-500 scale-[0.98]'
+                    : isResizing
                       ? 'border-blue-500 ring-2 ring-blue-500/25 shadow-lg'
                       : 'border-neutral-200/80 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700'
-                  }`}
+                    }`}
                 >
                   <div className="flex-1 flex flex-col min-h-0">
                     {/* Widget Header with Drag Handle and Actions */}
@@ -963,11 +961,10 @@ export const ChartView: FC<ChartViewProps> = ({
             <button
               type="button"
               onClick={() => setIsCustomizingOverviewInModal((prev) => !prev)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs ${
-                isCustomizingOverviewInModal
-                  ? 'bg-[#2383e2] hover:bg-[#1a6ebd] text-white shadow-xs'
-                  : 'bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300'
-              }`}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs ${isCustomizingOverviewInModal
+                ? 'bg-[#2383e2] hover:bg-[#1a6ebd] text-white shadow-xs'
+                : 'bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300'
+                }`}
               title={isCustomizingOverviewInModal ? 'Done customizing' : 'Customize overview metrics'}
             >
               {isCustomizingOverviewInModal ? (

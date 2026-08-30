@@ -22,6 +22,7 @@ import { normalizeCoordinates, extractEmbeddedCoordinates } from '@/lib/sales/lo
 import { NotionFilterBar } from './NotionFilterBar';
 import { filterSales, type FilterState, type PropertyType } from '@/lib/sales/filterUtils';
 import { useTheme } from '@/lib/sales/useTheme';
+import { useBodyScrollLock } from '@/lib/sales/useBodyScrollLock';
 
 interface MapViewProps {
   sales: SaleItem[];
@@ -86,6 +87,7 @@ export const MapView: FC<MapViewProps> = ({
   const hasInitializedBoundsRef = useRef(false);
 
   const [isFullscreen, setIsFullscreen] = useState(false);
+  useBodyScrollLock(isFullscreen);
   const [showNoPlaceDrawer, setShowNoPlaceDrawer] = useState(false);
   const [geocodingId, setGeocodingId] = useState<string | null>(null);
   const [successGeocodeId, setSuccessGeocodeId] = useState<string | null>(null);
@@ -281,17 +283,16 @@ export const MapView: FC<MapViewProps> = ({
               <span class="text-neutral-400 dark:text-neutral-500 font-medium">Net Sales:</span>
               <span class="font-mono font-bold text-emerald-600 dark:text-emerald-400">RM ${sale.sales.toFixed(2)}</span>
             </div>
-            ${
-              sale.location
-                ? `<div class="text-[11px] text-neutral-600 dark:text-neutral-400 mt-2 pt-2 border-t border-neutral-100 dark:border-neutral-800 flex items-start gap-1.5 leading-relaxed">
+            ${sale.location
+            ? `<div class="text-[11px] text-neutral-600 dark:text-neutral-400 mt-2 pt-2 border-t border-neutral-100 dark:border-neutral-800 flex items-start gap-1.5 leading-relaxed">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-rose-500 shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
                       <circle cx="12" cy="10" r="3"/>
                     </svg>
                     <span class="line-clamp-2">${sale.location}</span>
                   </div>`
-                : ''
-            }
+            : ''
+          }
           </div>
         `;
 
@@ -589,7 +590,7 @@ export const MapView: FC<MapViewProps> = ({
 
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Notion Filter Bar for Map */}
       <NotionFilterBar
         storageKeyPrefix="map"
@@ -606,11 +607,10 @@ export const MapView: FC<MapViewProps> = ({
       {/* Map Card */}
       <div
         ref={mapWrapperRef}
-        className={`relative rounded-xl border border-neutral-200/80 dark:border-neutral-800 bg-white dark:bg-[#191919] shadow-2xs overflow-hidden flex flex-col transition-all duration-200 ${
-          isFullscreen
-            ? 'fixed inset-0 z-50 h-screen w-screen rounded-none border-none'
-            : 'h-[60vh] min-h-[380px] sm:h-[520px] md:h-[620px]'
-        }`}
+        className={`relative rounded-xl border border-neutral-200/80 dark:border-neutral-800 bg-white dark:bg-[#191919] shadow-2xs overflow-hidden flex flex-col transition-all duration-200 isolate [mask-image:radial-gradient(white,black)] [-webkit-mask-image:-webkit-radial-gradient(white,black)] ${isFullscreen
+            ? 'fixed inset-0 z-50 h-screen w-screen rounded-none border-none [mask-image:none] [-webkit-mask-image:none]'
+            : 'h-[60vh] min-h-[380px] sm:h-[520px] md:h-[620px] rounded-xl'
+          }`}
       >
         {/* Top Floating Action Bar */}
         <div className="absolute top-2 sm:top-3 right-12 sm:right-16 z-20 flex items-center gap-1.5 sm:gap-2 pointer-events-none max-w-[calc(100%-60px)]">
@@ -643,7 +643,7 @@ export const MapView: FC<MapViewProps> = ({
         </div>
 
         {/* Map Container */}
-        <div ref={mapContainerRef} className="w-full h-full" />
+        <div ref={mapContainerRef} className="w-full h-full rounded-xl overflow-hidden" />
 
         {/* Unlocated Items Drawer / Panel */}
         {showNoPlaceDrawer && (
@@ -709,7 +709,7 @@ export const MapView: FC<MapViewProps> = ({
             </div>
 
             {/* Item List */}
-            <div className="p-3 overflow-y-auto flex-1 space-y-2.5 text-xs">
+            <div className="p-3 overflow-y-auto overscroll-contain flex-1 space-y-2.5 text-xs">
               {unlocatedSales.length === 0 ? (
                 <div className="text-center py-16 space-y-2 text-neutral-400">
                   <div className="w-10 h-10 mx-auto rounded-full bg-emerald-100 dark:bg-emerald-950/50 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
@@ -759,11 +759,10 @@ export const MapView: FC<MapViewProps> = ({
                         <button
                           onClick={() => handleAutoGeocodeItem(sale)}
                           disabled={geocodingId === sale.id || isBatchGeocoding}
-                          className={`w-full py-1 text-center rounded font-semibold transition-colors flex items-center justify-center gap-1.5 cursor-pointer text-xs ${
-                            successGeocodeId === sale.id
+                          className={`w-full py-1 text-center rounded font-semibold transition-colors flex items-center justify-center gap-1.5 cursor-pointer text-xs ${successGeocodeId === sale.id
                               ? 'bg-emerald-600 text-white'
                               : 'bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/50 text-purple-600 dark:text-purple-400 border border-purple-200/60 dark:border-purple-800/40'
-                          }`}
+                            }`}
                         >
                           {geocodingId === sale.id ? (
                             <>
@@ -799,7 +798,7 @@ export const MapView: FC<MapViewProps> = ({
                                   if (e.key === 'Enter') handleManualSave(sale.id);
                                 }}
                                 className="w-full pl-8 pr-7 py-1.5 text-xs border border-neutral-300 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
-                                autoFocus
+                                autoFocus={typeof window !== 'undefined' ? window.innerWidth >= 768 : false}
                               />
                               {isFetchingSuggestions && (
                                 <Loader2 className="w-3.5 h-3.5 absolute right-2.5 top-1/2 -translate-y-1/2 text-blue-500 animate-spin" />

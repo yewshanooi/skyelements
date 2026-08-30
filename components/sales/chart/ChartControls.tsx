@@ -9,6 +9,7 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import type { WidgetConfig } from './chartTypes';
+import { useBodyScrollLock } from '@/lib/sales/useBodyScrollLock';
 
 // =========================================================================
 // 1. Segmented Control / Button Pill Group
@@ -141,14 +142,23 @@ export const ChartModal: FC<ChartModalProps> = ({
   headerActions,
   children,
 }) => {
+  useBodyScrollLock(isOpen && Boolean(widget));
+
   if (!isOpen || !widget) return null;
 
   const Icon = widget.icon;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-6 bg-black/70 backdrop-blur-xs animate-in fade-in duration-200">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/70 backdrop-blur-xs animate-in fade-in duration-200 overscroll-none"
+      onTouchMove={(e) => {
+        if (e.target === e.currentTarget) {
+          e.preventDefault();
+        }
+      }}
+    >
       <div
-        className="bg-white dark:bg-[#1a1a1a] rounded-xl sm:rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-2xl w-full max-w-6xl max-h-[95vh] sm:max-h-[92vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
+        className="bg-white dark:bg-[#1a1a1a] rounded-xl sm:rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-2xl w-full max-w-6xl max-h-[76dvh] sm:max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 overscroll-contain"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-neutral-200/80 dark:border-neutral-800 flex items-center justify-between gap-2">
@@ -179,7 +189,7 @@ export const ChartModal: FC<ChartModalProps> = ({
           </div>
         </div>
 
-        <div className="p-3.5 sm:p-6 overflow-y-auto flex-1">
+        <div className="p-3.5 sm:p-6 overflow-y-auto overscroll-contain flex-1">
           {children}
         </div>
       </div>
@@ -233,12 +243,21 @@ export const CustomizeWidgetsModal: FC<CustomizeWidgetsModalProps> = ({
   onApplyPreset,
   onResetLayout,
 }) => {
+  useBodyScrollLock(isOpen);
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200 overscroll-none"
+      onTouchMove={(e) => {
+        if (e.target === e.currentTarget) {
+          e.preventDefault();
+        }
+      }}
+    >
       <div
-        className="bg-white dark:bg-[#1a1a1a] rounded-xl sm:rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-2xl w-full max-w-2xl max-h-[94vh] sm:max-h-[85vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
+        className="bg-white dark:bg-[#1a1a1a] rounded-xl sm:rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-2xl w-full max-w-2xl max-h-[76dvh] sm:max-h-[85vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 overscroll-contain my-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-4 sm:px-5 py-3 sm:py-4 border-b border-neutral-200/80 dark:border-neutral-800 flex items-center justify-between">
@@ -255,7 +274,7 @@ export const CustomizeWidgetsModal: FC<CustomizeWidgetsModalProps> = ({
           </button>
         </div>
 
-        <div className="p-3.5 sm:p-5 overflow-y-auto space-y-5 sm:space-y-6 flex-1">
+        <div className="p-3.5 sm:p-5 overflow-y-auto overscroll-contain space-y-5 sm:space-y-6 flex-1">
           {/* Quick Presets */}
           <div className="space-y-2.5">
             <div className="flex items-center justify-between">

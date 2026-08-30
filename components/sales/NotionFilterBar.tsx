@@ -44,6 +44,7 @@ interface NotionFilterBarProps {
   defaultVisibleProps?: PropertyType[];
   isAnyColumnResized?: boolean;
   onResetColumnWidths?: () => void;
+  extraLeftActions?: React.ReactNode;
   extraRightActions?: React.ReactNode;
   showSearch?: boolean;
   showNewButton?: boolean;
@@ -84,6 +85,7 @@ export const NotionFilterBar: FC<NotionFilterBarProps> = ({
   defaultVisibleProps = [],
   isAnyColumnResized = false,
   onResetColumnWidths,
+  extraLeftActions,
   extraRightActions,
 }) => {
   // Popover states
@@ -91,7 +93,7 @@ export const NotionFilterBar: FC<NotionFilterBarProps> = ({
   const [activeFilterPopover, setActiveFilterPopover] = useState<PropertyType | null>(null);
   const [isAddFilterOpen, setIsAddFilterOpen] = useState(false);
   const [filterSearchQuery, setFilterSearchQuery] = useState('');
-  
+
   // Reordering inside filter dropdown state
   const [filterDraggedItem, setFilterDraggedItem] = useState<string | null>(null);
   const [filterDragOverItem, setFilterDragOverItem] = useState<string | null>(null);
@@ -143,7 +145,7 @@ export const NotionFilterBar: FC<NotionFilterBarProps> = ({
             return merged;
           }
         }
-      } catch {}
+      } catch { }
     }
     const initial = [...defaultVisibleProps];
     if (filters.categories?.length > 0 && !initial.includes('category')) initial.push('category');
@@ -421,7 +423,7 @@ export const NotionFilterBar: FC<NotionFilterBarProps> = ({
     if (typeof window !== 'undefined') {
       try {
         localStorage.setItem(storageKey, JSON.stringify(updated));
-      } catch {}
+      } catch { }
     }
     if (activeFilterPopover === type) setActiveFilterPopover(null);
   };
@@ -560,6 +562,8 @@ export const NotionFilterBar: FC<NotionFilterBarProps> = ({
       <div className="flex flex-wrap items-center justify-between gap-1.5 sm:gap-2.5 py-1">
         {/* Left: Notion Sort Pill & Filters */}
         <div className="flex items-center gap-1.5 flex-wrap min-w-0 max-w-full">
+          {extraLeftActions}
+
           {/* 1. Notion Sort Pill (optional) */}
           {showSort && onSortChange && (
             <>
@@ -596,11 +600,10 @@ export const NotionFilterBar: FC<NotionFilterBarProps> = ({
             return (
               <div
                 key={type}
-                className={`inline-flex items-center rounded-full text-xs font-medium transition-all ${
-                  isFiltered
+                className={`inline-flex items-center rounded-full text-xs font-medium transition-all ${isFiltered
                     ? 'bg-[#ebf5fb] dark:bg-[#1a2d3d] text-[#2383e2] dark:text-[#529cca] border border-blue-200/70 dark:border-blue-800/60'
                     : 'text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800/80 border border-transparent'
-                }`}
+                  }`}
               >
                 <button
                   ref={(el) => {
@@ -710,11 +713,10 @@ export const NotionFilterBar: FC<NotionFilterBarProps> = ({
                     if (onSortChange) onSortChange(item.id, sortOrder);
                     setIsSortOpen(false);
                   }}
-                  className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors text-left cursor-pointer ${
-                    sortField === item.id
+                  className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors text-left cursor-pointer ${sortField === item.id
                       ? 'bg-neutral-100 dark:bg-neutral-800 font-semibold text-neutral-900 dark:text-neutral-100'
                       : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-[#2c2c2c]'
-                  }`}
+                    }`}
                 >
                   <span>{item.label}</span>
                   {sortField === item.id && <Check className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />}
@@ -729,11 +731,10 @@ export const NotionFilterBar: FC<NotionFilterBarProps> = ({
                     onSortChange(sortField, 'asc');
                     setIsSortOpen(false);
                   }}
-                  className={`flex-1 py-1 text-[11px] rounded-md font-medium text-center transition-colors cursor-pointer ${
-                    sortOrder === 'asc'
+                  className={`flex-1 py-1 text-[11px] rounded-md font-medium text-center transition-colors cursor-pointer ${sortOrder === 'asc'
                       ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 font-semibold'
                       : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800'
-                  }`}
+                    }`}
                 >
                   Ascending
                 </button>
@@ -742,11 +743,10 @@ export const NotionFilterBar: FC<NotionFilterBarProps> = ({
                     onSortChange(sortField, 'desc');
                     setIsSortOpen(false);
                   }}
-                  className={`flex-1 py-1 text-[11px] rounded-md font-medium text-center transition-colors cursor-pointer ${
-                    sortOrder === 'desc'
+                  className={`flex-1 py-1 text-[11px] rounded-md font-medium text-center transition-colors cursor-pointer ${sortOrder === 'desc'
                       ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 font-semibold'
                       : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800'
-                  }`}
+                    }`}
                 >
                   Descending
                 </button>
@@ -789,7 +789,7 @@ export const NotionFilterBar: FC<NotionFilterBarProps> = ({
                     value={filterSearchQuery}
                     onChange={(e) => setFilterSearchQuery(e.target.value)}
                     className="w-full pl-7 pr-2 py-1.5 text-xs bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg text-neutral-800 dark:text-neutral-200 focus:outline-hidden focus:ring-1 focus:ring-blue-500/40"
-                    autoFocus
+                    autoFocus={typeof window !== 'undefined' ? window.innerWidth >= 768 : false}
                   />
                 </div>
 
@@ -824,13 +824,12 @@ export const NotionFilterBar: FC<NotionFilterBarProps> = ({
 
                           <div
                             onClick={() => toggleFilterItem(activeFilterPopover, opt)}
-                            className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-xs transition-colors text-left cursor-pointer ${
-                              isBeingDragged
+                            className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-xs transition-colors text-left cursor-pointer ${isBeingDragged
                                 ? 'opacity-30 bg-blue-50/50 dark:bg-blue-950/20 border border-dashed border-blue-400/60 scale-[0.98]'
                                 : isSelected
-                                ? 'bg-neutral-100 dark:bg-neutral-800/80 font-medium'
-                                : 'hover:bg-neutral-50 dark:hover:bg-[#2c2c2c]'
-                            }`}
+                                  ? 'bg-neutral-100 dark:bg-neutral-800/80 font-medium'
+                                  : 'hover:bg-neutral-50 dark:hover:bg-[#2c2c2c]'
+                              }`}
                           >
                             <div className="flex items-center gap-1.5 flex-1 min-w-0">
                               <div
@@ -841,11 +840,10 @@ export const NotionFilterBar: FC<NotionFilterBarProps> = ({
                                 <GripVertical className="w-3 h-3 opacity-60 group-hover/filteropt:opacity-100" />
                               </div>
                               <div
-                                className={`w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0 transition-colors ${
-                                  isSelected
+                                className={`w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0 transition-colors ${isSelected
                                     ? 'bg-[#2383e2] border-[#2383e2] text-white'
                                     : 'border-neutral-300 dark:border-neutral-600'
-                                }`}
+                                  }`}
                               >
                                 {isSelected && <Check className="w-2.5 h-2.5 stroke-3" />}
                               </div>

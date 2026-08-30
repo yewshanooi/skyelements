@@ -85,9 +85,9 @@ export const RevenueTrendWidget: FC<RevenueTrendWidgetProps> = ({
   currentWidth = '2/4',
   isModal = false,
 }) => {
-  const heightClass = isModal ? 'h-[480px]' : currentWidth === '1/4' ? 'h-[260px]' : 'h-[320px]';
-  const yAxisWidth = currentWidth === '1/4' ? 35 : 45;
-  const leftMargin = currentWidth === '1/4' ? -15 : 0;
+  const heightClass = isModal ? 'h-[250px] sm:h-[380px]' : currentWidth === '1/4' ? 'h-[220px]' : 'h-[280px]';
+  const yAxisWidth = currentWidth === '1/4' ? 32 : 36;
+  const leftMargin = currentWidth === '1/4' ? -10 : 0;
 
   const showRevenue = metric === 'all' || metric === 'revenue';
   const showProfit = metric === 'all' || metric === 'profit';
@@ -131,7 +131,7 @@ export const RevenueTrendWidget: FC<RevenueTrendWidgetProps> = ({
 
       {/* Chart Container */}
       <div className={`w-full ${heightClass}`}>
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
           {chartType === 'area' ? (
             <AreaChart data={data} margin={{ top: 10, right: 15, left: leftMargin, bottom: 0 }}>
               <defs>

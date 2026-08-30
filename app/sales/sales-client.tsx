@@ -255,7 +255,7 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
       if (sessionStorage.getItem('sales_ai_drawer_open') === 'true') {
         setIsAiOpen(true);
       }
-    } catch {}
+    } catch { }
   }, []);
 
   const handleToggleAi = useCallback(() => {
@@ -263,7 +263,7 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
       const next = !prev;
       try {
         sessionStorage.setItem('sales_ai_drawer_open', String(next));
-      } catch {}
+      } catch { }
       return next;
     });
   }, []);
@@ -272,7 +272,7 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
     setIsAiOpen(false);
     try {
       sessionStorage.setItem('sales_ai_drawer_open', 'false');
-    } catch {}
+    } catch { }
   }, []);
 
   const handleOpenAuth = useCallback((mode: 'login' | 'signup' = 'login') => {
@@ -517,7 +517,7 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-background text-foreground transition-colors">
+    <div className="flex flex-col min-h-screen max-w-full overflow-x-hidden bg-background text-foreground transition-colors">
       <Header
         activeView={currentView}
         onSelectView={handleSelectView}
@@ -577,8 +577,8 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
               {currentView === 'timeline' && (
                 <TimelineView
                   sales={sales}
-                  selectedCategory={filters.categories[0] || 'all'}
-                  onSelectCategory={handleSelectTimelineCategory}
+                  filters={filters}
+                  onFiltersChange={handleFiltersChange}
                   currentYear={timelineYear}
                   currentMonth={timelineMonth}
                   onChangeYearMonth={handleTimelineYearMonthChange}
