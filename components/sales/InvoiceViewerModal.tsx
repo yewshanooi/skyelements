@@ -6,6 +6,7 @@ import { X, FileText, Printer, CheckCircle2, ExternalLink, Loader2 } from 'lucid
 import type { SaleItem } from '@/types/sales';
 import { getInvoiceSignedUrlAction } from '@/services/sales/salesActions';
 import { useBodyScrollLock } from '@/lib/sales/useBodyScrollLock';
+import { formatDateDisplay } from '@/lib/sales/dateUtils';
 
 interface InvoiceViewerModalProps {
   sale: SaleItem | null;
@@ -174,7 +175,7 @@ const printDigitalReceiptDocument = (sale: SaleItem) => {
   const safeMarketplace = escapeHtml(sale.marketplace);
   const safeId = escapeHtml(sale.id.slice(0, 8));
   const safePaymentStatus = escapeHtml(sale.payment_status);
-  const safeDate = escapeHtml(sale.date);
+  const safeDate = escapeHtml(formatDateDisplay(sale.date));
   const safeCustomer = escapeHtml(sale.customer);
   const safeLocation = sale.location ? escapeHtml(sale.location) : '';
   const safePaymentMethod = escapeHtml(sale.payment_method);
@@ -571,7 +572,7 @@ const InvoiceViewerModalContent: FC<{ sale: SaleItem; onClose: () => void }> = (
                     <CheckCircle2 className="w-3.5 h-3.5" />
                     {sale.payment_status}
                   </span>
-                  <div className="text-xs text-neutral-400 mt-1 sm:mt-1.5">Date: {sale.date}</div>
+                  <div className="text-xs text-neutral-400 mt-1 sm:mt-1.5">Date: {formatDateDisplay(sale.date)}</div>
                 </div>
               </div>
 

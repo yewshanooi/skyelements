@@ -7,6 +7,7 @@ import type { SaleItem, StoreType, SortField, SortOrder } from '@/types/sales';
 import { TagPill } from './TagPill';
 import { NotionFilterBar } from './NotionFilterBar';
 import { filterSales, type FilterState } from '@/lib/sales/filterUtils';
+import { formatDayMonth } from '@/lib/sales/dateUtils';
 
 interface KanbanBoardViewProps {
   sales: SaleItem[];
@@ -47,13 +48,6 @@ const STORE_COLUMNS: ColumnConfig[] = [
     headerBg: 'bg-red-50/50 dark:bg-red-950/20',
   },
 ];
-
-function formatDayMonth(dateStr?: string): string {
-  if (!dateStr) return '';
-  const parts = dateStr.split('-');
-  return parts.length === 3 ? `${parts[2]}/${parts[1]}` : dateStr;
-}
-
 
 export const KanbanBoardView: FC<KanbanBoardViewProps> = ({
   sales,

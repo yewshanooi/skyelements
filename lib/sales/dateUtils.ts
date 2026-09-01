@@ -63,17 +63,49 @@ export function formatIsoDate(d: Date): string {
   return formatIsoParts(d.getFullYear(), d.getMonth() + 1, d.getDate());
 }
 
-/**
- * Formats YYYY-MM-DD into DD/MM/YYYY for input display.
- */
 export function formatDateDisplay(dateStr?: string): string {
   if (!dateStr) return '';
   const trimmed = dateStr.trim();
   if (!trimmed) return '';
 
-  const parts = trimmed.split('-');
+  const clean = trimmed.split('T')[0].split(' ')[0];
+  const parts = clean.split('-');
   if (parts.length === 3 && parts[0].length === 4) {
     return `${parts[2].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[0]}`;
+  }
+
+  return dateStr;
+}
+
+/**
+ * Formats YYYY-MM-DD into DD/MM for compact card badges.
+ */
+export function formatDayMonth(dateStr?: string): string {
+  if (!dateStr) return '';
+  const trimmed = dateStr.trim();
+  if (!trimmed) return '';
+
+  const clean = trimmed.split('T')[0].split(' ')[0];
+  const parts = clean.split('-');
+  if (parts.length === 3) {
+    return `${parts[2].padStart(2, '0')}/${parts[1].padStart(2, '0')}`;
+  }
+
+  return dateStr;
+}
+
+/**
+ * Formats YYYY-MM or YYYY-MM-DD into MM/YYYY for monthly trend charts.
+ */
+export function formatMonthYear(dateStr?: string): string {
+  if (!dateStr) return '';
+  const trimmed = dateStr.trim();
+  if (!trimmed) return '';
+
+  const clean = trimmed.split('T')[0].split(' ')[0];
+  const parts = clean.split('-');
+  if (parts.length >= 2 && parts[0].length === 4) {
+    return `${parts[1].padStart(2, '0')}/${parts[0]}`;
   }
 
   return dateStr;
@@ -84,7 +116,8 @@ export function formatDateDisplay(dateStr?: string): string {
  */
 export function formatDateShort(dateStr?: string, includeYear = true): string {
   if (!dateStr) return '';
-  const parts = dateStr.split('-');
+  const clean = dateStr.trim().split('T')[0].split(' ')[0];
+  const parts = clean.split('-');
   if (parts.length === 3) {
     const y = parseInt(parts[0], 10);
     const m = parseInt(parts[1], 10);

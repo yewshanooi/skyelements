@@ -99,7 +99,6 @@ export async function createSaleAction(sale: Omit<SaleItem, 'id'>): Promise<Sale
   }
 
   const { lat, lng } = await resolveCoordinates(sale.location, sale.latitude, sale.longitude);
-  const calculatedSales = Number((sale.subtotal - sale.cost).toFixed(2));
 
   const { data, error } = await supabase
     .from('sales')
@@ -114,7 +113,6 @@ export async function createSaleAction(sale: Omit<SaleItem, 'id'>): Promise<Sale
       date: sale.date,
       subtotal: Number(sale.subtotal) || 0,
       cost: Number(sale.cost) || 0,
-      sales: !isNaN(Number(sale.sales)) ? Number(sale.sales) : calculatedSales,
       order_status: sale.order_status || 'Processing',
       payment_status: sale.payment_status || 'Processing',
       invoice_url: sale.invoice_url || null,

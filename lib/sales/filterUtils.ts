@@ -326,3 +326,72 @@ export function filterSales(sales: SaleItem[], filters: FilterState): SaleItem[]
     return true;
   });
 }
+
+export const STORAGE_KEY_FILTERS = 'sales_dashboard_active_filters_v1';
+
+/**
+ * Checks if a FilterState has any active filters applied.
+ */
+export function hasActiveFilters(filters?: FilterState | null): boolean {
+  if (!filters) return false;
+  return Boolean(
+    (filters.search && filters.search.trim().length > 0) ||
+    (Array.isArray(filters.categories) && filters.categories.length > 0) ||
+    (Array.isArray(filters.stores) && filters.stores.length > 0) ||
+    (Array.isArray(filters.orderStatuses) && filters.orderStatuses.length > 0) ||
+    (Array.isArray(filters.paymentStatuses) && filters.paymentStatuses.length > 0) ||
+    (Array.isArray(filters.paymentMethods) && filters.paymentMethods.length > 0) ||
+    Boolean(filters.dateFilter?.startDate || filters.dateFilter?.endDate) ||
+    Boolean(filters.dateRange && filters.dateRange !== 'all')
+  );
+}
+
+/**
+ * Persists active filters to localStorage, or clears storage if empty.
+ */
+export function saveFiltersToStorage(filters: FilterState): void {
+  if (typeof window === 'undefined') return;
+  try {
+    if (hasActiveFilters(filters)) {
+      localStorage.setItem(STORAGE_KEY_FILTERS, JSON.stringify(filters));
+    } else {
+      localStorage.removeItem(STORAGE_KEY_FILTERS);
+    }
+  } catch {
+    /* ignore storage error */
+  }
+}
+
+/**
+ * Loads saved filters from localStorage if available.
+ */
+export function loadFiltersFromStorage(): FilterState | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY_FILTERS);
+    if (!stored) return null;
+    const parsed = JSON.parse(stored);
+    if (parsed && typeof parsed === 'object') {
+      return {
+        search: typeof parsed.search === 'string' ? parsed.search : '',
+        categories: Array.isArray(parsed.categories) ? parsed.categories : [],
+        stores: Array.isArray(parsed.stores) ? parsed.stores : [],
+        orderStatuses: Array.isArray(parsed.orderStatuses) ? parsed.orderStatuses : [],
+        paymentStatuses: Array.isArray(parsed.paymentStatuses) ? parsed.paymentStatuses : [],
+        paymentMethods: Array.isArray(parsed.paymentMethods) ? parsed.paymentMethods : [],
+        dateRange: typeof parsed.dateRange === 'string' ? parsed.dateRange : 'all',
+        dateFilter:
+          parsed.dateFilter && typeof parsed.dateFilter === 'object'
+            ? {
+                startDate: parsed.dateFilter.startDate || undefined,
+                endDate: parsed.dateFilter.endDate || undefined,
+              }
+            : undefined,
+      };
+    }
+  } catch {
+    /* ignore storage error */
+  }
+  return null;
+}
+

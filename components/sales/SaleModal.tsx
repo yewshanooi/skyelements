@@ -97,7 +97,12 @@ function getInitialFormData(
           : '',
       item: initialData.item || '',
       category: initialData.category || '',
-      cost: initialData.cost === 0 ? '' : (initialData.cost ?? ''),
+      cost:
+        initialData.cost !== undefined && initialData.cost !== null
+          ? Number(initialData.cost) === 0
+            ? ''
+            : Number(initialData.cost).toFixed(2)
+          : '',
       customer: initialData.customer || '',
       date: initialData.date || new Date().toISOString().split('T')[0],
       invoice_name: initialData.invoice_name || '',
@@ -108,7 +113,12 @@ function getInitialFormData(
       payment_method: initialData.payment_method || '',
       payment_status: (initialData.payment_status || '') as PaymentStatus,
       sales: initialData.sales ?? 0,
-      subtotal: initialData.subtotal === 0 ? '' : (initialData.subtotal ?? ''),
+      subtotal:
+        initialData.subtotal !== undefined && initialData.subtotal !== null
+          ? Number(initialData.subtotal) === 0
+            ? ''
+            : Number(initialData.subtotal).toFixed(2)
+          : '',
       latitude: coords?.lat ?? undefined,
       longitude: coords?.lng ?? undefined,
       notes: initialData.notes || '',
@@ -388,6 +398,14 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
                   min="0"
                   value={formData.cost}
                   onChange={(e) => setFormData((prev) => ({ ...prev, cost: e.target.value }))}
+                  onBlur={() => {
+                    if (formData.cost !== '' && !isNaN(Number(formData.cost))) {
+                      setFormData((prev) => ({
+                        ...prev,
+                        cost: Number(formData.cost).toFixed(2),
+                      }));
+                    }
+                  }}
                   className="w-full px-2.5 py-1 text-xs bg-transparent hover:bg-neutral-100/70 dark:hover:bg-neutral-800/70 focus:bg-white dark:focus:bg-[#282828] border border-neutral-200/80 dark:border-neutral-700/80 focus:border-blue-500 rounded font-mono text-neutral-900 dark:text-neutral-100 outline-hidden transition-colors"
                 />
               </div>
@@ -482,7 +500,7 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
                     className="inline-flex items-center gap-1.5 px-2 py-0.5 text-xs font-medium text-neutral-500 dark:text-neutral-400 hover:text-blue-600 dark:hover:text-blue-400 bg-transparent hover:bg-neutral-100 dark:hover:bg-neutral-800/80 rounded transition-colors cursor-pointer border border-dashed border-neutral-300 dark:border-neutral-700 hover:border-blue-400 select-none"
                   >
                     <Upload className="w-3.5 h-3.5" />
-                    <span>Upload invoice</span>
+                    <span>Upload</span>
                   </button>
                 )}
               </div>
@@ -771,6 +789,14 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
                   min="0"
                   value={formData.subtotal}
                   onChange={(e) => setFormData((prev) => ({ ...prev, subtotal: e.target.value }))}
+                  onBlur={() => {
+                    if (formData.subtotal !== '' && !isNaN(Number(formData.subtotal))) {
+                      setFormData((prev) => ({
+                        ...prev,
+                        subtotal: Number(formData.subtotal).toFixed(2),
+                      }));
+                    }
+                  }}
                   className="w-full px-2.5 py-1 text-xs bg-transparent hover:bg-neutral-100/70 dark:hover:bg-neutral-800/70 focus:bg-white dark:focus:bg-[#282828] border border-neutral-200/80 dark:border-neutral-700/80 focus:border-blue-500 rounded font-mono font-medium text-neutral-900 dark:text-neutral-100 outline-hidden transition-colors"
                 />
               </div>

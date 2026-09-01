@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import type { SaleItem } from '@/types/sales';
 import { TagPill } from './TagPill';
+import { formatDateDisplay } from '@/lib/sales/dateUtils';
 import {
   parseNotionFile,
   executeNotionImport,
@@ -654,9 +655,9 @@ const NotionImportModalContent: FC<NotionImportModalContentProps> = ({
                     <Clock className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                     <span>Date Range</span>
                   </div>
-                  <div className="text-lg font-bold text-neutral-900 dark:text-neutral-100 mt-1 whitespace-nowrap" title={`${summaryMetrics.minDate} – ${summaryMetrics.maxDate}`}>
+                  <div className="text-lg font-bold text-neutral-900 dark:text-neutral-100 mt-1 whitespace-nowrap" title={`${formatDateDisplay(summaryMetrics.minDate)} – ${formatDateDisplay(summaryMetrics.maxDate)}`}>
                     {summaryMetrics.minDate && summaryMetrics.maxDate
-                      ? `${summaryMetrics.minDate.slice(2)} ~ ${summaryMetrics.maxDate.slice(2)}`
+                      ? `${formatDateDisplay(summaryMetrics.minDate)} ~ ${formatDateDisplay(summaryMetrics.maxDate)}`
                       : 'N/A'}
                   </div>
                 </div>
@@ -777,7 +778,7 @@ const NotionImportModalContent: FC<NotionImportModalContentProps> = ({
                               {item.customer}
                             </td>
                             <td className="py-2 px-2.5 font-mono text-[11px] text-neutral-600 dark:text-neutral-400 whitespace-nowrap">
-                              {item.date}
+                              {formatDateDisplay(item.date)}
                             </td>
                             <td className="py-2 px-2.5 text-right font-mono text-neutral-800 dark:text-neutral-200 whitespace-nowrap font-medium">
                               RM {item.subtotal.toFixed(2)}

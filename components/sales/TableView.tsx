@@ -1089,7 +1089,7 @@ export const TableView: FC<TableViewProps> = ({
                       <td
                         onClick={() => {
                           setEditingCell({ saleId: sale.id, field: 'subtotal' });
-                          setTempValue(String(sale.subtotal || 0));
+                          setTempValue(sale.subtotal > 0 ? sale.subtotal.toFixed(2) : '');
                         }}
                         className="px-3 py-2 border-r border-neutral-200/60 dark:border-neutral-800 font-mono text-right text-neutral-800 dark:text-neutral-200 cursor-text hover:bg-neutral-100/60 dark:hover:bg-neutral-800/40 transition-colors"
                       >
@@ -1118,7 +1118,7 @@ export const TableView: FC<TableViewProps> = ({
                       <td
                         onClick={() => {
                           setEditingCell({ saleId: sale.id, field: 'cost' });
-                          setTempValue(String(sale.cost || 0));
+                          setTempValue(sale.cost > 0 ? sale.cost.toFixed(2) : '');
                         }}
                         className="px-3 py-2 border-r border-neutral-200/60 dark:border-neutral-800 font-mono text-right text-neutral-500 dark:text-neutral-400 cursor-text hover:bg-neutral-100/60 dark:hover:bg-neutral-800/40 transition-colors"
                       >

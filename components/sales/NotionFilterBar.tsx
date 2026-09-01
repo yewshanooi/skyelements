@@ -24,6 +24,7 @@ import {
 import type { SortField, SortOrder } from '@/types/sales';
 import { TagPill } from './TagPill';
 import { NotionDatePicker } from './NotionDatePicker';
+import { formatDateDisplay } from '@/lib/sales/dateUtils';
 import {
   getOptions,
   reorderOptions,
@@ -115,47 +116,10 @@ export const NotionFilterBar: FC<NotionFilterBarProps> = ({
     });
   }, []);
 
-  const storageKey = `sales_dashboard_visible_filters_${storageKeyPrefix}_v4`;
-
-  // Active filter pills visible on toolbar
-  const [visibleFilterProps, setVisibleFilterProps] = useState<PropertyType[]>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const stored = localStorage.getItem(storageKey);
-        if (stored !== null) {
-          const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed)) return parsed;
-        }
-      } catch { }
-    }
-    return [...defaultVisibleProps];
-  });
-
-  const [prevStorageKey, setPrevStorageKey] = useState(storageKey);
-  if (prevStorageKey !== storageKey) {
-    setPrevStorageKey(storageKey);
-    if (typeof window !== 'undefined') {
-      try {
-        const stored = localStorage.getItem(storageKey);
-        if (stored !== null) {
-          const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed)) {
-            setVisibleFilterProps(parsed);
-          }
-        }
-      } catch { }
-    }
-  }
-
-  // Persist visibleFilterProps to localStorage
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    try {
-      localStorage.setItem(storageKey, JSON.stringify(visibleFilterProps));
-    } catch {
-      /* ignore storage error */
-    }
-  }, [visibleFilterProps, storageKey]);
+  // Active filter pills visible on toolbar (defaults to none selected / empty)
+  const [visibleFilterProps, setVisibleFilterProps] = useState<PropertyType[]>(() => [
+    ...defaultVisibleProps,
+  ]);
 
   // Compute effective visible filter properties derived from state and active filters
   const effectiveVisibleFilterProps = useMemo(() => {
@@ -387,13 +351,7 @@ export const NotionFilterBar: FC<NotionFilterBarProps> = ({
 
   const removeFilterProp = (type: PropertyType) => {
     clearFilterType(type);
-    const updated = visibleFilterProps.filter((p) => p !== type);
-    setVisibleFilterProps(updated);
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.setItem(storageKey, JSON.stringify(updated));
-      } catch { }
-    }
+    setVisibleFilterProps((prev) => prev.filter((p) => p !== type));
     if (activeFilterPopover === type) setActiveFilterPopover(null);
   };
 
@@ -409,15 +367,6 @@ export const NotionFilterBar: FC<NotionFilterBarProps> = ({
       return filters.dateFilter?.startDate || (filters.dateRange && filters.dateRange !== 'all') ? 1 : 0;
     }
     return 0;
-  };
-
-  const formatDateShort = (dateStr?: string) => {
-    if (!dateStr) return '';
-    const parts = dateStr.split('-');
-    if (parts.length === 3) {
-      return `${parts[2]}/${parts[1]}/${parts[0].slice(-2)}`;
-    }
-    return dateStr;
   };
 
   const getFilterLabel = (type: PropertyType) => {
@@ -451,15 +400,15 @@ export const NotionFilterBar: FC<NotionFilterBarProps> = ({
         const { startDate, endDate } = filters.dateFilter;
         if (startDate && endDate) {
           if (startDate === endDate) {
-            return `Date: ${formatDateShort(startDate)}`;
+            return `Date: ${formatDateDisplay(startDate)}`;
           }
-          return `Date: ${formatDateShort(startDate)} - ${formatDateShort(endDate)}`;
+          return `Date: ${formatDateDisplay(startDate)} - ${formatDateDisplay(endDate)}`;
         }
         if (startDate) {
-          return `Date: ${formatDateShort(startDate)}`;
+          return `Date: ${formatDateDisplay(startDate)}`;
         }
         if (endDate) {
-          return `Date: <= ${formatDateShort(endDate)}`;
+          return `Date: <= ${formatDateDisplay(endDate)}`;
         }
       }
       if (filters.dateRange && filters.dateRange !== 'all') {
@@ -600,10 +549,10 @@ export const NotionFilterBar: FC<NotionFilterBarProps> = ({
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      clearFilterType(type);
+                      removeFilterProp(type);
                     }}
                     className="pr-2.5 pl-0.5 text-[#2383e2]/70 dark:text-[#529cca]/70 hover:text-[#2383e2] dark:hover:text-[#529cca] cursor-pointer"
-                    title="Clear filter"
+                    title="Remove filter"
                   >
                     <X className="w-3 h-3" />
                   </button>

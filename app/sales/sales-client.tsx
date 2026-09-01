@@ -25,8 +25,12 @@ import {
   filterSales,
   parseFiltersFromSearchParams,
   buildSearchParamsFromFilters,
+  hasActiveFilters,
+  saveFiltersToStorage,
+  loadFiltersFromStorage,
   type FilterState,
 } from '@/lib/sales/filterUtils';
+import { formatDateDisplay } from '@/lib/sales/dateUtils';
 
 const ViewLoading = () => (
   <div className="flex flex-col items-center justify-center py-24 space-y-3">
@@ -84,6 +88,15 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
 
   useEffect(() => {
     setIsClientReady(true);
+    // Restore saved filters from localStorage if none provided in URL search parameters
+    const parsed = parseFiltersFromSearchParams(searchParams);
+    if (!hasActiveFilters(parsed.filters)) {
+      const stored = loadFiltersFromStorage();
+      if (stored && hasActiveFilters(stored)) {
+        setFilters(stored);
+        syncFiltersToUrl(stored);
+      }
+    }
   }, []);
 
   // Sync currentView if activeView prop changes
@@ -112,6 +125,9 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
   useEffect(() => {
     const parsed = parseFiltersFromSearchParams(searchParams);
     setFilters(parsed.filters);
+    if (hasActiveFilters(parsed.filters)) {
+      saveFiltersToStorage(parsed.filters);
+    }
     if (parsed.sortField) setSortField(parsed.sortField);
     if (parsed.sortOrder) setSortOrder(parsed.sortOrder);
     if (parsed.year) setTimelineYear(parsed.year);
@@ -143,6 +159,7 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
   const handleFiltersChange = useCallback(
     (newFilters: FilterState) => {
       setFilters(newFilters);
+      saveFiltersToStorage(newFilters);
       syncFiltersToUrl(newFilters);
     },
     [syncFiltersToUrl]
@@ -172,6 +189,7 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
     (query: string) => {
       const updated = { ...filters, search: query };
       setFilters(updated);
+      saveFiltersToStorage(updated);
 
       if (debounceSearchTimerRef.current) {
         clearTimeout(debounceSearchTimerRef.current);
@@ -215,6 +233,7 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
       const currentParams = new URLSearchParams(window.location.search);
       const parsed = parseFiltersFromSearchParams(currentParams);
       setFilters(parsed.filters);
+      saveFiltersToStorage(parsed.filters);
       if (parsed.sortField) setSortField(parsed.sortField);
       if (parsed.sortOrder) setSortOrder(parsed.sortOrder);
       if (parsed.year) setTimelineYear(parsed.year);
@@ -437,7 +456,7 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
       `"${s.marketplace}"`,
       `"${s.payment_method}"`,
       `"${s.customer}"`,
-      s.date,
+      formatDateDisplay(s.date),
       s.subtotal,
       s.cost,
       s.sales,

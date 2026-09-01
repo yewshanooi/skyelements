@@ -77,14 +77,20 @@ export const computeTrendData = (
 
     if (granularity === 'daily') {
       key = s.date.slice(0, 10); // YYYY-MM-DD
-      label = key.slice(5); // MM-DD
+      const parts = key.split('-');
+      label = parts.length === 3 ? `${parts[2]}/${parts[1]}` : key.slice(5); // DD/MM
     } else if (granularity === 'weekly') {
       const d = new Date(s.date);
       const day = d.getDay();
       const diff = d.getDate() - day + (day === 0 ? -6 : 1);
       const monday = new Date(d.setDate(diff));
       key = monday.toISOString().slice(0, 10);
-      label = `Wk ${key.slice(5)}`;
+      const parts = key.split('-');
+      label = parts.length === 3 ? `Wk ${parts[2]}/${parts[1]}` : `Wk ${key.slice(5)}`;
+    } else {
+      // Monthly: MM/YYYY (e.g. 08/2026)
+      const parts = key.split('-');
+      label = parts.length === 2 ? `${parts[1]}/${parts[0]}` : key;
     }
 
     const existing = timeMap.get(key) || {

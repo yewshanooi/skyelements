@@ -20,7 +20,8 @@ import type { SaleItem } from '@/types/sales';
 import { geocodeAddress, searchLocations, type LocationSuggestion } from '@/services/sales/geocodeService';
 import { normalizeCoordinates, extractEmbeddedCoordinates } from '@/lib/sales/locationParser';
 import { NotionFilterBar } from './NotionFilterBar';
-import { filterSales, type FilterState } from '@/lib/sales/filterUtils';
+import { filterSales, DEFAULT_EMPTY_FILTERS, type FilterState } from '@/lib/sales/filterUtils';
+import { formatDateDisplay } from '@/lib/sales/dateUtils';
 import { useBodyScrollLock } from '@/lib/sales/useBodyScrollLock';
 
 interface MapViewProps {
@@ -133,15 +134,7 @@ export const MapView: FC<MapViewProps> = ({
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Map Filter state
-  const [internalFilters, setInternalFilters] = useState<FilterState>({
-    search: '',
-    categories: [],
-    stores: [],
-    orderStatuses: [],
-    paymentStatuses: ['Paid'],
-    paymentMethods: [],
-    dateRange: 'all',
-  });
+  const [internalFilters, setInternalFilters] = useState<FilterState>(DEFAULT_EMPTY_FILTERS);
 
   const filters = propFilters ?? internalFilters;
   const setFilters = (newFilters: FilterState) => {
@@ -270,7 +263,7 @@ export const MapView: FC<MapViewProps> = ({
             </div>
             <div class="flex items-center justify-between text-xs">
               <span class="text-neutral-400 dark:text-neutral-500 font-medium">Date:</span>
-              <span class="text-neutral-700 dark:text-neutral-300 font-mono text-[11px]">${sale.date}</span>
+              <span class="text-neutral-700 dark:text-neutral-300 font-mono text-[11px]">${formatDateDisplay(sale.date)}</span>
             </div>
             <div class="flex items-center justify-between text-xs">
               <span class="text-neutral-400 dark:text-neutral-500 font-medium">Net Sales:</span>

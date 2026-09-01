@@ -9,7 +9,7 @@ import {
   FileText,
 } from 'lucide-react';
 import type { SaleItem } from '@/types/sales';
-import { formatIsoDate, parseDateString, formatDateShort } from '@/lib/sales/dateUtils';
+import { formatIsoDate, parseDateString, formatDateDisplay } from '@/lib/sales/dateUtils';
 import { NotionFilterBar } from './NotionFilterBar';
 import { filterSales, DEFAULT_EMPTY_FILTERS, type FilterState } from '@/lib/sales/filterUtils';
 
@@ -306,46 +306,39 @@ export const TimelineView: FC<TimelineViewProps> = ({
         showSort={false}
         filters={activeFilters}
         onFiltersChange={handleFiltersChange}
-        defaultVisibleProps={['category']}
-        extraLeftActions={
-          <>
-            <button
-              type="button"
-              className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full text-xs font-medium bg-neutral-100 hover:bg-neutral-200/70 dark:bg-neutral-800 dark:hover:bg-neutral-700/70 text-neutral-700 dark:text-neutral-300 border border-neutral-200/80 dark:border-neutral-700/80 transition-all cursor-default shadow-2xs shrink-0"
-            >
+        extraRightActions={
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <div className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-md text-xs font-medium bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 border border-neutral-200/80 dark:border-neutral-700/80 shadow-2xs shrink-0">
               <Calendar className="w-3.5 h-3.5 text-neutral-500 dark:text-neutral-400" />
               <span>{MONTH_NAMES[currentMonth]} {currentYear}</span>
-            </button>
-            <div className="h-4 w-px bg-neutral-200 dark:bg-neutral-800 mx-0.5 shrink-0" />
-          </>
-        }
-        extraRightActions={
-          <div className="inline-flex items-center rounded-md border border-neutral-200/80 dark:border-neutral-700/80 bg-white dark:bg-neutral-800 text-xs font-medium text-neutral-600 dark:text-neutral-400 shadow-2xs overflow-hidden">
-            <button
-              type="button"
-              onClick={prevMonth}
-              className="p-1 sm:px-1.5 sm:py-1 hover:bg-neutral-100 dark:hover:bg-neutral-700 hover:text-neutral-900 dark:hover:text-neutral-100 transition-colors cursor-pointer"
-              title="Previous month"
-              aria-label="Previous month"
-            >
-              <ChevronLeft className="w-3.5 h-3.5" />
-            </button>
-            <button
-              type="button"
-              onClick={setToday}
-              className="px-2 sm:px-2.5 py-1 text-xs font-medium border-x border-neutral-200/80 dark:border-neutral-700/80 hover:bg-neutral-100 dark:hover:bg-neutral-700 hover:text-neutral-900 dark:hover:text-neutral-100 transition-colors text-neutral-700 dark:text-neutral-300 cursor-pointer"
-            >
-              Today
-            </button>
-            <button
-              type="button"
-              onClick={nextMonth}
-              className="p-1 sm:px-1.5 sm:py-1 hover:bg-neutral-100 dark:hover:bg-neutral-700 hover:text-neutral-900 dark:hover:text-neutral-100 transition-colors cursor-pointer"
-              title="Next month"
-              aria-label="Next month"
-            >
-              <ChevronRight className="w-3.5 h-3.5" />
-            </button>
+            </div>
+            <div className="inline-flex items-center rounded-md border border-neutral-200/80 dark:border-neutral-700/80 bg-white dark:bg-neutral-800 text-xs font-medium text-neutral-600 dark:text-neutral-400 shadow-2xs overflow-hidden">
+              <button
+                type="button"
+                onClick={prevMonth}
+                className="p-1 sm:px-1.5 sm:py-1 hover:bg-neutral-100 dark:hover:bg-neutral-700 hover:text-neutral-900 dark:hover:text-neutral-100 transition-colors cursor-pointer"
+                title="Previous month"
+                aria-label="Previous month"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={setToday}
+                className="px-2 sm:px-2.5 py-1 text-xs font-medium border-x border-neutral-200/80 dark:border-neutral-700/80 hover:bg-neutral-100 dark:hover:bg-neutral-700 hover:text-neutral-900 dark:hover:text-neutral-100 transition-colors text-neutral-700 dark:text-neutral-300 cursor-pointer"
+              >
+                Today
+              </button>
+              <button
+                type="button"
+                onClick={nextMonth}
+                className="p-1 sm:px-1.5 sm:py-1 hover:bg-neutral-100 dark:hover:bg-neutral-700 hover:text-neutral-900 dark:hover:text-neutral-100 transition-colors cursor-pointer"
+                title="Next month"
+                aria-label="Next month"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
         }
       />
@@ -455,7 +448,7 @@ export const TimelineView: FC<TimelineViewProps> = ({
                     >
                       <div
                         onClick={() => onSelectSale(sale)}
-                        title={`${sale.item} • ${formatDateShort(sale.date)} • RM ${sale.sales.toFixed(2)}`}
+                        title={`${sale.item} • ${formatDateDisplay(sale.date)} • RM ${sale.sales.toFixed(2)}`}
                         className="group cursor-pointer bg-white dark:bg-[#252525] hover:bg-blue-50/80 dark:hover:bg-blue-950/40 border border-neutral-200/90 dark:border-neutral-700/80 hover:border-blue-400 dark:hover:border-blue-500 rounded-lg px-3 py-1.5 shadow-2xs hover:shadow-md transition-all flex items-center gap-2 max-w-sm whitespace-nowrap"
                       >
                         <FileText className="w-3.5 h-3.5 text-neutral-400 group-hover:text-blue-500 shrink-0 transition-colors" />
