@@ -1,6 +1,6 @@
 'use server';
 
-import type { SaleItem, ViewMode } from '@/types/sales';
+import type { SaleItem } from '@/types/sales';
 import {
   CATEGORIES,
   STORE_TYPES,
@@ -8,203 +8,156 @@ import {
   PAYMENT_STATUSES,
   PAYMENT_METHODS,
 } from '@/types/sales';
+import { executeSalesMetricsQuery } from './salesAnalyticsEngine';
+import type {
+  ChartSpec,
+  QuerySalesMetricsArgs,
+  ChatMessage,
+  AiServerResponse,
+  PendingCreateForm,
+  PendingUpdateForm,
+} from '@/types/salesAi';
 
-export interface ChatMessage {
-  id: string;
-  role: 'user' | 'model' | 'system';
-  text: string;
-  timestamp: number;
-  toolCalls?: Array<{
-    name: string;
-    args: Record<string, unknown>;
-  }>;
-  createdSale?: SaleItem;
-  updatedSale?: {
-    item: SaleItem;
-    changes: Record<string, { before: unknown; after: unknown }>;
-  };
-  pendingDelete?: {
-    id: string;
-    itemName: string;
-    customer: string;
-    subtotal: number;
-    confirmed?: boolean;
-    cancelled?: boolean;
-  };
-  actionExecuted?: string;
-  error?: boolean;
-}
 
-export interface AiServerResponse {
-  id: string;
-  role: 'model';
-  text: string;
-  timestamp: number;
-  toolCalls?: Array<{
-    name: string;
-    args: Record<string, unknown>;
-  }>;
-  createdSalePayload?: Omit<SaleItem, 'id'>;
-  updatedSalePayload?: {
-    id: string;
-    updates: Partial<SaleItem>;
-    item: SaleItem;
-    changes: Record<string, { before: unknown; after: unknown }>;
-  };
-  pendingDelete?: {
-    id: string;
-    itemName: string;
-    customer: string;
-    subtotal: number;
-  };
-  switchView?: ViewMode;
-  filterQuery?: string;
-  actionExecuted?: string;
-}
-
-// Tool Declaration Definitions for Gemini
+// Tool Declaration Definitions for Gemini Function-Calling Registry
 const GEMINI_FUNCTION_DECLARATIONS = [
   {
-    name: 'create_sale_item',
-    description: 'Create a new sale item in the dashboard database.',
+    name: 'query_sales_metrics',
+    description:
+      'Execute deterministic server-side aggregation queries directly against the PostgreSQL sales database. ALWAYS use this tool whenever the user asks for financial totals, revenue, profit, costs, order counts, averages, breakdowns by category/marketplace/customer/status, monthly/daily trends, rankings, or chart visualizations. NEVER guess numbers or calculate them mentally.',
     parameters: {
       type: 'OBJECT',
       properties: {
-        item: { type: 'STRING', description: 'Name or title of the item/product' },
-        quantity: { type: 'NUMBER', description: 'Quantity sold' },
-        subtotal: { type: 'NUMBER', description: 'Total selling price / revenue in MYR (RM)' },
-        cost: { type: 'NUMBER', description: 'Total cost / expense in MYR (RM) (default 0)' },
-        customer: { type: 'STRING', description: 'Name of the customer' },
-        category: {
-          type: 'STRING',
-          description: 'Category name (e.g. Trading Card Games, Gift Cards, Collectibles, Miniatures, Books, Electronics, Virtual Items, etc.)',
+        metrics: {
+          type: 'ARRAY',
+          items: {
+            type: 'STRING',
+            enum: ['revenue', 'cost', 'profit', 'units_sold', 'order_count', 'aov'],
+          },
+          description:
+            'Aggregation targets: Select 1 or at most 2 metrics to keep tables clean and legible (e.g. ["revenue"] or ["revenue", "profit"]). Targets: revenue, cost, profit, units_sold, order_count, aov. Defaults to ["revenue"] if omitted.',
         },
-        marketplace: {
-          type: 'STRING',
-          description: 'Marketplace platform (e.g. Shopee, Carousell, etc.)',
+        dimensions: {
+          type: 'ARRAY',
+          items: {
+            type: 'STRING',
+            enum: [
+              'category',
+              'marketplace',
+              'order_status',
+              'payment_status',
+              'customer',
+              'item',
+              'date',
+              'month',
+            ],
+          },
+          description:
+            'Group by dimensions: category, marketplace, order_status, payment_status, customer, item, date (YYYY-MM-DD), and month (YYYY-MM). Leave empty for overall summary totals.',
         },
-        payment_method: {
-          type: 'STRING',
-          description: 'Payment method used (e.g. Online Banking, E-Wallet, Shopee - Online Banking, Shopee - SPayLater, Shopee - Cash on Delivery, etc.)',
+        filters: {
+          type: 'OBJECT',
+          properties: {
+            start_date: {
+              type: 'STRING',
+              description: 'Filter sales on or after this date (YYYY-MM-DD format)',
+            },
+            end_date: {
+              type: 'STRING',
+              description: 'Filter sales on or before this date (YYYY-MM-DD format)',
+            },
+            category: {
+              type: 'STRING',
+              description: 'Exact category filter',
+            },
+            marketplace: {
+              type: 'STRING',
+              description: 'Exact marketplace filter (e.g. Shopee, Carousell)',
+            },
+            order_status: {
+              type: 'STRING',
+              description: 'Fulfillment status filter (Processing, Shipped, Delivered)',
+            },
+            payment_status: {
+              type: 'STRING',
+              description: 'Payment status filter (On Hold, Processing, Paid)',
+            },
+            customer: {
+              type: 'STRING',
+              description: 'Customer name filter (case-insensitive substring)',
+            },
+          },
+          description: 'Predicate filters to constrain the query dataset',
         },
-        order_status: {
+        order_by: {
           type: 'STRING',
-          description: 'Order fulfillment status: Processing, Shipped, or Delivered',
+          enum: ['metric_desc', 'metric_asc', 'dimension_asc', 'dimension_desc'],
+          description:
+            'Sorting rule: metric_desc (highest metric first, default), metric_asc (lowest metric first), dimension_asc (alphabetical/chronological), dimension_desc.',
         },
-        payment_status: {
-          type: 'STRING',
-          description: 'Payment status: On Hold, Processing, or Paid',
+        limit: {
+          type: 'NUMBER',
+          description: 'Maximum rows to return (1 to 50, default: 10 for rankings, 50 for trends)',
         },
-        date: {
+        chart_title: {
           type: 'STRING',
-          description: 'Sale date in YYYY-MM-DD format (defaults to current date if omitted)',
-        },
-        location: {
-          type: 'STRING',
-          description: 'Delivery or customer location/address (e.g. Kuala Lumpur, Penang, Mid Valley, etc.)',
-        },
-        notes: {
-          type: 'STRING',
-          description: 'Any additional notes or customer remarks',
+          description: 'Concise, informative heading for the generated metrics table',
         },
       },
-      required: ['item'],
     },
   },
   {
-    name: 'update_sale_item',
-    description: 'Update any fields of an existing sale item by ID or matching customer/item name.',
+    name: 'open_create_sale_form',
+    description:
+      'Open an interactive order creation form card in the chat dialog box allowing the user to enter their own details and click confirm. ALWAYS call this tool when the user asks to create a new order, add an order, record a sale, or fill up an order form.',
     parameters: {
       type: 'OBJECT',
       properties: {
-        id: { type: 'STRING', description: 'The exact ID of the sale item to update' },
-        search_hint: {
-          type: 'STRING',
-          description: 'If ID is not known, hint text (customer name or item name) to match the item',
-        },
-        updates: {
-          type: 'OBJECT',
-          properties: {
-            item: { type: 'STRING' },
-            quantity: { type: 'NUMBER' },
-            subtotal: { type: 'NUMBER' },
-            cost: { type: 'NUMBER' },
-            customer: { type: 'STRING' },
-            category: { type: 'STRING' },
-            marketplace: { type: 'STRING' },
-            payment_method: { type: 'STRING' },
-            order_status: { type: 'STRING' },
-            payment_status: { type: 'STRING' },
-            date: { type: 'STRING' },
-            location: { type: 'STRING' },
-            notes: { type: 'STRING' },
-          },
-          description: 'Object containing only the fields that should be updated',
-        },
+        item: { type: 'STRING', description: 'Optional initial item name' },
+        quantity: { type: 'NUMBER', description: 'Optional initial quantity' },
+        subtotal: { type: 'NUMBER', description: 'Optional initial selling price in MYR' },
+        customer: { type: 'STRING', description: 'Optional initial customer name' },
+        marketplace: { type: 'STRING', description: 'Optional initial marketplace (Shopee or Carousell)' },
       },
-      required: ['updates'],
+    },
+  },
+  {
+    name: 'open_update_sale_form',
+    description:
+      'Open an interactive order edit form card in the chat dialog box allowing the user to select an existing order, edit fields, and click confirm. ALWAYS call this tool when the user asks to edit, update, modify, or change an order or status.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        order_id: { type: 'STRING', description: 'Optional ID of the order to edit' },
+        search_hint: { type: 'STRING', description: 'Optional customer name or item name to pre-select' },
+      },
     },
   },
   {
     name: 'request_delete_sale_item',
-    description: 'Request deletion of an existing sale item with user confirmation in the chat UI.',
+    description: 'Request deletion of an existing sale item with user confirmation card in the chat UI.',
     parameters: {
       type: 'OBJECT',
       properties: {
         id: { type: 'STRING', description: 'The exact ID of the sale item to delete' },
         item_name: { type: 'STRING', description: 'Name of the item for display in the confirmation card' },
-        customer: { type: 'STRING', description: 'Customer name for display in the confirmation card' },
+        customer: { type: 'STRING', description: 'Customer name for display' },
         subtotal: { type: 'NUMBER', description: 'Amount in MYR for display' },
         reason: { type: 'STRING', description: 'Reason for deletion' },
       },
       required: ['id'],
     },
   },
-  {
-    name: 'switch_dashboard_view',
-    description: 'Switch the active view tab on the dashboard (table, board, chart, timeline, map).',
-    parameters: {
-      type: 'OBJECT',
-      properties: {
-        view: {
-          type: 'STRING',
-          enum: ['table', 'board', 'chart', 'timeline', 'map'],
-          description: 'The target view to switch to',
-        },
-      },
-      required: ['view'],
-    },
-  },
-  {
-    name: 'filter_dashboard_search',
-    description: 'Filter the dashboard table and views by typing a search keyword in the main search bar.',
-    parameters: {
-      type: 'OBJECT',
-      properties: {
-        query: { type: 'STRING', description: 'The search term to apply (e.g. customer name, category, status)' },
-      },
-      required: ['query'],
-    },
-  },
 ];
 
 /**
- * Generate system prompt containing business context, data summary, and available options
+ * Builds a lean, token-efficient system instruction without raw dataset bloat.
+ * Follows Execution Lifecycle Step 1 & Technical Constraints:
+ * - Table schema metadata & allowed enum values
+ * - Calendar anchor & current date context
+ * - Strict Zero LLM Math directives
  */
-function buildSystemInstruction(sales: SaleItem[]): string {
-  const categories = CATEGORIES;
-  const marketplaces = STORE_TYPES;
-  const orderStatuses = ORDER_STATUSES;
-  const paymentStatuses = PAYMENT_STATUSES;
-  const paymentMethods = PAYMENT_METHODS;
-
-  // Compute live dataset stats
-  const totalCount = sales.length;
-  const totalRevenue = sales.reduce((acc, s) => acc + (s.subtotal || 0), 0);
-  const totalCost = sales.reduce((acc, s) => acc + (s.cost || 0), 0);
-  const totalProfit = sales.reduce((acc, s) => acc + (s.sales || 0), 0);
-
-  // Time & Month Ground Truth
+function buildSystemInstruction(): string {
   const now = new Date();
   const todayStr = now.toISOString().split('T')[0];
   const currentYear = now.getFullYear();
@@ -223,237 +176,57 @@ function buildSystemInstruction(sales: SaleItem[]): string {
   const currentMonthName = monthNames[currentMonthNum - 1];
   const lastMonthName = monthNames[lastMonthNum - 1];
 
-  // Pre-compute monthly statistics deterministically
-  const monthlyStats: Record<
-    string,
-    {
-      label: string;
-      count: number;
-      revenue: number;
-      cost: number;
-      profit: number;
-      items: Array<{ item: string; customer: string; date: string; subtotal: number; profit: number }>;
-    }
-  > = {};
+  const todayFormatted = `${String(now.getDate()).padStart(2, '0')}/${String(currentMonthNum).padStart(2, '0')}/${currentYear}`;
+  const currentMonthFormatted = `${String(currentMonthNum).padStart(2, '0')}/${currentYear}`;
+  const lastMonthFormatted = `${String(lastMonthNum).padStart(2, '0')}/${lastMonthYear}`;
 
-  sales.forEach((s) => {
-    const ym = s.date && s.date.length >= 7 ? s.date.slice(0, 7) : 'Unknown';
-    if (!monthlyStats[ym]) {
-      let label = ym;
-      if (ym !== 'Unknown') {
-        const parts = ym.split('-');
-        if (parts.length === 2) {
-          const mIdx = parseInt(parts[1], 10) - 1;
-          label = `${monthNames[mIdx] || parts[1]} ${parts[0]}`;
-        }
-      }
-      monthlyStats[ym] = {
-        label,
-        count: 0,
-        revenue: 0,
-        cost: 0,
-        profit: 0,
-        items: [],
-      };
-    }
-    monthlyStats[ym].count += 1;
-    monthlyStats[ym].revenue += s.subtotal || 0;
-    monthlyStats[ym].cost += s.cost || 0;
-    monthlyStats[ym].profit += s.sales || 0;
-    monthlyStats[ym].items.push({
-      item: s.item,
-      customer: s.customer,
-      date: s.date,
-      subtotal: s.subtotal,
-      profit: s.sales,
-    });
-  });
+  return `You are an ultra-high-precision analytics and operations assistant integrated into the Sales Dashboard.
 
-  const monthlySummaryLines = Object.entries(monthlyStats)
-    .sort(([a], [b]) => b.localeCompare(a))
-    .map(([ym, stats]) => {
-      let tag = '';
-      if (ym === currentYearMonth) tag = ' (THIS CURRENT MONTH)';
-      else if (ym === lastMonthYearMonth) tag = ' (LAST MONTH)';
-      return `- **${ym} (${stats.label})**${tag}: ${stats.count} order(s) | Revenue: RM ${stats.revenue.toFixed(2)} | Cost: RM ${stats.cost.toFixed(2)} | Net Profit: RM ${stats.profit.toFixed(2)}`;
-    });
+### CALENDAR ANCHOR:
+- TODAY'S DATE: ${todayFormatted} (ISO: "${todayStr}")
+- CURRENT MONTH: ${currentMonthFormatted} ("${currentMonthName} ${currentYear}", ISO: "${currentYearMonth}")
+- LAST MONTH: ${lastMonthFormatted} ("${lastMonthName} ${lastMonthYear}", ISO: "${lastMonthYearMonth}")
 
-  // Pre-compute customer leaderboards (sorted by total spend)
-  const customerStats: Record<string, { count: number; spend: number; profit: number }> = {};
-  sales.forEach((s) => {
-    const cust = s.customer?.trim() || 'Unknown';
-    if (!customerStats[cust]) customerStats[cust] = { count: 0, spend: 0, profit: 0 };
-    customerStats[cust].count += 1;
-    customerStats[cust].spend += s.subtotal || 0;
-    customerStats[cust].profit += s.sales || 0;
-  });
+### CENTRAL DATABASE SCHEMA (\`sales\` Table):
+- \`id\` (UUID): Unique primary key
+- \`date\` (DATE): YYYY-MM-DD
+- \`item\` (TEXT): Product or service title
+- \`quantity\` (INTEGER): Number of units
+- \`subtotal\` (NUMERIC): Selling price / revenue in MYR
+- \`cost\` (NUMERIC): Total cost / expenses in MYR
+- \`sales\` (NUMERIC): Net profit generated always as (subtotal - cost)
+- \`category\` (TEXT): Allowed: ${CATEGORIES.join(', ')}
+- \`marketplace\` (TEXT): Allowed: ${STORE_TYPES.join(', ')}
+- \`payment_method\` (TEXT): Allowed: ${PAYMENT_METHODS.join(', ')}
+- \`order_status\` (TEXT): Allowed: ${ORDER_STATUSES.join(', ')}
+- \`payment_status\` (TEXT): Allowed: ${PAYMENT_STATUSES.join(', ')}
+- \`customer\` (TEXT): Customer name
+- \`location\` (TEXT): Delivery address / city
 
-  const topCustomersLines = Object.entries(customerStats)
-    .sort(([, a], [, b]) => b.spend - a.spend)
-    .slice(0, 10)
-    .map(
-      ([cust, st], idx) =>
-        `${idx + 1}. **${cust}**: ${st.count} orders | Total Spend: RM ${st.spend.toFixed(2)} | Profit: RM ${st.profit.toFixed(2)}`
-    );
-
-  // Pre-compute category breakdown
-  const categoryStats: Record<string, { count: number; qty: number; revenue: number; cost: number; profit: number }> = {};
-  sales.forEach((s) => {
-    if (!s.category) return;
-    const cat = s.category;
-    if (!categoryStats[cat]) categoryStats[cat] = { count: 0, qty: 0, revenue: 0, cost: 0, profit: 0 };
-    categoryStats[cat].count += 1;
-    categoryStats[cat].qty += s.quantity || 0;
-    categoryStats[cat].revenue += s.subtotal || 0;
-    categoryStats[cat].cost += s.cost || 0;
-    categoryStats[cat].profit += s.sales || 0;
-  });
-
-  const categoryLines = Object.entries(categoryStats)
-    .sort(([, a], [, b]) => b.revenue - a.revenue)
-    .map(([cat, st]) => {
-      const margin = st.revenue > 0 ? ((st.profit / st.revenue) * 100).toFixed(1) : '0';
-      return `- **${cat}**: ${st.count} orders (${st.qty} items) | Revenue: RM ${st.revenue.toFixed(2)} | Net Profit: RM ${st.profit.toFixed(2)} (${margin}% margin)`;
-    });
-
-  // Pre-compute marketplace statistics
-  const marketplaceStats: Record<string, { count: number; revenue: number; profit: number }> = {};
-  sales.forEach((s) => {
-    if (!s.marketplace) return;
-    const mp = s.marketplace;
-    if (!marketplaceStats[mp]) marketplaceStats[mp] = { count: 0, revenue: 0, profit: 0 };
-    marketplaceStats[mp].count += 1;
-    marketplaceStats[mp].revenue += s.subtotal || 0;
-    marketplaceStats[mp].profit += s.sales || 0;
-  });
-
-  const marketplaceLines = Object.entries(marketplaceStats).map(
-    ([mp, st]) =>
-      `- ${mp}: ${st.count} orders | Revenue: RM ${st.revenue.toFixed(2)} | Profit: RM ${st.profit.toFixed(2)}`
-  );
-
-  // Pre-compute order and payment status aggregates
-  const orderStatusStats: Record<string, { count: number; total: number }> = {};
-  const paymentStatusStats: Record<string, { count: number; total: number }> = {};
-  sales.forEach((s) => {
-    if (s.order_status) {
-      const os = s.order_status;
-      if (!orderStatusStats[os]) orderStatusStats[os] = { count: 0, total: 0 };
-      orderStatusStats[os].count += 1;
-      orderStatusStats[os].total += s.subtotal || 0;
-    }
-    if (s.payment_status) {
-      const ps = s.payment_status;
-      if (!paymentStatusStats[ps]) paymentStatusStats[ps] = { count: 0, total: 0 };
-      paymentStatusStats[ps].count += 1;
-      paymentStatusStats[ps].total += s.subtotal || 0;
-    }
-  });
-
-  const orderStatusLines = Object.entries(orderStatusStats).map(
-    ([os, st]) => `- ${os}: ${st.count} orders (RM ${st.total.toFixed(2)})`
-  );
-  const paymentStatusLines = Object.entries(paymentStatusStats).map(
-    ([ps, st]) => `- ${ps}: ${st.count} orders (RM ${st.total.toFixed(2)})`
-  );
-
-  // Pre-compute top sold items by quantity and revenue
-  const itemStats: Record<string, { count: number; qty: number; revenue: number }> = {};
-  sales.forEach((s) => {
-    const it = s.item?.trim() || 'Unknown';
-    if (!itemStats[it]) itemStats[it] = { count: 0, qty: 0, revenue: 0 };
-    itemStats[it].count += 1;
-    itemStats[it].qty += s.quantity || 1;
-    itemStats[it].revenue += s.subtotal || 0;
-  });
-
-  const topItemsLines = Object.entries(itemStats)
-    .sort(([, a], [, b]) => b.qty - a.qty || b.revenue - a.revenue)
-    .slice(0, 10)
-    .map(
-      ([it, st], idx) =>
-        `${idx + 1}. **${it}**: ${st.qty} items sold (${st.count} orders) | Total: RM ${st.revenue.toFixed(2)}`
-    );
-
-  // Compact sales list for direct context querying
-  const compactSales = sales.map((s) => ({
-    id: s.id,
-    item: s.item,
-    qty: s.quantity,
-    subtotal: s.subtotal,
-    cost: s.cost,
-    profit: s.sales,
-    customer: s.customer,
-    category: s.category,
-    marketplace: s.marketplace,
-    order_status: s.order_status,
-    payment_status: s.payment_status,
-    payment_method: s.payment_method,
-    date: s.date,
-    month: s.date && s.date.length >= 7 ? s.date.slice(0, 7) : '',
-    location: s.location || '',
-  }));
-
-  const avgOrderValue = totalCount > 0 ? (totalRevenue / totalCount).toFixed(2) : '0.00';
-  const overallMargin = totalRevenue > 0 ? ((totalProfit / totalRevenue) * 100).toFixed(1) : '0';
-
-  return `You are "AI Assistant", an ultra-high-precision analytics and management assistant integrated into a modern Sales Dashboard.
-
-### CALENDAR & DATE GROUND TRUTH:
-- TODAY'S DATE: ${todayStr} (${currentMonthName} ${now.getDate()}, ${currentYear})
-- THIS CURRENT MONTH: "${currentMonthName} ${currentYear}" (Key: "${currentYearMonth}")
-- LAST MONTH: "${lastMonthName} ${lastMonthYear}" (Key: "${lastMonthYearMonth}")
-
-### PRE-COMPUTED MONTHLY AGGREGATES (GROUND TRUTH):
-${monthlySummaryLines.join('\n') || '- No sales records available.'}
-
-### PRE-COMPUTED TOP CUSTOMERS (BY TOTAL SPEND):
-${topCustomersLines.join('\n') || '- None'}
-
-### PRE-COMPUTED CATEGORY BREAKDOWN:
-${categoryLines.join('\n') || '- None'}
-
-### PRE-COMPUTED MARKETPLACE BREAKDOWN:
-${marketplaceLines.join('\n')}
-
-### PRE-COMPUTED FULFILLMENT & PAYMENT STATUS:
-*Order Fulfillment:*
-${orderStatusLines.join('\n')}
-*Payment Status:*
-${paymentStatusLines.join('\n')}
-
-### PRE-COMPUTED TOP PRODUCTS:
-${topItemsLines.join('\n') || '- None'}
-
-### OVERALL FINANCIAL SUMMARY:
-- Total Orders: ${totalCount}
-- Total Revenue: RM ${totalRevenue.toFixed(2)}
-- Total Cost: RM ${totalCost.toFixed(2)}
-- Total Net Profit: RM ${totalProfit.toFixed(2)}
-- Average Order Value (AOV): RM ${avgOrderValue}
-- Overall Profit Margin: ${overallMargin}%
-
-### AVAILABLE SYSTEM OPTIONS:
-- Categories: ${categories.join(', ')}
-- Marketplaces: ${marketplaces.join(', ')}
-- Order Statuses: ${orderStatuses.join(', ')}
-- Payment Statuses: ${paymentStatuses.join(', ')}
-- Payment Methods: ${paymentMethods.join(', ')}
-
-### ALL RAW SALES RECORDS (${compactSales.length} orders):
-\`\`\`json
-${JSON.stringify(compactSales)}
-\`\`\`
-
-### STRICT ACCURACY DIRECTIVES:
-1. **DETERMINISTIC CITATION:** For all summary, monthly, customer, category, and status questions, you MUST directly cite the exact pre-computed numbers above. Do not perform mental estimations or guess.
-2. **MONTH FILTERING:** Only include orders whose 'date' string strictly starts with the requested month's prefix (e.g. July 2026 is "2026-07-XX", June 2026 is "2026-06-XX").
-3. **ZERO HALLUCINATION:** If asked about a customer, product, or date range that has 0 sales or does not exist, state clearly that no records were found.
-4. **TOOL USAGE:** Use \`create_sale_item\`, \`update_sale_item\`, \`request_delete_sale_item\`, \`switch_dashboard_view\`, or \`filter_dashboard_search\` as appropriate when executing actions.
-5. **CURRENCY FORMAT:** Always format currency as "RM X.XX".`;
+### CRITICAL OPERATIONAL DIRECTIVES:
+1. **ZERO LLM MATH (NON-NEGOTIABLE):** 
+   You MUST NEVER calculate, sum, subtract, average, or guess numerical values yourself.
+   Whenever a user asks for revenue, profit, costs, order counts, averages, performance, summaries, monthly/daily trends, category breakdowns, customer rankings, or charts, you MUST call the \`query_sales_metrics\` function.
+2. **STRICT POSTGRESQL AGGREGATION:**
+   The central PostgreSQL database is the sole source of mathematical truth. When \`query_sales_metrics\` returns aggregated results, you must cite those exact database figures.
+3. **DETERMINISTIC METRICS TABLE & NO DUPLICATE MARKDOWN:**
+   When invoking \`query_sales_metrics\`, provide a clean, informative \`chart_title\` (e.g. "Top 5 Customers by Total Spend", "Monthly Revenue & Profit Breakdown").
+   ALWAYS select at most 1 or 2 metrics (e.g. \`["revenue", "profit"]\` or \`["revenue"]\`). NEVER request 3 or more metrics simultaneously.
+   CRITICAL: NEVER format data rows as a markdown table in your text response. A dedicated data table card is already automatically rendered for the user. In your text response, provide ONLY a 1-2 sentence executive summary or commentary highlighting the top numbers.
+4. **CURRENCY FORMATTING:**
+   Always format currency as "RM X.XX" (e.g. RM 1,450.00).
+5. **DATE FORMATTING (MANDATORY):**
+   Always format dates presented to the user in "DD/MM/YYYY" format (e.g. "03/09/2026").
+   For monthly breakdowns, period labels, and trends, format as "MM/YYYY" (e.g. "09/2026").
+   You may use "DD/MM" for compact item listings within the same year.
+   (Note: For database query filters and create/update item actions, continue passing standard ISO "YYYY-MM-DD" internally).
+6. **DASHBOARD ACTIONS & USER ORDER CRUD FORMS:**
+   - Use \`open_create_sale_form\` whenever the user asks to create a new order, add an order, record a sale, or fill up an order form. This displays an interactive form card directly inside the chat dialog box where the user can enter their own details and click confirm.
+   - Use \`open_update_sale_form\` whenever the user asks to edit, update, or modify an existing order. This displays an interactive edit form card in the chat dialog box allowing the user to select an order, adjust status or prices, and click confirm.
+   - Use \`request_delete_sale_item\` when the user asks to remove an order.`;
 }
 
-// Smart fuzzy matching for updates and deletes
+// Helper: Smart fuzzy matching for updates and deletes
 function findBestMatchingSale(sales: SaleItem[], targetId?: string, searchHint?: string): SaleItem | undefined {
   if (targetId) {
     const exact = sales.find((s) => s.id === targetId);
@@ -464,7 +237,13 @@ function findBestMatchingSale(sales: SaleItem[], targetId?: string, searchHint?:
   const hint = searchHint.toLowerCase().trim();
   if (!hint) return undefined;
 
-  // 1. Direct match on ID, customer, item or location
+  // Support matching the most recent / latest order when requested
+  if (hint.includes('latest') || hint.includes('recent') || hint.includes('last') || hint === 'newest') {
+    if (sales.length > 0) {
+      return [...sales].sort((a, b) => (b.date || '').localeCompare(a.date || ''))[0];
+    }
+  }
+
   const directMatches = sales.filter(
     (s) =>
       s.id.toLowerCase() === hint ||
@@ -479,7 +258,6 @@ function findBestMatchingSale(sales: SaleItem[], targetId?: string, searchHint?:
     return directMatches.sort((a, b) => (b.date || '').localeCompare(a.date || ''))[0];
   }
 
-  // 2. Token match
   const tokens = hint.split(/\s+/).filter((t) => t.length > 1);
   if (tokens.length > 0) {
     let bestMatch: SaleItem | undefined;
@@ -503,13 +281,19 @@ function findBestMatchingSale(sales: SaleItem[], targetId?: string, searchHint?:
   return undefined;
 }
 
-// Fetch with automatic retry and exponential backoff for transient failures
+// Fetch with automatic retry and exponential backoff
 async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 2): Promise<Response> {
   let lastError: unknown;
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       const resp = await fetch(url, options);
-      if (resp.ok || resp.status === 400 || resp.status === 401 || resp.status === 403 || resp.status === 404) {
+      if (
+        resp.ok ||
+        resp.status === 400 ||
+        resp.status === 401 ||
+        resp.status === 403 ||
+        resp.status === 404
+      ) {
         return resp;
       }
       if (attempt < maxRetries) {
@@ -532,13 +316,13 @@ async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 2)
 }
 
 /**
- * Server Action: Send a message to Google AI Studio Gemini API with multi-turn tool calling
- * Completely executed on the server using server-side GOOGLE_API_KEY.
+ * Server Action: Send a message to Google AI Studio Gemini API
+ * Powered by Deterministic Semantic Function-Calling Pipeline
  */
 export async function sendSalesAiMessage(
   history: ChatMessage[],
   newMessage: string,
-  sales: SaleItem[]
+  sales: SaleItem[] = []
 ): Promise<AiServerResponse> {
   const apiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -548,9 +332,9 @@ export async function sendSalesAiMessage(
   }
 
   const modelName = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
-  const systemInstruction = buildSystemInstruction(sales);
+  const systemInstruction = buildSystemInstruction();
 
-  // Prepare Gemini conversation payload (pruned to last 8 turns for speed and token efficiency)
+  // Prepare Gemini conversation payload (pruned to recent turns for efficiency)
   const contents: Array<{
     role: 'user' | 'model';
     parts: Array<Record<string, unknown>>;
@@ -571,7 +355,6 @@ export async function sendSalesAiMessage(
     }
   }
 
-  // Add current new user message
   contents.push({
     role: 'user',
     parts: [{ text: newMessage }],
@@ -634,23 +417,17 @@ export async function sendSalesAiMessage(
     }
   }
 
-  // Handle Tool Calls if Gemini invoked any
+  // Handle Tool Calls if Gemini requested any
   if (functionCalls.length > 0) {
-    let createdSalePayload: Omit<SaleItem, 'id'> | undefined;
-    let updatedSalePayload: {
-      id: string;
-      updates: Partial<SaleItem>;
-      item: SaleItem;
-      changes: Record<string, { before: unknown; after: unknown }>;
-    } | undefined;
+    let resolvedChartSpec: ChartSpec | undefined;
     let pendingDeleteResult: {
       id: string;
       itemName: string;
       customer: string;
       subtotal: number;
     } | undefined;
-    let switchViewTarget: ViewMode | undefined;
-    let filterQueryTarget: string | undefined;
+    let pendingCreateFormResult: PendingCreateForm | undefined;
+    let pendingUpdateFormResult: PendingUpdateForm | undefined;
     let actionExecutedDescription = '';
 
     const functionResponses: Array<{
@@ -663,99 +440,92 @@ export async function sendSalesAiMessage(
     for (const call of functionCalls) {
       const { name, args } = call;
 
-      if (name === 'create_sale_item') {
-        const item = String(args.item || 'Untitled Order');
-        const quantity = args.quantity !== undefined && !isNaN(Number(args.quantity)) ? Number(args.quantity) : 0;
-        const subtotal = Number(args.subtotal) || 0;
-        const cost = Number(args.cost) || 0;
-        const salesProfit = Number((subtotal - cost).toFixed(2));
-        const customer = args.customer ? String(args.customer) : '';
-        const category = args.category ? String(args.category) : '';
-        const marketplace = args.marketplace ? String(args.marketplace) : '';
-        const payment_method = args.payment_method ? String(args.payment_method) : '';
-        const order_status = args.order_status ? String(args.order_status) : '';
-        const payment_status = args.payment_status ? String(args.payment_status) : '';
-        const date = String(args.date || new Date().toISOString().split('T')[0]);
-        const location = args.location ? String(args.location) : undefined;
-        const notes = args.notes ? String(args.notes) : undefined;
+      if (name === 'query_sales_metrics') {
+        // Execute Deterministic Semantic Function-Calling against PostgreSQL
+        try {
+          const queryResult = await executeSalesMetricsQuery(
+            args as unknown as QuerySalesMetricsArgs,
+            sales
+          );
 
-        createdSalePayload = {
-          item,
-          quantity,
-          subtotal,
-          cost,
-          sales: salesProfit,
-          customer,
-          category,
-          marketplace,
-          payment_method,
-          order_status,
-          payment_status,
-          date,
-          location,
-          notes,
+          resolvedChartSpec = queryResult.chartSpec;
+          actionExecutedDescription = `Generated analytics for ${resolvedChartSpec.title}`;
+
+          functionResponses.push({
+            functionResponse: {
+              name,
+              response: {
+                status: 'success',
+                row_count: queryResult.rowCount,
+                records: queryResult.data,
+                chart_spec: {
+                  type: queryResult.chartSpec.type,
+                  title: queryResult.chartSpec.title,
+                  xAxisKey: queryResult.chartSpec.xAxisKey,
+                  dataKeys: queryResult.chartSpec.dataKeys,
+                },
+                source: queryResult.source,
+              },
+            },
+          });
+        } catch (err: unknown) {
+          const errMsg = err instanceof Error ? err.message : 'Database aggregation query failed';
+          functionResponses.push({
+            functionResponse: {
+              name,
+              response: {
+                status: 'error',
+                error: errMsg,
+              },
+            },
+          });
+        }
+      } else if (name === 'open_create_sale_form') {
+        const item = args.item ? String(args.item) : undefined;
+        const quantity = args.quantity !== undefined && !isNaN(Number(args.quantity)) ? Number(args.quantity) : undefined;
+        const subtotal = args.subtotal !== undefined && !isNaN(Number(args.subtotal)) ? Number(args.subtotal) : undefined;
+        const customer = args.customer ? String(args.customer) : undefined;
+        const marketplace = args.marketplace ? String(args.marketplace) : undefined;
+
+        pendingCreateFormResult = {
+          initialValues: {
+            item,
+            quantity,
+            subtotal,
+            customer,
+            marketplace,
+          },
         };
-
-        actionExecutedDescription = `Created new item: "${item}" for ${customer} (RM ${subtotal})`;
+        actionExecutedDescription = 'Opened interactive order creation form';
 
         functionResponses.push({
           functionResponse: {
             name,
             response: {
-              success: true,
-              item,
-              customer,
-              subtotal,
-              profit: salesProfit,
+              status: 'form_displayed',
+              message: 'Interactive order creation form is now displayed in the dialog for the user to fill and confirm.',
             },
           },
         });
-      } else if (name === 'update_sale_item') {
-        const targetId = args.id ? String(args.id) : undefined;
+      } else if (name === 'open_update_sale_form') {
+        const orderId = args.order_id ? String(args.order_id) : undefined;
         const searchHint = args.search_hint ? String(args.search_hint) : undefined;
-        const updates = (args.updates || {}) as Partial<SaleItem>;
 
-        const existing = findBestMatchingSale(sales, targetId, searchHint);
+        pendingUpdateFormResult = {
+          orderId,
+          searchHint,
+        };
+        actionExecutedDescription = 'Opened interactive order update form';
 
-        if (existing) {
-          const changes: Record<string, { before: unknown; after: unknown }> = {};
-          for (const [k, v] of Object.entries(updates)) {
-            const key = k as keyof SaleItem;
-            changes[k] = { before: existing[key], after: v };
-          }
-
-          const updatedItem: SaleItem = { ...existing, ...updates };
-
-          updatedSalePayload = {
-            id: existing.id,
-            updates,
-            item: updatedItem,
-            changes,
-          };
-          actionExecutedDescription = `Updated "${updatedItem.item}" (${Object.keys(updates).join(', ')})`;
-
-          functionResponses.push({
-            functionResponse: {
-              name,
-              response: {
-                success: true,
-                id: existing.id,
-                item: updatedItem.item,
-                updated_fields: updates,
-              },
+        functionResponses.push({
+          functionResponse: {
+            name,
+            response: {
+              status: 'form_displayed',
+              message: 'Interactive order update form is now displayed in the dialog for the user to select and confirm.',
             },
-          });
-        } else {
-          functionResponses.push({
-            functionResponse: {
-              name,
-              response: {
-                success: false,
-                error: `Could not find an item matching "${targetId || searchHint}". Please provide more details or the item ID.`,
-              },
-            },
-          });
-        }
+          },
+        });
       } else if (name === 'request_delete_sale_item') {
         const id = String(args.id || '');
         const searchHint = String(args.item_name || args.customer || '');
@@ -779,36 +549,14 @@ export async function sendSalesAiMessage(
             name,
             response: {
               status: 'confirmation_required',
-              message: 'Confirmation card has been displayed to user in the chat UI. Waiting for user click.',
+              message: 'Confirmation card has been displayed to user in the chat UI.',
             },
-          },
-        });
-      } else if (name === 'switch_dashboard_view') {
-        const view = String(args.view || 'table') as ViewMode;
-        switchViewTarget = view;
-        actionExecutedDescription = `Switched view to ${view}`;
-
-        functionResponses.push({
-          functionResponse: {
-            name,
-            response: { success: true, view },
-          },
-        });
-      } else if (name === 'filter_dashboard_search') {
-        const query = String(args.query || '');
-        filterQueryTarget = query;
-        actionExecutedDescription = `Filtered dashboard by "${query}"`;
-
-        functionResponses.push({
-          functionResponse: {
-            name,
-            response: { success: true, query },
           },
         });
       }
     }
 
-    // Send function responses back to Gemini on server to get final conversational summary
+    // Follow-up completion: Inject exact aggregate results back into LLM stream
     const followupContents = [
       ...contents,
       candidate.content,
@@ -840,17 +588,29 @@ export async function sendSalesAiMessage(
       console.warn('Failed to get followup summary from Gemini:', err);
     }
 
+    // Defense-in-depth: If structured chartSpec/table is attached, strip any redundant markdown tables from model text
+    if (resolvedChartSpec && modelText) {
+      modelText = modelText
+        .split('\n')
+        .filter((line) => {
+          const t = line.trim();
+          return !(t.startsWith('|') && t.endsWith('|'));
+        })
+        .join('\n')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+    }
+
     return {
       id: `msg-${Date.now()}`,
       role: 'model',
       text: modelText || actionExecutedDescription || 'Action completed successfully.',
       timestamp: Date.now(),
       toolCalls: functionCalls,
-      createdSalePayload,
-      updatedSalePayload,
+      chartSpec: resolvedChartSpec,
       pendingDelete: pendingDeleteResult,
-      switchView: switchViewTarget,
-      filterQuery: filterQueryTarget,
+      pendingCreateForm: pendingCreateFormResult,
+      pendingUpdateForm: pendingUpdateFormResult,
       actionExecuted: actionExecutedDescription,
     };
   }

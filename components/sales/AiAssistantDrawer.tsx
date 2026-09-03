@@ -16,19 +16,19 @@ import {
   AlertTriangle,
   RefreshCw,
   Eye,
-  ShoppingBag,
-  TrendingUp,
-  Users,
-  Clock,
   RotateCcw,
+  CalendarDays,
+  ChartPie,
+  Trophy,
+  Plus,
+  Pencil,
 } from 'lucide-react';
 import type { SaleItem, ViewMode } from '@/types/sales';
-import {
-  sendSalesAiMessage,
-  type ChatMessage,
-} from '@/services/sales/geminiService';
+import { sendSalesAiMessage } from '@/services/sales/geminiService';
+import type { ChatMessage } from '@/types/salesAi';
 import { AiMarkdown } from './AiMarkdown';
-import { useBodyScrollLock } from '@/lib/sales/useBodyScrollLock';
+import { AiChartCard } from './AiChartCard';
+import { AiCreateOrderCard, AiUpdateOrderCard } from './AiOrderForms';
 
 interface AiAssistantDrawerProps {
   isOpen: boolean;
@@ -39,6 +39,21 @@ interface AiAssistantDrawerProps {
   onDeleteSale: (id: string) => Promise<void>;
   onSwitchView: (view: ViewMode) => void;
   onSetSearch: (query: string) => void;
+}
+
+function formatDisplayDate(dateStr?: string): string {
+  if (!dateStr) return '';
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr.trim());
+  if (match) {
+    const [, y, m, d] = match;
+    return `${d}/${m}/${y}`;
+  }
+  const monthMatch = /^(\d{4})-(\d{2})$/.exec(dateStr.trim());
+  if (monthMatch) {
+    const [, y, m] = monthMatch;
+    return `${m}/${y}`;
+  }
+  return dateStr;
 }
 
 interface SpeechRecognitionResultItem {
@@ -133,15 +148,27 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
   const [isListening, setIsListening] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const speechRecognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Auto-scroll on new message so forms and responses are cleanly aligned under the header
+  useEffect(() => {
+    if (messages.length > 1) {
+      const lastMsg = messages[messages.length - 1];
+      const el = document.getElementById(`chat-msg-${lastMsg.id}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else if (messagesContainerRef.current) {
+        messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+      }
+    }
+  }, [messages]);
 
   // Floating Window Geometry (Position & Dimensions)
   const [isMinimized, setIsMinimized] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-
-  useBodyScrollLock(isOpen && !isMinimized);
 
   const [position, setPosition] = useState<{ x: number; y: number } | null>(() => {
     try {
@@ -159,7 +186,6 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed.width >= 300 && parsed.height >= 380) {
-          if (parsed.width === 440) return { width: 380, height: parsed.height };
           return parsed;
         }
       }
@@ -170,27 +196,10 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
   });
 
   const [isDragging, setIsDragging] = useState(false);
-  const [resizingDir, setResizingDir] = useState<string | null>(null);
 
   const dragStartRef = useRef<{ mouseX: number; mouseY: number; posX: number; posY: number }>({
     mouseX: 0,
     mouseY: 0,
-    posX: 0,
-    posY: 0,
-  });
-
-  const resizeStartRef = useRef<{
-    mouseX: number;
-    mouseY: number;
-    width: number;
-    height: number;
-    posX: number;
-    posY: number;
-  }>({
-    mouseX: 0,
-    mouseY: 0,
-    width: 380,
-    height: 600,
     posX: 0,
     posY: 0,
   });
@@ -219,6 +228,11 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
     } else {
       setMobileDragOffsetY(deltaY * 0.15);
     }
+  };
+
+  const handleClearChat = () => {
+    setMessages([createInitialWelcomeMessage()]);
+    localStorage.removeItem(STORAGE_KEY_CHAT_HISTORY);
   };
 
   const handleCloseAndClear = () => {
@@ -292,10 +306,10 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
     currentSizeRef.current = size;
   }, [size]);
 
-  // Dragging and Resizing Global Mouse Event Handlers (Butter-smooth with rAF)
+  // Dragging Global Mouse Event Handlers (Butter-smooth with rAF)
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      if (!isDragging && !resizingDir) return;
+      if (!isDragging) return;
 
       if (animationFrameRef.current !== null) {
         cancelAnimationFrame(animationFrameRef.current);
@@ -311,43 +325,6 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
 
           const newPos = { x: newX, y: newY };
           setPosition(newPos);
-        } else if (resizingDir) {
-          const dx = e.clientX - resizeStartRef.current.mouseX;
-          const dy = e.clientY - resizeStartRef.current.mouseY;
-
-          const minW = 300;
-          const maxW = Math.min(950, window.innerWidth - 16);
-          const minH = 380;
-          const maxH = Math.min(900, window.innerHeight - 16);
-
-          let newW = resizeStartRef.current.width;
-          let newH = resizeStartRef.current.height;
-          let newX = resizeStartRef.current.posX;
-          let newY = resizeStartRef.current.posY;
-
-          if (resizingDir.includes('e')) {
-            newW = Math.min(Math.max(minW, resizeStartRef.current.width + dx), maxW);
-          }
-          if (resizingDir.includes('w')) {
-            const rawW = resizeStartRef.current.width - dx;
-            const clampedW = Math.min(Math.max(minW, rawW), maxW);
-            newW = clampedW;
-            newX = Math.max(8, resizeStartRef.current.posX + (resizeStartRef.current.width - clampedW));
-          }
-          if (resizingDir.includes('s')) {
-            newH = Math.min(Math.max(minH, resizeStartRef.current.height + dy), maxH);
-          }
-          if (resizingDir.includes('n')) {
-            const rawH = resizeStartRef.current.height - dy;
-            const clampedH = Math.min(Math.max(minH, rawH), maxH);
-            newH = clampedH;
-            newY = Math.max(8, resizeStartRef.current.posY + (resizeStartRef.current.height - clampedH));
-          }
-
-          const newSize = { width: newW, height: newH };
-          const newPos = { x: newX, y: newY };
-          setSize(newSize);
-          setPosition(newPos);
         }
       });
     };
@@ -358,17 +335,13 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
         animationFrameRef.current = null;
       }
 
-      if (isDragging || resizingDir) {
+      if (isDragging) {
         setIsDragging(false);
-        setResizingDir(null);
 
-        // Commit saved position & size to localStorage on mouseUp
+        // Commit saved position to localStorage on mouseUp
         try {
           if (currentPosRef.current) {
             localStorage.setItem('sales_ai_window_pos', JSON.stringify(currentPosRef.current));
-          }
-          if (currentSizeRef.current) {
-            localStorage.setItem('sales_ai_window_size', JSON.stringify(currentSizeRef.current));
           }
         } catch {
           /* ignore */
@@ -376,11 +349,11 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
       }
     };
 
-    if (isDragging || resizingDir) {
+    if (isDragging) {
       window.addEventListener('mousemove', handleMouseMove, { passive: true });
       window.addEventListener('mouseup', handleMouseUp);
       document.body.style.userSelect = 'none';
-      document.body.style.cursor = isDragging ? 'grabbing' : '';
+      document.body.style.cursor = 'grabbing';
     }
 
     return () => {
@@ -392,7 +365,7 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
       document.body.style.userSelect = '';
       document.body.style.cursor = '';
     };
-  }, [isDragging, resizingDir]);
+  }, [isDragging]);
 
   const handleHeaderMouseDown = (e: React.MouseEvent) => {
     if (e.button !== 0) return;
@@ -408,48 +381,42 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
     setIsDragging(true);
   };
 
-  const handleResizeStart = (e: React.MouseEvent, dir: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    const currentPos = getEffectivePosition();
-    resizeStartRef.current = {
-      mouseX: e.clientX,
-      mouseY: e.clientY,
-      width: size.width,
-      height: size.height,
-      posX: currentPos.x,
-      posY: currentPos.y,
-    };
-    setResizingDir(dir);
-  };
-
-  // Quick Action Prompts
-  const quickPrompts = [
+  // Quick Action Prompts (3 Analytics based + 2 Sales Order CRUD based)
+  const quickPrompts: Array<{
+    label: string;
+    prompt: string;
+    icon: React.ReactNode;
+    action: 'send' | 'create_form' | 'update_form';
+  }> = [
     {
-      label: 'Sales Summary',
-      prompt: 'Give me a complete summary of total revenue, costs, net profit, and average order value.',
-      icon: <TrendingUp className="w-3 h-3 text-blue-500" />,
+      label: 'Monthly Trend',
+      prompt: 'Show our monthly revenue and net profit breakdown in a table.',
+      icon: <CalendarDays className="w-3 h-3 text-blue-500" />,
+      action: 'send',
     },
     {
-      label: 'Top Customers',
-      prompt: 'Who are our top 5 customers by total spending and order volume?',
-      icon: <Users className="w-3 h-3 text-emerald-500" />,
+      label: 'Category Breakdown',
+      prompt: 'Break down revenue and net profit by product category in a table.',
+      icon: <ChartPie className="w-3 h-3 text-purple-500" />,
+      action: 'send',
     },
     {
-      label: 'Unshipped Orders',
-      prompt: 'List all orders that are currently "Processing" or have not been shipped yet.',
-      icon: <Clock className="w-3 h-3 text-amber-500" />,
+      label: 'Top 5 Customers',
+      prompt: 'Who are our top 5 customers ranked by total spend? Show in a table.',
+      icon: <Trophy className="w-3 h-3 text-amber-500" />,
+      action: 'send',
     },
     {
-      label: 'Unpaid Orders',
-      prompt: 'Show all orders with payment status "On Hold" or "Processing".',
-      icon: <ShoppingBag className="w-3 h-3 text-rose-500" />,
+      label: 'Create New Order',
+      prompt: 'Create New Order',
+      icon: <Plus className="w-3 h-3 text-emerald-500" />,
+      action: 'create_form',
     },
     {
-      label: 'Create Sample Order',
-      prompt: 'Create a new order: 2 Pokemon Ultra Prism Booster Packs for RM 280 total, cost RM 160, customer "Daniel Tan", sold on Shopee today, Paid and Shipped.',
-      icon: <Sparkles className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />,
+      label: 'Edit Existing Order',
+      prompt: 'Edit Existing Order',
+      icon: <Pencil className="w-3 h-3 text-orange-500" />,
+      action: 'update_form',
     },
   ];
 
@@ -478,38 +445,16 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
         sales
       );
 
-      let createdSale: SaleItem | undefined;
-      let updatedSale: { item: SaleItem; changes: Record<string, { before: unknown; after: unknown }> } | undefined;
-
-      if (serverResponse.createdSalePayload) {
-        createdSale = await onCreateSale(serverResponse.createdSalePayload);
-      }
-
-      if (serverResponse.updatedSalePayload) {
-        await onUpdateSale(serverResponse.updatedSalePayload.id, serverResponse.updatedSalePayload.updates);
-        updatedSale = {
-          item: serverResponse.updatedSalePayload.item,
-          changes: serverResponse.updatedSalePayload.changes,
-        };
-      }
-
-      if (serverResponse.switchView) {
-        onSwitchView(serverResponse.switchView);
-      }
-
-      if (serverResponse.filterQuery !== undefined) {
-        onSetSearch(serverResponse.filterQuery);
-      }
-
       const aiResponse: ChatMessage = {
         id: serverResponse.id,
         role: 'model',
         text: serverResponse.text,
         timestamp: serverResponse.timestamp,
         toolCalls: serverResponse.toolCalls,
-        createdSale,
-        updatedSale,
+        chartSpec: serverResponse.chartSpec,
         pendingDelete: serverResponse.pendingDelete,
+        pendingCreateForm: serverResponse.pendingCreateForm,
+        pendingUpdateForm: serverResponse.pendingUpdateForm,
         actionExecuted: serverResponse.actionExecuted,
       };
 
@@ -528,17 +473,11 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
     }
   };
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
       e.preventDefault();
       handleSendMessage();
     }
-  };
-
-  // Clear chat history
-  const handleClearChat = () => {
-    setMessages([createInitialWelcomeMessage()]);
-    localStorage.removeItem(STORAGE_KEY_CHAT_HISTORY);
   };
 
   // Voice Dictation (Web Speech API)
@@ -638,6 +577,112 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
     );
   };
 
+  // Confirm and Cancel handlers for Interactive Creation Form Card
+  const handleConfirmCreateForm = async (msgId: string, payload: Omit<SaleItem, 'id'>) => {
+    try {
+      const created = await onCreateSale(payload);
+      setMessages((prev) =>
+        prev.map((msg) => {
+          if (msg.id === msgId) {
+            return {
+              ...msg,
+              text: `✅ **Order Created**: Successfully recorded **"${created.item}"** for **${created.customer}** (RM ${created.subtotal.toFixed(2)}).`,
+              pendingCreateForm: {
+                ...msg.pendingCreateForm,
+                confirmed: true,
+              },
+              createdSale: created,
+            };
+          }
+          return msg;
+        })
+      );
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : 'Unknown error occurred';
+      alert(`Failed to create order: ${errMsg}`);
+    }
+  };
+
+  const handleCancelCreateForm = (msgId: string) => {
+    setMessages((prev) =>
+      prev.map((msg) => {
+        if (msg.id === msgId) {
+          return {
+            ...msg,
+            text: `❌ *Order creation was cancelled.*`,
+            pendingCreateForm: {
+              ...msg.pendingCreateForm,
+              cancelled: true,
+            },
+          };
+        }
+        return msg;
+      })
+    );
+  };
+
+  // Confirm and Cancel handlers for Interactive Update Form Card
+  const handleConfirmUpdateForm = async (
+    msgId: string,
+    saleId: string,
+    updates: Partial<SaleItem>
+  ) => {
+    try {
+      const targetSale = sales.find((s) => s.id === saleId);
+      if (!targetSale) throw new Error('Selected order not found.');
+
+      await onUpdateSale(saleId, updates);
+
+      const changes: Record<string, { before: unknown; after: unknown }> = {};
+      for (const [k, v] of Object.entries(updates)) {
+        const key = k as keyof SaleItem;
+        changes[k] = { before: targetSale[key], after: v };
+      }
+      const updatedItem: SaleItem = { ...targetSale, ...updates };
+
+      setMessages((prev) =>
+        prev.map((msg) => {
+          if (msg.id === msgId) {
+            return {
+              ...msg,
+              text: `✅ **Order Updated**: Successfully updated **"${updatedItem.item}"** for **${updatedItem.customer}**.`,
+              pendingUpdateForm: {
+                ...msg.pendingUpdateForm,
+                confirmed: true,
+              },
+              updatedSale: {
+                item: updatedItem,
+                changes,
+              },
+            };
+          }
+          return msg;
+        })
+      );
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : 'Unknown error occurred';
+      alert(`Failed to update order: ${errMsg}`);
+    }
+  };
+
+  const handleCancelUpdateForm = (msgId: string) => {
+    setMessages((prev) =>
+      prev.map((msg) => {
+        if (msg.id === msgId) {
+          return {
+            ...msg,
+            text: `❌ *Order update was cancelled.*`,
+            pendingUpdateForm: {
+              ...msg.pendingUpdateForm,
+              cancelled: true,
+            },
+          };
+        }
+        return msg;
+      })
+    );
+  };
+
   if (!isOpen) return null;
 
   // Minimized Floating Pill UI (Preserves conversation state)
@@ -674,7 +719,7 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
   const isMobileScreen = typeof window !== 'undefined' && window.innerWidth < 768;
   const currentPos = getEffectivePosition();
 
-  // Desktop-only floating & resizable geometry
+  // Desktop-only floating geometry
   const desktopWindowStyle: React.CSSProperties = isFullscreen
     ? {
         left: '8px',
@@ -690,12 +735,12 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
         top: `${currentPos.y}px`,
         width: `${size.width}px`,
         height: `${size.height}px`,
-        willChange: isDragging || resizingDir ? 'left, top, width, height' : 'auto',
+        willChange: isDragging ? 'left, top' : 'auto',
         opacity: isClosing ? 0 : 1,
         transform: isClosing ? 'scale(0.96)' : 'scale(1)',
         transition: isClosing
           ? 'opacity 0.22s ease, transform 0.22s ease'
-          : isDragging || resizingDir
+          : isDragging
           ? 'none'
           : 'width 0.15s ease-out, height 0.15s ease-out, left 0.15s ease-out, top 0.15s ease-out',
       };
@@ -737,58 +782,10 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
         className={`fixed z-50 flex flex-col bg-white/98 dark:bg-[#1c1c1e]/98 backdrop-blur-2xl border border-black/[0.08] dark:border-white/[0.12] overflow-hidden font-sans overscroll-contain
           /* Fixed iOS Bottom Sheet Layout on Mobile */
           inset-x-0 bottom-0 top-12 rounded-t-[28px] shadow-[0_-8px_32px_rgba(0,0,0,0.2)] dark:shadow-[0_-8px_32px_rgba(0,0,0,0.6)] animate-in slide-in-from-bottom-4 duration-200
-          /* Floating Draggable & Resizable Window Layout on Desktop (md+) */
+          /* Floating Draggable Window Layout on Desktop (md+) */
           md:inset-auto md:rounded-[22px] md:shadow-[0_24px_70px_rgba(0,0,0,0.28)] md:dark:shadow-[0_24px_70px_rgba(0,0,0,0.6)] md:animate-none
-          ${isDragging || resizingDir ? 'transition-none select-none pointer-events-auto' : ''}
-          ${isDragging ? 'shadow-[0_30px_90px_rgba(0,0,0,0.4)] ring-2 ring-[#2383e2]/30' : ''}`}
+          ${isDragging ? 'transition-none select-none pointer-events-auto shadow-[0_30px_90px_rgba(0,0,0,0.4)] ring-2 ring-[#2383e2]/30' : ''}`}
       >
-      {/* 8-Directional Resize Handles (Desktop only) */}
-      {!isFullscreen && !isMobileScreen && (
-        <>
-          <div
-            onMouseDown={(e) => handleResizeStart(e, 'n')}
-            className="absolute top-0 left-3 right-3 h-2 cursor-ns-resize z-30"
-          />
-          <div
-            onMouseDown={(e) => handleResizeStart(e, 's')}
-            className="absolute bottom-0 left-3 right-3 h-2 cursor-ns-resize z-30"
-          />
-          <div
-            onMouseDown={(e) => handleResizeStart(e, 'w')}
-            className="absolute left-0 top-3 bottom-3 w-2 cursor-ew-resize z-30"
-          />
-          <div
-            onMouseDown={(e) => handleResizeStart(e, 'e')}
-            className="absolute right-0 top-3 bottom-3 w-2 cursor-ew-resize z-30"
-          />
-          <div
-            onMouseDown={(e) => handleResizeStart(e, 'nw')}
-            className="absolute top-0 left-0 w-4 h-4 cursor-nwse-resize z-30"
-          />
-          <div
-            onMouseDown={(e) => handleResizeStart(e, 'ne')}
-            className="absolute top-0 right-0 w-4 h-4 cursor-nesw-resize z-30"
-          />
-          <div
-            onMouseDown={(e) => handleResizeStart(e, 'sw')}
-            className="absolute bottom-0 left-0 w-4 h-4 cursor-nesw-resize z-30"
-          />
-          <div
-            onMouseDown={(e) => handleResizeStart(e, 'se')}
-            className="absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize z-30 flex items-end justify-end p-1"
-          >
-            <svg
-              viewBox="0 0 6 6"
-              className="w-2 h-2 text-neutral-300 dark:text-neutral-600 pointer-events-none"
-              fill="currentColor"
-            >
-              <circle cx="5" cy="5" r="0.6" />
-              <circle cx="5" cy="2.5" r="0.6" />
-              <circle cx="2.5" cy="5" r="0.6" />
-            </svg>
-          </div>
-        </>
-      )}
 
       {/* 1. Mobile iOS Navigation Header (iOS Sheet UI with Touch Swipe Down to Dismiss) */}
       <div
@@ -910,14 +907,19 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
       </div>
 
       {/* Message Stream */}
-      <div className="flex-1 overflow-y-auto overscroll-contain p-4 space-y-4 bg-[#fbfbfd] dark:bg-[#161618]">
-        <div className={`flex flex-col space-y-4 ${isFullscreen ? 'max-w-3xl mx-auto w-full' : 'w-full'}`}>
+      <div
+        ref={messagesContainerRef}
+        className="flex-1 overflow-y-auto overscroll-contain p-3.5 sm:p-4 space-y-3.5 bg-[#fbfbfd] dark:bg-[#161618]"
+      >
+        <div className={`flex flex-col space-y-3.5 ${isFullscreen ? 'max-w-3xl mx-auto w-full' : 'w-full'}`}>
           {messages.map((msg) => {
             const isUser = msg.role === 'user';
+            const isCard = Boolean(msg.pendingCreateForm || msg.pendingUpdateForm || msg.chartSpec);
             return (
               <div
                 key={msg.id}
-                className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} space-y-1`}
+                id={`chat-msg-${msg.id}`}
+                className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} ${isCard ? 'w-full' : ''} space-y-1`}
               >
                 <div
                   className={`text-[12.5px] leading-relaxed ${
@@ -925,6 +927,8 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
                       ? 'max-w-[82%] bg-[#2383e2] text-white rounded-[18px] rounded-br-[4px] px-3.5 py-2.5 shadow-[0_1px_3px_rgba(35,131,226,0.25)]'
                       : msg.error
                       ? 'max-w-[88%] bg-red-50 dark:bg-red-950/30 text-red-900 dark:text-red-200 rounded-[18px] rounded-bl-[4px] px-4 py-3 border border-red-200 dark:border-red-800/40 shadow-2xs'
+                      : isCard
+                      ? 'w-full max-w-full bg-white dark:bg-[#252528] text-neutral-900 dark:text-[#f5f5f7] rounded-[18px] rounded-bl-[4px] p-2.5 sm:p-3.5 border border-black/[0.05] dark:border-white/[0.08] shadow-[0_1px_3px_rgba(0,0,0,0.04)]'
                       : 'max-w-[88%] bg-white dark:bg-[#252528] text-neutral-900 dark:text-[#f5f5f7] rounded-[18px] rounded-bl-[4px] px-4 py-3 border border-black/[0.05] dark:border-white/[0.08] shadow-[0_1px_3px_rgba(0,0,0,0.04)]'
                   }`}
                 >
@@ -932,8 +936,21 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
                   {isUser ? (
                     <p className="whitespace-pre-wrap">{msg.text}</p>
                   ) : (
-                    <AiMarkdown content={msg.text} />
+                    <AiMarkdown
+                      content={
+                        msg.chartSpec
+                          ? msg.text
+                              .split('\n')
+                              .filter((l) => !(l.trim().startsWith('|') && l.trim().endsWith('|')))
+                              .join('\n')
+                              .trim()
+                          : msg.text
+                      }
+                    />
                   )}
+
+                  {/* Deterministic Semantic Chart Visualization */}
+                  {msg.chartSpec && <AiChartCard chartSpec={msg.chartSpec} />}
 
                   {/* Apple-style Interactive Card: Created Order */}
                   {msg.createdSale && (
@@ -964,6 +981,12 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
                           <span className="text-neutral-400 dark:text-neutral-500">Store: </span>
                           <span className="text-neutral-800 dark:text-neutral-200">
                             {msg.createdSale.marketplace}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-neutral-400 dark:text-neutral-500">Date: </span>
+                          <span className="text-neutral-800 dark:text-neutral-200">
+                            {formatDisplayDate(msg.createdSale.date)}
                           </span>
                         </div>
                         <div>
@@ -1008,7 +1031,7 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
                             key={field}
                             className="px-2 py-0.5 rounded-md text-[10.5px] font-medium bg-[#2383e2]/10 text-[#2383e2] dark:bg-[#2383e2]/20 dark:text-blue-300"
                           >
-                            {field}: {String(after)}
+                            {field}: {field === 'date' && typeof after === 'string' ? formatDisplayDate(after) : String(after)}
                           </span>
                         ))}
                       </div>
@@ -1057,6 +1080,26 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
                       </div>
                     </div>
                   )}
+
+                  {/* Interactive Form Card: New Sale Creation */}
+                  {msg.pendingCreateForm && !msg.pendingCreateForm.confirmed && !msg.pendingCreateForm.cancelled && (
+                    <AiCreateOrderCard
+                      initialValues={msg.pendingCreateForm.initialValues}
+                      onConfirm={(payload) => handleConfirmCreateForm(msg.id, payload)}
+                      onCancel={() => handleCancelCreateForm(msg.id)}
+                    />
+                  )}
+
+                  {/* Interactive Form Card: Update Order */}
+                  {msg.pendingUpdateForm && !msg.pendingUpdateForm.confirmed && !msg.pendingUpdateForm.cancelled && (
+                    <AiUpdateOrderCard
+                      sales={sales}
+                      initialOrderId={msg.pendingUpdateForm.orderId}
+                      searchHint={msg.pendingUpdateForm.searchHint}
+                      onConfirm={(id, updates) => handleConfirmUpdateForm(msg.id, id, updates)}
+                      onCancel={() => handleCancelUpdateForm(msg.id)}
+                    />
+                  )}
                 </div>
                 <span className="text-[9.5px] text-neutral-400 dark:text-neutral-500 px-1">
                   {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -1069,7 +1112,7 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
           {isLoading && (
             <div className="flex items-center gap-2.5 text-xs text-neutral-500 dark:text-neutral-400 py-2.5 px-4 bg-white/90 dark:bg-[#252528]/90 border border-black/[0.04] dark:border-white/[0.06] rounded-[18px] w-fit shadow-xs">
               <div className="w-3.5 h-3.5 border-2 border-[#2383e2] border-t-transparent rounded-full animate-spin" />
-              <span className="text-[11.5px] font-medium">Analyzing sales data...</span>
+              <span className="text-[11.5px] font-medium">Loading...</span>
             </div>
           )}
 
@@ -1077,15 +1120,41 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
         </div>
       </div>
 
-      {/* Suggested Quick Action Chips */}
-      {messages.length <= 3 && !isLoading && (
+      {/* Suggested Quick Action Chips (Only shown initially before first interaction) */}
+      {messages.length <= 1 && !isLoading && (
         <div className="px-3.5 py-2 bg-[#f6f6f6]/80 dark:bg-[#1e1e20]/80 border-t border-black/[0.04] dark:border-white/[0.06]">
           <div className={`flex gap-1.5 overflow-x-auto overscroll-x-contain pb-0.5 no-scrollbar ${isFullscreen ? 'max-w-3xl mx-auto w-full' : ''}`}>
             {quickPrompts.map((qp, idx) => (
               <button
                 key={idx}
                 type="button"
-                onClick={() => handleSendMessage(qp.prompt)}
+                onClick={() => {
+                  if (qp.action === 'create_form') {
+                    const ts = Date.now();
+                    const userMsg = createUserMessage('I would like to create a new order.');
+                    const modelMsg: ChatMessage = {
+                      id: `create-form-${ts}`,
+                      role: 'model',
+                      text: 'Please enter the order details in the form below and confirm:',
+                      timestamp: ts + 1,
+                      pendingCreateForm: { initialValues: {} },
+                    };
+                    setMessages((prev) => [...prev, userMsg, modelMsg]);
+                  } else if (qp.action === 'update_form') {
+                    const ts = Date.now();
+                    const userMsg = createUserMessage('I would like to edit an order.');
+                    const modelMsg: ChatMessage = {
+                      id: `update-form-${ts}`,
+                      role: 'model',
+                      text: 'Select the order to modify and adjust the fields below, then click confirm to save:',
+                      timestamp: ts + 1,
+                      pendingUpdateForm: {},
+                    };
+                    setMessages((prev) => [...prev, userMsg, modelMsg]);
+                  } else {
+                    handleSendMessage(qp.prompt);
+                  }
+                }}
                 className="whitespace-nowrap px-3 py-1.5 bg-white dark:bg-[#2c2c2e] hover:bg-neutral-100 dark:hover:bg-[#343438] border border-black/[0.06] dark:border-white/[0.08] rounded-full text-[11px] font-medium text-neutral-700 dark:text-neutral-200 transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95"
               >
                 {qp.icon}
@@ -1099,15 +1168,15 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
       {/* Apple Capsule Input Area */}
       <div className="px-3.5 pt-3 pb-3 bg-[#f6f6f6]/95 dark:bg-[#202022]/95 border-t border-black/[0.06] dark:border-white/[0.08] backdrop-blur-xl">
         <div className={isFullscreen ? 'max-w-3xl mx-auto w-full' : 'w-full'}>
-          <div className="relative flex items-end bg-white dark:bg-[#2c2c2e] border border-black/[0.08] dark:border-white/[0.1] rounded-[20px] p-2 focus-within:ring-2 focus-within:ring-[#2383e2]/40 focus-within:border-[#2383e2] transition-all shadow-2xs">
-            <textarea
-              ref={textareaRef}
-              rows={1}
+          <div className="relative flex items-center bg-white dark:bg-[#2c2c2e] border border-black/[0.08] dark:border-white/[0.1] rounded-[20px] p-2 focus-within:ring-2 focus-within:ring-[#2383e2]/40 focus-within:border-[#2383e2] transition-all shadow-2xs">
+            <input
+              ref={inputRef}
+              type="text"
               value={inputQuery}
               onChange={(e) => setInputQuery(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Ask anything..."
-              className="w-full resize-none bg-transparent border-0 px-2.5 py-1 text-[12.5px] text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 focus:outline-hidden leading-relaxed max-h-28"
+              className="w-full bg-transparent border-0 px-2.5 py-1 text-[12.5px] text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 focus:outline-hidden leading-normal"
             />
 
             <div className="flex items-center gap-1.5 pb-0.5 pr-0.5">
