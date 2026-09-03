@@ -472,7 +472,8 @@ export const TableView: FC<TableViewProps> = ({
 
     let parsedVal: string | number = tempValue;
     if (field === 'quantity') {
-      parsedVal = parseInt(tempValue, 10) || 1;
+      const parsed = parseInt(tempValue, 10);
+      parsedVal = isNaN(parsed) ? 0 : Math.max(0, parsed);
     } else if (field === 'subtotal' || field === 'cost' || field === 'sales') {
       parsedVal = parseFloat(tempValue) || 0;
     }
@@ -524,14 +525,18 @@ export const TableView: FC<TableViewProps> = ({
 
   const handleRemoveInvoice = async (e: React.MouseEvent, sale: SaleItem) => {
     e.stopPropagation();
-    if (sale.invoice_url) {
-      await deleteInvoiceFileAction(sale.invoice_url);
-    }
-    if (onUpdateSale) {
-      await onUpdateSale(sale.id, {
-        invoice_name: undefined,
-        invoice_url: undefined,
-      });
+    try {
+      if (sale.invoice_url || sale.id) {
+        await deleteInvoiceFileAction(sale.invoice_url, sale.id);
+      }
+      if (onUpdateSale) {
+        await onUpdateSale(sale.id, {
+          invoice_name: null,
+          invoice_url: null,
+        });
+      }
+    } catch (err) {
+      console.error('Failed to remove invoice:', err);
     }
   };
 
@@ -869,7 +874,7 @@ export const TableView: FC<TableViewProps> = ({
                       <td
                         onClick={() => {
                           setEditingCell({ saleId: sale.id, field: 'quantity' });
-                          setTempValue(String(sale.quantity || 1));
+                          setTempValue(sale.quantity > 0 ? String(sale.quantity) : '');
                         }}
                         className="px-3 py-2 font-mono text-right border-r border-neutral-200/60 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300 cursor-text hover:bg-neutral-100/60 dark:hover:bg-neutral-800/40 transition-colors"
                       >
@@ -888,7 +893,7 @@ export const TableView: FC<TableViewProps> = ({
                           />
                         ) : (
                           <div className="w-full flex items-center justify-end min-h-[22px] min-w-0">
-                            <span className="truncate">{sale.quantity}</span>
+                            <span className="truncate">{sale.quantity > 0 ? sale.quantity : '-'}</span>
                           </div>
                         )}
                       </td>

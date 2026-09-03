@@ -55,7 +55,7 @@ export const FORMULA_COLUMNS: FormulaColumnDef[] = [
     aliases: ['# Quantity', '#Quantity', 'Quantity', 'quantity', 'qty'],
     icon: '🔢',
     type: 'number',
-    getValue: (item) => Number(item?.quantity ?? 1),
+    getValue: (item) => Number(item?.quantity ?? 0),
     description: 'Number of items sold',
   },
   {

@@ -139,14 +139,19 @@ export const computeDonutData = (
   const map = new Map<string, number>();
 
   filteredSales.forEach((s) => {
-    const key =
-      breakdown === 'categories'
-        ? s.category || 'Uncategorized'
-        : breakdown === 'marketplace'
-        ? s.marketplace || 'Other'
-        : breakdown === 'payment'
-        ? s.payment_method || 'Unspecified'
-        : s.item || 'Unknown Item';
+    let key = '';
+    if (breakdown === 'categories') {
+      if (!s.category) return;
+      key = s.category;
+    } else if (breakdown === 'marketplace') {
+      if (!s.marketplace) return;
+      key = s.marketplace;
+    } else if (breakdown === 'payment') {
+      if (!s.payment_method) return;
+      key = s.payment_method;
+    } else {
+      key = s.item || 'Untitled Order';
+    }
 
     const cur = map.get(key) || 0;
     map.set(key, cur + (s.sales || s.subtotal || 0));
@@ -188,7 +193,8 @@ export const computeCategoryMatrix = (
   const map = new Map<string, { category: string; revenue: number; profit: number; cost: number; orders: number; quantity: number }>();
 
   filteredSales.forEach((s) => {
-    const cat = s.category || 'Uncategorized';
+    if (!s.category) return;
+    const cat = s.category;
     const cur = map.get(cat) || {
       category: cat,
       revenue: 0,
@@ -453,15 +459,15 @@ export const computeFulfillmentData = (filteredSales: SaleItem[]): FulfillmentPi
   };
 
   filteredSales.forEach((s) => {
-    const oSt = s.order_status || 'Processing';
-    if (!orderStatusCounts[oSt]) orderStatusCounts[oSt] = { count: 0, revenue: 0 };
-    orderStatusCounts[oSt].count += 1;
-    orderStatusCounts[oSt].revenue += s.subtotal || 0;
+    if (s.order_status && orderStatusCounts[s.order_status]) {
+      orderStatusCounts[s.order_status].count += 1;
+      orderStatusCounts[s.order_status].revenue += s.subtotal || 0;
+    }
 
-    const pSt = s.payment_status || 'Paid';
-    if (!paymentStatusCounts[pSt]) paymentStatusCounts[pSt] = { count: 0, revenue: 0 };
-    paymentStatusCounts[pSt].count += 1;
-    paymentStatusCounts[pSt].revenue += s.subtotal || 0;
+    if (s.payment_status && paymentStatusCounts[s.payment_status]) {
+      paymentStatusCounts[s.payment_status].count += 1;
+      paymentStatusCounts[s.payment_status].revenue += s.subtotal || 0;
+    }
   });
 
   const totalOrders = filteredSales.length;
@@ -557,7 +563,7 @@ export const computeTopProducts = (
       revenue: 0,
       profit: 0,
     };
-    cur.units += s.quantity || 1;
+    cur.units += s.quantity || 0;
     cur.revenue += s.subtotal || 0;
     cur.profit += s.sales || 0;
     map.set(s.item, cur);

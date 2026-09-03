@@ -333,7 +333,12 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
   const handleSaveSale = useCallback(async (saleData: Omit<SaleItem, 'id'> | SaleItem) => {
     try {
       if ('id' in saleData && saleData.id) {
-        const updated = await updateSaleAction(saleData.id, saleData);
+        const payload: Partial<SaleItem> = {
+          ...saleData,
+          invoice_name: saleData.invoice_name || null,
+          invoice_url: saleData.invoice_url || null,
+        };
+        const updated = await updateSaleAction(saleData.id, payload);
         setSales((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
       } else {
         const created = await createSaleAction(saleData);
@@ -398,9 +403,9 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
     setIsSaleModalOpen(true);
   }, []);
 
-  const handleOpenNew = useCallback((defaultStore?: StoreType | string) => {
+  const handleOpenNew = useCallback(() => {
     setEditingSale(null);
-    setDefaultStoreForNewSale(defaultStore || '');
+    setDefaultStoreForNewSale('');
     setIsSaleModalOpen(true);
   }, []);
 
@@ -496,6 +501,9 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
           updatedItem.sales = evaluateSalesFormula(formula, updatedItem);
         }
       }
+
+      // Optimistically update React state immediately so UI responds without waiting for network
+      setSales((prev) => prev.map((s) => (s.id === saleId ? updatedItem : s)));
 
       await handleSaveSale(updatedItem);
     } catch (err) {

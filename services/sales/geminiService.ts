@@ -71,7 +71,7 @@ const GEMINI_FUNCTION_DECLARATIONS = [
       type: 'OBJECT',
       properties: {
         item: { type: 'STRING', description: 'Name or title of the item/product' },
-        quantity: { type: 'NUMBER', description: 'Quantity sold (default 1)' },
+        quantity: { type: 'NUMBER', description: 'Quantity sold' },
         subtotal: { type: 'NUMBER', description: 'Total selling price / revenue in MYR (RM)' },
         cost: { type: 'NUMBER', description: 'Total cost / expense in MYR (RM) (default 0)' },
         customer: { type: 'STRING', description: 'Name of the customer' },
@@ -108,7 +108,7 @@ const GEMINI_FUNCTION_DECLARATIONS = [
           description: 'Any additional notes or customer remarks',
         },
       },
-      required: ['item', 'subtotal'],
+      required: ['item'],
     },
   },
   {
@@ -299,10 +299,11 @@ function buildSystemInstruction(sales: SaleItem[]): string {
   // Pre-compute category breakdown
   const categoryStats: Record<string, { count: number; qty: number; revenue: number; cost: number; profit: number }> = {};
   sales.forEach((s) => {
-    const cat = s.category || 'Uncategorized';
+    if (!s.category) return;
+    const cat = s.category;
     if (!categoryStats[cat]) categoryStats[cat] = { count: 0, qty: 0, revenue: 0, cost: 0, profit: 0 };
     categoryStats[cat].count += 1;
-    categoryStats[cat].qty += s.quantity || 1;
+    categoryStats[cat].qty += s.quantity || 0;
     categoryStats[cat].revenue += s.subtotal || 0;
     categoryStats[cat].cost += s.cost || 0;
     categoryStats[cat].profit += s.sales || 0;
@@ -318,7 +319,8 @@ function buildSystemInstruction(sales: SaleItem[]): string {
   // Pre-compute marketplace statistics
   const marketplaceStats: Record<string, { count: number; revenue: number; profit: number }> = {};
   sales.forEach((s) => {
-    const mp = s.marketplace || 'Other';
+    if (!s.marketplace) return;
+    const mp = s.marketplace;
     if (!marketplaceStats[mp]) marketplaceStats[mp] = { count: 0, revenue: 0, profit: 0 };
     marketplaceStats[mp].count += 1;
     marketplaceStats[mp].revenue += s.subtotal || 0;
@@ -334,14 +336,18 @@ function buildSystemInstruction(sales: SaleItem[]): string {
   const orderStatusStats: Record<string, { count: number; total: number }> = {};
   const paymentStatusStats: Record<string, { count: number; total: number }> = {};
   sales.forEach((s) => {
-    const os = s.order_status || 'Unknown';
-    const ps = s.payment_status || 'Unknown';
-    if (!orderStatusStats[os]) orderStatusStats[os] = { count: 0, total: 0 };
-    if (!paymentStatusStats[ps]) paymentStatusStats[ps] = { count: 0, total: 0 };
-    orderStatusStats[os].count += 1;
-    orderStatusStats[os].total += s.subtotal || 0;
-    paymentStatusStats[ps].count += 1;
-    paymentStatusStats[ps].total += s.subtotal || 0;
+    if (s.order_status) {
+      const os = s.order_status;
+      if (!orderStatusStats[os]) orderStatusStats[os] = { count: 0, total: 0 };
+      orderStatusStats[os].count += 1;
+      orderStatusStats[os].total += s.subtotal || 0;
+    }
+    if (s.payment_status) {
+      const ps = s.payment_status;
+      if (!paymentStatusStats[ps]) paymentStatusStats[ps] = { count: 0, total: 0 };
+      paymentStatusStats[ps].count += 1;
+      paymentStatusStats[ps].total += s.subtotal || 0;
+    }
   });
 
   const orderStatusLines = Object.entries(orderStatusStats).map(
@@ -658,17 +664,17 @@ export async function sendSalesAiMessage(
       const { name, args } = call;
 
       if (name === 'create_sale_item') {
-        const item = String(args.item || 'New Item');
-        const quantity = Number(args.quantity) || 1;
+        const item = String(args.item || 'Untitled Order');
+        const quantity = args.quantity !== undefined && !isNaN(Number(args.quantity)) ? Number(args.quantity) : 0;
         const subtotal = Number(args.subtotal) || 0;
         const cost = Number(args.cost) || 0;
         const salesProfit = Number((subtotal - cost).toFixed(2));
-        const customer = String(args.customer || 'Customer');
-        const category = String(args.category || 'Trading Card Games');
-        const marketplace = String(args.marketplace || 'Shopee');
-        const payment_method = String(args.payment_method || 'Online Banking');
-        const order_status = String(args.order_status || 'Processing');
-        const payment_status = String(args.payment_status || 'Paid');
+        const customer = args.customer ? String(args.customer) : '';
+        const category = args.category ? String(args.category) : '';
+        const marketplace = args.marketplace ? String(args.marketplace) : '';
+        const payment_method = args.payment_method ? String(args.payment_method) : '';
+        const order_status = args.order_status ? String(args.order_status) : '';
+        const payment_status = args.payment_status ? String(args.payment_status) : '';
         const date = String(args.date || new Date().toISOString().split('T')[0]);
         const location = args.location ? String(args.location) : undefined;
         const notes = args.notes ? String(args.notes) : undefined;

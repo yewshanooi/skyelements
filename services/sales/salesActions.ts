@@ -104,17 +104,17 @@ export async function createSaleAction(sale: Omit<SaleItem, 'id'>): Promise<Sale
     .from('sales')
     .insert({
       user_id: user.id,
-      quantity: sale.quantity || 1,
+      quantity: sale.quantity !== undefined && sale.quantity !== null && !isNaN(Number(sale.quantity)) ? Number(sale.quantity) : 0,
       item: sale.item,
-      category: sale.category || 'Uncategorized',
-      marketplace: sale.marketplace || 'Direct',
-      payment_method: sale.payment_method || 'Cash',
-      customer: sale.customer || 'Guest',
-      date: sale.date,
+      category: sale.category || '',
+      marketplace: sale.marketplace || '',
+      payment_method: sale.payment_method || '',
+      customer: sale.customer || '',
+      date: sale.date || new Date().toISOString().split('T')[0],
       subtotal: Number(sale.subtotal) || 0,
       cost: Number(sale.cost) || 0,
-      order_status: sale.order_status || 'Processing',
-      payment_status: sale.payment_status || 'Processing',
+      order_status: sale.order_status || '',
+      payment_status: sale.payment_status || '',
       invoice_url: sale.invoice_url || null,
       invoice_name: sale.invoice_name || null,
       location: sale.location || null,
@@ -163,6 +163,14 @@ export async function updateSaleAction(
     );
     if (lat !== null || updates.latitude !== undefined) dbPayload.latitude = lat;
     if (lng !== null || updates.longitude !== undefined) dbPayload.longitude = lng;
+  }
+
+  // Explicitly ensure invoice removal is honored if present in payload
+  if ('invoice_url' in updates) {
+    dbPayload.invoice_url = updates.invoice_url || null;
+  }
+  if ('invoice_name' in updates) {
+    dbPayload.invoice_name = updates.invoice_name || null;
   }
 
   const { data, error } = await supabase
@@ -283,17 +291,17 @@ export async function createSalesBatchAction(
     const norm = normalizeCoordinates(sale.latitude, sale.longitude);
     return {
       user_id: user.id,
-      quantity: sale.quantity || 1,
+      quantity: sale.quantity !== undefined && sale.quantity !== null && !isNaN(Number(sale.quantity)) ? Number(sale.quantity) : 0,
       item: sale.item,
-      category: sale.category || 'Uncategorized',
-      marketplace: sale.marketplace || 'Direct',
-      payment_method: sale.payment_method || 'Cash',
-      customer: sale.customer || 'Guest',
-      date: sale.date,
+      category: sale.category || '',
+      marketplace: sale.marketplace || '',
+      payment_method: sale.payment_method || '',
+      customer: sale.customer || '',
+      date: sale.date || new Date().toISOString().split('T')[0],
       subtotal: Number(sale.subtotal) || 0,
       cost: Number(sale.cost) || 0,
-      order_status: sale.order_status || 'Processing',
-      payment_status: sale.payment_status || 'Processing',
+      order_status: sale.order_status || '',
+      payment_status: sale.payment_status || '',
       invoice_url: sale.invoice_url || null,
       invoice_name: sale.invoice_name || null,
       location: sale.location || null,
@@ -365,22 +373,44 @@ export async function getInvoiceSignedUrlAction(
  * Server Action: Remove an invoice file from Supabase Storage bucket 'invoices'
  */
 export async function deleteInvoiceFileAction(
-  filePathOrUrl?: string | null
+  filePathOrUrl?: string | null,
+  saleId?: string | null
 ): Promise<boolean> {
-  if (!filePathOrUrl) return false;
-
-  const path = extractStoragePath(filePathOrUrl, 'invoices');
-  if (!path) return false;
+  if (!filePathOrUrl && !saleId) return false;
 
   try {
     const supabase = await createClient();
-    const { error } = await supabase.storage
-      .from('invoices')
-      .remove([path]);
 
-    if (error) {
-      console.error('[deleteInvoiceFileAction] Storage removal error:', error);
-      return false;
+    // 1. Remove from storage bucket if file path/URL exists
+    if (filePathOrUrl) {
+      const path = extractStoragePath(filePathOrUrl, 'invoices');
+      if (path) {
+        const { error } = await supabase.storage
+          .from('invoices')
+          .remove([path]);
+
+        if (error) {
+          console.error('[deleteInvoiceFileAction] Storage removal error:', error);
+        }
+      }
+    }
+
+    // 2. If saleId is provided, clear the invoice columns in the database row
+    if (saleId) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { error: dbError } = await supabase
+          .from('sales')
+          .update({ invoice_url: null, invoice_name: null })
+          .eq('id', saleId)
+          .eq('user_id', user.id);
+
+        if (dbError) {
+          console.error('[deleteInvoiceFileAction] DB invoice reset error:', dbError);
+        }
+      }
+      revalidatePath('/sales');
+      revalidatePath('/sales/[view]', 'page');
     }
 
     return true;

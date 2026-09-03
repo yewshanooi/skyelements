@@ -611,8 +611,8 @@ const InvoiceViewerModalContent: FC<{ sale: SaleItem; onClose: () => void }> = (
                       <td className="p-3 font-medium text-neutral-800 dark:text-neutral-200">
                         {sale.item}
                       </td>
-                      <td className="p-3 text-center text-neutral-500">{sale.category}</td>
-                      <td className="p-3 text-center font-mono font-medium">{sale.quantity}</td>
+                      <td className="p-3 text-center text-neutral-500">{sale.category || '-'}</td>
+                      <td className="p-3 text-center font-mono font-medium">{sale.quantity > 0 ? sale.quantity : '-'}</td>
                       <td className="p-3 text-right font-mono font-medium">
                         RM {sale.subtotal.toFixed(2)}
                       </td>

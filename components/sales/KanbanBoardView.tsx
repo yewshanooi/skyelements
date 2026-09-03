@@ -292,11 +292,11 @@ export const KanbanBoardView: FC<KanbanBoardViewProps> = ({
 
               {/* Column Footer Button */}
               <button
-                onClick={() => onOpenNewSale(col.id)}
+                onClick={() => onOpenNewSale()}
                 className="mt-3 py-2 w-full text-center text-xs font-medium text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200 hover:bg-white dark:hover:bg-neutral-800/80 rounded-lg border border-dashed border-neutral-300 dark:border-neutral-700 transition-all flex items-center justify-center gap-1.5 shadow-2xs hover:shadow-xs cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5 text-neutral-400" />
-                <span>New order in {col.label}</span>
+                <span>New order</span>
               </button>
             </div>
           );

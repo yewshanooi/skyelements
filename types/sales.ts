@@ -68,8 +68,8 @@ export interface SaleItem {
   sales: number; // Subtotal - Cost
   order_status: OrderStatus | string;
   payment_status: PaymentStatus | string;
-  invoice_url?: string;
-  invoice_name?: string;
+  invoice_url?: string | null;
+  invoice_name?: string | null;
   location?: string;
   latitude?: number;
   longitude?: number;

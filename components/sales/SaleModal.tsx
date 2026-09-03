@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo } from 'react';
-import type { FC, FormEvent, ChangeEvent } from 'react';
+import type { FC, ChangeEvent, SyntheticEvent } from 'react';
 import {
   X,
   MapPin,
@@ -48,8 +48,8 @@ interface SaleFormData {
   cost: number | string;
   customer: string;
   date: string;
-  invoice_name: string;
-  invoice_url?: string;
+  invoice_name?: string | null;
+  invoice_url?: string | null;
   location: string;
   marketplace: StoreType | string;
   order_status: OrderStatus | string;
@@ -105,8 +105,8 @@ function getInitialFormData(
           : '',
       customer: initialData.customer || '',
       date: initialData.date || new Date().toISOString().split('T')[0],
-      invoice_name: initialData.invoice_name || '',
-      invoice_url: initialData.invoice_url,
+      invoice_name: initialData.invoice_name || null,
+      invoice_url: initialData.invoice_url || null,
       location: initialData.location || '',
       marketplace: initialData.marketplace || (defaultStore || ''),
       order_status: (initialData.order_status || '') as OrderStatus,
@@ -132,10 +132,10 @@ function getInitialFormData(
     cost: '',
     customer: '',
     date: new Date().toISOString().split('T')[0],
-    invoice_name: '',
-    invoice_url: undefined,
+    invoice_name: null,
+    invoice_url: null,
     location: '',
-    marketplace: defaultStore || '',
+    marketplace: '',
     order_status: '' as OrderStatus,
     payment_method: '',
     payment_status: '' as PaymentStatus,
@@ -250,21 +250,21 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
 
   const handleRemoveInvoice = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (formData.invoice_url) {
-      await deleteInvoiceFileAction(formData.invoice_url);
+    if (formData.invoice_url || initialData?.id) {
+      await deleteInvoiceFileAction(formData.invoice_url, initialData?.id);
     }
     setFormData((prev) => ({
       ...prev,
       invoice_name: '',
-      invoice_url: undefined,
+      invoice_url: null,
     }));
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: SyntheticEvent) => {
+    if (e) e.preventDefault();
     if (!formData.item.trim()) {
       setErrorMsg('Order name is required');
       return;
@@ -275,6 +275,8 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
     try {
       const dataToSave: Omit<SaleItem, 'id'> = {
         ...formData,
+        invoice_name: formData.invoice_name || null,
+        invoice_url: formData.invoice_url || null,
         quantity: parseFormQuantity(formData.quantity),
         cost: parseFormAmount(formData.cost),
         subtotal: parseFormAmount(formData.subtotal),
@@ -481,7 +483,7 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
                 ) : formData.invoice_name || formData.invoice_url ? (
                   <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium bg-neutral-100 dark:bg-neutral-800/90 border border-neutral-200/70 dark:border-neutral-700/70 text-neutral-800 dark:text-neutral-200 group/inv max-w-sm select-none">
                     <FileText className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
-                    <span className="truncate" title={formData.invoice_name}>
+                    <span className="truncate" title={formData.invoice_name || undefined}>
                       {formData.invoice_name || 'receipt.pdf'}
                     </span>
                     <button
