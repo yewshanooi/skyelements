@@ -412,7 +412,7 @@ export default function SodiumPage() {
         <p>
           ¹ Based on discord.js&apos;s stable branch <a href="https://github.com/discordjs/discord.js/releases" target="_blank" rel="noopener noreferrer"><u>release</u></a> schedule.<br />
           ² No fees or subscriptions required. Users must abide by the <a href="https://github.com/yewshanooi/sodium/blob/main/LICENSE" target="_blank" rel="noopener noreferrer"><u>license</u></a> to modify or distribute the bot.<br />
-          ³ Gemini is a large language model developed by Google DeepMind. It is the successor to LaMDA and PaLM 2.<br />
+          ³ Gemini is a family of multimodal large language models developed by Google DeepMind.<br />
           ⁴ Transformers.js is an npm package developed by Hugging Face to run pre-trained machine learning models.
         </p>
       </div>

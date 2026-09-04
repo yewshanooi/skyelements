@@ -21,6 +21,7 @@ export async function login(prevState: ActionState | null, formData: FormData): 
     const email = String(formData.get('email') || '')
     const password = String(formData.get('password') || '')
     const captchaToken = String(formData.get('captchaToken') || '')
+    const redirectTo = String(formData.get('redirectTo') || '/lithium')
     
     const {error} = await supabase.auth.signInWithPassword({email, password, options: { captchaToken }});
 
@@ -28,7 +29,7 @@ export async function login(prevState: ActionState | null, formData: FormData): 
         return { error: error.message };
     }
 
-    redirect('/lithium')
+    redirect(redirectTo)
 }
 
 export async function signup(prevState: ActionState | null, formData: FormData): Promise<ActionState> {
@@ -38,6 +39,7 @@ export async function signup(prevState: ActionState | null, formData: FormData):
     const password = String(formData.get('password') || '')
     const captchaToken = String(formData.get('captchaToken') || '')
     const displayName = String(formData.get('displayName') || '').trim()
+    const redirectTo = String(formData.get('redirectTo') || '/lithium')
 
     if (!displayName) {
         return { error: 'Name is required.' };
@@ -65,7 +67,7 @@ export async function signup(prevState: ActionState | null, formData: FormData):
         return { error: error.message };
     }
 
-    redirect('/lithium')
+    redirect(redirectTo)
 }
 
 export async function forgotPassword(prevState: ActionState | null, formData: FormData): Promise<ActionState> {
@@ -75,7 +77,7 @@ export async function forgotPassword(prevState: ActionState | null, formData: Fo
     const captchaToken = String(formData.get('captchaToken') || '');
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback?next=/reset-password`,
+        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || ''}/auth/callback?next=/reset-password`,
         captchaToken,
     });
 
@@ -118,13 +120,14 @@ export async function signout() {
     redirect('/')
 }
 
-async function signInWithOAuthProvider(provider: 'google' | 'notion') {
+async function signInWithOAuthProvider(provider: 'google' | 'notion', redirectTo: string = '/lithium') {
     const supabase = await createActionClient();
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || '';
 
     const { data, error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-            redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback?next=/lithium`,
+            redirectTo: `${siteUrl}/auth/callback?next=${encodeURIComponent(redirectTo)}`,
         },
     });
 
@@ -139,9 +142,11 @@ async function signInWithOAuthProvider(provider: 'google' | 'notion') {
 }
 
 export async function signInWithGoogle(formData?: FormData) {
-    return signInWithOAuthProvider('google');
+    const redirectTo = formData?.get('redirectTo')?.toString() || '/lithium';
+    return signInWithOAuthProvider('google', redirectTo);
 }
 
 export async function signInWithNotion(formData?: FormData) {
-    return signInWithOAuthProvider('notion');
+    const redirectTo = formData?.get('redirectTo')?.toString() || '/lithium';
+    return signInWithOAuthProvider('notion', redirectTo);
 }

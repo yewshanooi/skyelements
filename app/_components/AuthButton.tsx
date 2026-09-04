@@ -1,15 +1,18 @@
 'use client';
 
 import { useFormStatus } from "react-dom";
-import { Button } from "@/components/ui/button"
-import { Spinner } from "@/components/ui/spinner"
+import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
+import { cn } from "@/lib/utils";
 
 export default function AuthButton({
     children,
-    pendingText = <Spinner />
+    pendingText = <Spinner />,
+    className,
 }: {
     children: React.ReactNode;
     pendingText?: React.ReactNode;
+    className?: string;
 }) {
     const { pending } = useFormStatus();
 
@@ -18,7 +21,7 @@ export default function AuthButton({
             type="submit"
             disabled={pending}
             aria-busy={pending}
-            className="cursor-pointer"
+            className={cn("w-full cursor-pointer", className)}
         >
             {pending ? pendingText : children}
         </Button>
