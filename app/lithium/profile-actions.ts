@@ -5,7 +5,7 @@ import { getAuthenticatedClient, getUserProfile, LITHIUM_AVATAR_METADATA_KEY, ty
 
 const MAX_DISPLAY_NAME_LENGTH = 80;
 const MAX_SYSTEM_INSTRUCTION_LENGTH = 4000;
-const USER_STORAGE_BUCKETS = ['avatars', 'chat-uploads', 'chat-images'] as const;
+const USER_STORAGE_BUCKETS = ['avatars', 'chat-uploads', 'chat-images', 'invoices'] as const;
 
 type StorageEntry = {
   name: string;

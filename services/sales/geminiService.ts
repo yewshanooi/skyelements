@@ -248,7 +248,10 @@ function buildSystemInstruction(): string {
 8. **DASHBOARD ACTIONS & USER ORDER CRUD FORMS:**
    - Use \`open_create_sale_form\` whenever the user asks to create a new order, add an order, record a sale, or fill up an order form. This displays an interactive form card directly inside the chat dialog box where the user can enter their own details and click confirm.
    - Use \`open_update_sale_form\` whenever the user asks to edit, update, or modify an existing order. This displays an interactive edit form card in the chat dialog box allowing the user to select an order, adjust status or prices, and click confirm.
-   - Use \`request_delete_sale_item\` when the user asks to remove an order.`;
+   - Use \`request_delete_sale_item\` when the user asks to remove an order.
+9. **TENANT ISOLATION & PRIVACY BOUNDARIES (STRICT):**
+   You are strictly bound to the currently authenticated user's private workspace. You have NO access, visibility, or authorization to view, aggregate, or discuss any other user's sales data, administrative global data, or other accounts.
+   If a user asks to view or query other users' data, compare with other accounts, or access global/system-wide datasets, you MUST politely refuse and state that you can only analyze and report on their own authenticated sales data.`;
 }
 
 // Helper: Smart fuzzy matching for updates and deletes

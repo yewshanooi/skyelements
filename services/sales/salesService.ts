@@ -59,13 +59,9 @@ export async function uploadInvoiceFile(
     throw new Error(`Storage upload failed: ${error.message}`);
   }
 
-  // Generate a secure signed URL for private bucket
-  const { data: signedData } = await supabase.storage
-    .from('invoices')
-    .createSignedUrl(data.path, 60 * 60 * 24 * 7); // 7-day initial signed URL
-
+  // Return canonical private storage path. Ephemeral signed URLs will be generated on-demand when viewed.
   return {
-    url: signedData?.signedUrl || data.path,
+    url: data.path,
     name: file.name,
     path: data.path,
   };

@@ -7,11 +7,12 @@ import {
   ChevronRight,
   Calendar,
   FileText,
+  RotateCcw,
 } from 'lucide-react';
 import type { SaleItem } from '@/types/sales';
 import { formatIsoDate, parseDateString, formatDateDisplay } from '@/lib/sales/dateUtils';
 import { NotionFilterBar } from './NotionFilterBar';
-import { filterSales, DEFAULT_EMPTY_FILTERS, type FilterState } from '@/lib/sales/filterUtils';
+import { filterSales, DEFAULT_EMPTY_FILTERS, hasActiveFilters, type FilterState } from '@/lib/sales/filterUtils';
 
 interface TimelineViewProps {
   sales: SaleItem[];
@@ -298,6 +299,20 @@ export const TimelineView: FC<TimelineViewProps> = ({
     return mapped.map((m) => m.sale);
   }, [sales, activeFilters]);
 
+  // Sales falling within the active timeline window (prev tail + current month + next head)
+  const timelineSales = useMemo(() => {
+    return relevantSales.filter((sale) => {
+      const saleIso = normalizeDate(sale.date);
+      return dayIndexMap.has(saleIso);
+    });
+  }, [relevantSales, dayIndexMap]);
+
+  const isFilterActive = useMemo(() => hasActiveFilters(activeFilters), [activeFilters]);
+
+  const handleResetFilters = useCallback(() => {
+    handleFiltersChange({ ...DEFAULT_EMPTY_FILTERS });
+  }, [handleFiltersChange]);
+
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Notion Filter Toolbar for Timeline */}
@@ -366,13 +381,12 @@ export const TimelineView: FC<TimelineViewProps> = ({
                       minWidth: `${COLUMN_WIDTH}px`,
                       maxWidth: `${COLUMN_WIDTH}px`,
                     }}
-                    className={`h-full text-center border-r border-neutral-200/60 dark:border-neutral-800 flex flex-col items-center justify-center shrink-0 select-none py-1 ${
-                      col.isCurrentMonth
+                    className={`h-full text-center border-r border-neutral-200/60 dark:border-neutral-800 flex flex-col items-center justify-center shrink-0 select-none py-1 ${col.isCurrentMonth
                         ? col.isWeekend
                           ? 'bg-neutral-100/50 dark:bg-neutral-900/30 text-neutral-600 dark:text-neutral-400'
                           : 'text-neutral-700 dark:text-neutral-300 font-medium'
                         : 'text-neutral-400 dark:text-neutral-600 bg-neutral-100/70 dark:bg-neutral-900/60'
-                    }`}
+                      }`}
                   >
                     <span className="text-[9px] text-neutral-400 dark:text-neutral-500 font-sans leading-none mb-0.5">
                       {WEEKDAYS[col.dayOfWeek]}
@@ -403,13 +417,12 @@ export const TimelineView: FC<TimelineViewProps> = ({
                       minWidth: `${COLUMN_WIDTH}px`,
                       maxWidth: `${COLUMN_WIDTH}px`,
                     }}
-                    className={`h-full border-r border-neutral-200/50 dark:border-neutral-800/40 relative shrink-0 ${
-                      col.isCurrentMonth
+                    className={`h-full border-r border-neutral-200/50 dark:border-neutral-800/40 relative shrink-0 ${col.isCurrentMonth
                         ? col.isWeekend
                           ? 'bg-neutral-50/40 dark:bg-neutral-950/20'
                           : ''
                         : 'bg-neutral-100/40 dark:bg-neutral-950/40'
-                    }`}
+                      }`}
                   >
                     {isToday && (
                       <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-0.5 bg-red-500/70 z-10" />
@@ -421,16 +434,33 @@ export const TimelineView: FC<TimelineViewProps> = ({
 
             {/* Sales Event Items positioned along the Timeline */}
             <div className="relative z-10 w-full pt-4 pb-16 space-y-2.5">
-              {relevantSales.length === 0 ? (
+              {timelineSales.length === 0 ? (
                 <div
-                  className="sticky left-0 flex flex-col items-center justify-center py-20 text-neutral-400 dark:text-neutral-600 gap-2 text-center"
+                  className="sticky left-0 py-16 px-4 flex flex-col items-center justify-center space-y-3 text-center pointer-events-auto"
                   style={{ width: containerWidth ? `${containerWidth}px` : '100%', maxWidth: '100vw' }}
                 >
-                  <Calendar className="w-8 h-8 stroke-1" />
-                  <p className="text-sm font-medium">No sales recorded for this period</p>
+                  <Calendar className="w-10 h-10 text-neutral-300 dark:text-neutral-600 mx-auto" />
+                  <h3 className="text-sm font-semibold text-neutral-800 dark:text-neutral-200">
+                    {isFilterActive ? 'No orders match the selected filters' : 'No sales recorded for this period'}
+                  </h3>
+                  <p className="text-xs text-neutral-400 max-w-sm mx-auto">
+                    {isFilterActive
+                      ? 'Try adjusting your active filters to view orders.'
+                      : 'Navigate to a different month or add a new sale to see it.'}
+                  </p>
+                  {isFilterActive && (
+                    <button
+                      type="button"
+                      onClick={handleResetFilters}
+                      className="px-3.5 py-1.5 rounded-lg text-xs font-medium bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>Reset Filters</span>
+                    </button>
+                  )}
                 </div>
               ) : (
-                relevantSales.map((sale) => {
+                timelineSales.map((sale) => {
                   const saleIso = normalizeDate(sale.date);
                   const colIdx = dayIndexMap.get(saleIso) ?? -1;
                   if (colIdx === -1) return null;
