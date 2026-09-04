@@ -55,7 +55,7 @@ export const AiMarkdown: FC<AiMarkdownProps> = ({ content }) => {
       elements.push(
         <blockquote
           key={`quote-${i}`}
-          className="border-l-3 border-blue-500/80 pl-3 py-1 my-2 bg-blue-50/40 dark:bg-blue-950/20 text-neutral-700 dark:text-neutral-300 text-xs italic rounded-r"
+          className="border-l-3 border-blue-500/80 pl-3 py-1 my-2 bg-blue-50/40 dark:bg-blue-950/20 text-neutral-700 dark:text-neutral-300 text-[12.5px] italic rounded-r"
         >
           {quoteLines.map((ql, qIdx) => (
             <p key={qIdx} className="leading-relaxed">
@@ -70,7 +70,7 @@ export const AiMarkdown: FC<AiMarkdownProps> = ({ content }) => {
     // Check for Headers (#, ##, ###)
     if (line.startsWith('### ')) {
       elements.push(
-        <h4 key={`h3-${i}`} className="text-xs font-bold text-neutral-900 dark:text-neutral-100 mt-3 mb-1.5 flex items-center gap-1.5">
+        <h4 key={`h3-${i}`} className="text-[12.5px] font-bold text-neutral-900 dark:text-neutral-100 mt-3 mb-1.5 flex items-center gap-1.5">
           {renderInlineMarkdown(line.slice(4))}
         </h4>
       );
@@ -107,7 +107,7 @@ export const AiMarkdown: FC<AiMarkdownProps> = ({ content }) => {
         i++;
       }
       elements.push(
-        <ul key={`ul-${i}`} className="my-1.5 space-y-1 pl-4 text-xs text-neutral-700 dark:text-neutral-300 list-disc">
+        <ul key={`ul-${i}`} className="my-1.5 space-y-1 pl-4 text-[12.5px] text-neutral-700 dark:text-neutral-300 list-disc">
           {listItems.map((item, idx) => (
             <li key={idx} className="leading-relaxed">
               {renderInlineMarkdown(item.text)}
@@ -129,7 +129,7 @@ export const AiMarkdown: FC<AiMarkdownProps> = ({ content }) => {
         i++;
       }
       elements.push(
-        <ol key={`ol-${i}`} className="my-1.5 space-y-1 pl-4 text-xs text-neutral-700 dark:text-neutral-300 list-decimal">
+        <ol key={`ol-${i}`} className="my-1.5 space-y-1 pl-4 text-[12.5px] text-neutral-700 dark:text-neutral-300 list-decimal">
           {listItems.map((item, idx) => (
             <li key={idx} className="leading-relaxed">
               {renderInlineMarkdown(item)}
@@ -145,7 +145,7 @@ export const AiMarkdown: FC<AiMarkdownProps> = ({ content }) => {
       elements.push(<div key={`spacer-${i}`} className="h-1.5" />);
     } else {
       elements.push(
-        <p key={`p-${i}`} className="my-1 leading-relaxed text-xs text-neutral-800 dark:text-neutral-200">
+        <p key={`p-${i}`} className="my-1 leading-relaxed text-[12.5px] text-neutral-800 dark:text-neutral-200">
           {renderInlineMarkdown(line)}
         </p>
       );
@@ -153,7 +153,7 @@ export const AiMarkdown: FC<AiMarkdownProps> = ({ content }) => {
     i++;
   }
 
-  return <div className="space-y-1 leading-normal text-xs select-text">{elements}</div>;
+  return <div className="space-y-1 leading-normal text-[12.5px] select-text">{elements}</div>;
 };
 
 function CodeBlock({ code, language }: { code: string; language?: string }) {

@@ -504,7 +504,7 @@ export const AiUpdateOrderCard: FC<AiUpdateOrderCardProps> = ({
             onChange={(e) => setFilterQuery(e.target.value)}
             placeholder="Search order or customer..."
             disabled={isSubmitting}
-            className="w-full mb-1.5 px-2.5 py-1 bg-white dark:bg-[#28282c] border border-black/[0.08] dark:border-white/[0.1] rounded-lg text-[11px] text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 focus:outline-hidden focus:ring-1.5 focus:ring-[#2383e2]/50"
+            className="w-full mb-1.5 px-2.5 py-1.5 bg-white dark:bg-[#28282c] border border-black/[0.08] dark:border-white/[0.1] rounded-xl text-[12px] text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 focus:outline-hidden focus:ring-1.5 focus:ring-[#2383e2]/50"
           />
         )}
         <select
