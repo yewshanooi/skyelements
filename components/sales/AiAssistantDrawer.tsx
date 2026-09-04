@@ -149,9 +149,23 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const pillsContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const speechRecognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Ensure quick query pills always reset to start alignment on open / reset
+  useEffect(() => {
+    if (pillsContainerRef.current) {
+      pillsContainerRef.current.scrollLeft = 0;
+    }
+  }, [isOpen, messages.length]);
+
+  const handlePillsWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    if (pillsContainerRef.current && e.deltaY !== 0) {
+      pillsContainerRef.current.scrollLeft += e.deltaY;
+    }
+  };
 
   // Auto-scroll on new message so forms and responses are cleanly aligned under the header
   useEffect(() => {
@@ -159,10 +173,33 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
       const lastMsg = messages[messages.length - 1];
       const el = document.getElementById(`chat-msg-${lastMsg.id}`);
       if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       } else if (messagesContainerRef.current) {
         messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
       }
+    }
+  }, [messages]);
+
+  // Persist conversation history to localStorage on message updates
+  useEffect(() => {
+    try {
+      if (messages.length > 0) {
+        const trimmed = messages.slice(-25).map((m) => {
+          if (m.chartSpec && m.chartSpec.data && m.chartSpec.data.length > 25) {
+            return {
+              ...m,
+              chartSpec: {
+                ...m.chartSpec,
+                data: m.chartSpec.data.slice(0, 25),
+              },
+            };
+          }
+          return m;
+        });
+        localStorage.setItem(STORAGE_KEY_CHAT_HISTORY, JSON.stringify(trimmed));
+      }
+    } catch {
+      /* ignore quota errors */
     }
   }, [messages]);
 
@@ -235,11 +272,10 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
     localStorage.removeItem(STORAGE_KEY_CHAT_HISTORY);
   };
 
-  const handleCloseAndClear = () => {
+  const handleCloseWindow = () => {
     if (isClosing) return;
     setIsClosing(true);
     setTimeout(() => {
-      handleClearChat();
       setIsMinimized(false);
       setIsFullscreen(false);
       setIsClosing(false);
@@ -260,7 +296,7 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
     const isPulledEnough = deltaY > 60;
 
     if (isFlick || isPulledEnough) {
-      handleCloseAndClear();
+      handleCloseWindow();
     } else {
       setMobileDragOffsetY(0);
     }
@@ -367,6 +403,68 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
     };
   }, [isDragging]);
 
+  // Resizing state & handlers for desktop floating window
+  const [isResizing, setIsResizing] = useState(false);
+  const resizeStartRef = useRef<{ mouseX: number; mouseY: number; startW: number; startH: number }>({
+    mouseX: 0,
+    mouseY: 0,
+    startW: 380,
+    startH: 600,
+  });
+
+  useEffect(() => {
+    const handleResizeMove = (e: MouseEvent) => {
+      if (!isResizing) return;
+      const deltaX = e.clientX - resizeStartRef.current.mouseX;
+      const deltaY = e.clientY - resizeStartRef.current.mouseY;
+
+      const newWidth = Math.min(Math.max(340, resizeStartRef.current.startW + deltaX), window.innerWidth - 32);
+      const newHeight = Math.min(Math.max(420, resizeStartRef.current.startH + deltaY), window.innerHeight - 32);
+
+      setSize({ width: newWidth, height: newHeight });
+    };
+
+    const handleResizeUp = () => {
+      if (isResizing) {
+        setIsResizing(false);
+        try {
+          if (currentSizeRef.current) {
+            localStorage.setItem('sales_ai_window_size', JSON.stringify(currentSizeRef.current));
+          }
+        } catch {
+          /* ignore */
+        }
+      }
+    };
+
+    if (isResizing) {
+      window.addEventListener('mousemove', handleResizeMove);
+      window.addEventListener('mouseup', handleResizeUp);
+      document.body.style.userSelect = 'none';
+      document.body.style.cursor = 'nwse-resize';
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleResizeMove);
+      window.removeEventListener('mouseup', handleResizeUp);
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+    };
+  }, [isResizing]);
+
+  const handleResizeMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    resizeStartRef.current = {
+      mouseX: e.clientX,
+      mouseY: e.clientY,
+      startW: size.width,
+      startH: size.height,
+    };
+    setIsResizing(true);
+  };
+
   const handleHeaderMouseDown = (e: React.MouseEvent) => {
     if (e.button !== 0) return;
     if ((e.target as HTMLElement).closest('button, input, textarea, a')) return;
@@ -438,12 +536,48 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
     setInputQuery('');
     setIsLoading(true);
 
+    // Prune history & sales snapshots to reduce server action payload size and latency
+    const prunedHistory: ChatMessage[] = [...messages, userMessage].slice(-10).map((m) => ({
+      id: m.id,
+      role: m.role,
+      text: m.text,
+      timestamp: m.timestamp,
+    }));
+
+    const prunedSales = sales.slice(0, 100).map((s) => ({
+      id: s.id,
+      date: s.date,
+      item: s.item,
+      quantity: s.quantity,
+      subtotal: s.subtotal,
+      cost: s.cost,
+      sales: s.sales,
+      customer: s.customer,
+      category: s.category,
+      marketplace: s.marketplace,
+      order_status: s.order_status,
+      payment_status: s.payment_status,
+    })) as SaleItem[];
+
     try {
       const serverResponse = await sendSalesAiMessage(
-        messages,
+        prunedHistory,
         query,
-        sales
+        prunedSales
       );
+
+      if (serverResponse.error) {
+        const errorMessage: ChatMessage = {
+          id: serverResponse.id,
+          role: 'model',
+          text: serverResponse.text,
+          timestamp: serverResponse.timestamp,
+          error: true,
+          errorMessage: serverResponse.errorMessage,
+        };
+        setMessages((prev) => [...prev, errorMessage]);
+        return;
+      }
 
       const aiResponse: ChatMessage = {
         id: serverResponse.id,
@@ -464,7 +598,13 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
         return; // Request was cleanly cancelled
       }
       console.error('AI query error:', err);
-      const errMsg = err instanceof Error ? err.message : 'Unknown error occurred while contacting Gemini API.';
+      let errMsg = err instanceof Error ? err.message : 'Unknown error occurred while contacting Gemini API.';
+      if (
+        errMsg.includes('Server Components render') ||
+        errMsg.includes('omitted in production')
+      ) {
+        errMsg = 'The AI service encountered a temporary server error. Please try again in a few moments.';
+      }
       const errorMessage = createErrorMessage(errMsg);
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
@@ -703,10 +843,10 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                handleCloseAndClear();
+                handleCloseWindow();
               }}
               className="p-1 text-neutral-400 hover:text-red-500 rounded-full transition-colors cursor-pointer"
-              title="Close & Clear"
+              title="Close Window"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -735,12 +875,12 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
         top: `${currentPos.y}px`,
         width: `${size.width}px`,
         height: `${size.height}px`,
-        willChange: isDragging ? 'left, top' : 'auto',
+        willChange: isDragging || isResizing ? 'left, top, width, height' : 'auto',
         opacity: isClosing ? 0 : 1,
         transform: isClosing ? 'scale(0.96)' : 'scale(1)',
         transition: isClosing
           ? 'opacity 0.22s ease, transform 0.22s ease'
-          : isDragging
+          : isDragging || isResizing
           ? 'none'
           : 'width 0.15s ease-out, height 0.15s ease-out, left 0.15s ease-out, top 0.15s ease-out',
       };
@@ -772,7 +912,7 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
           pointerEvents: isClosing ? 'none' : 'auto',
         }}
         className="fixed inset-0 bg-black/40 dark:bg-black/60 z-40 md:hidden overscroll-none touch-none"
-        onClick={handleCloseAndClear}
+        onClick={handleCloseWindow}
         onTouchMove={(e) => e.preventDefault()}
       />
 
@@ -784,7 +924,7 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
           inset-x-0 bottom-0 top-12 rounded-t-[28px] shadow-[0_-8px_32px_rgba(0,0,0,0.2)] dark:shadow-[0_-8px_32px_rgba(0,0,0,0.6)] animate-in slide-in-from-bottom-4 duration-200
           /* Floating Draggable Window Layout on Desktop (md+) */
           md:inset-auto md:rounded-[22px] md:shadow-[0_24px_70px_rgba(0,0,0,0.28)] md:dark:shadow-[0_24px_70px_rgba(0,0,0,0.6)] md:animate-none
-          ${isDragging ? 'transition-none select-none pointer-events-auto shadow-[0_30px_90px_rgba(0,0,0,0.4)] ring-2 ring-[#2383e2]/30' : ''}`}
+          ${isDragging || isResizing ? 'transition-none select-none pointer-events-auto shadow-[0_30px_90px_rgba(0,0,0,0.4)] ring-2 ring-[#2383e2]/30' : ''}`}
       >
 
       {/* 1. Mobile iOS Navigation Header (iOS Sheet UI with Touch Swipe Down to Dismiss) */}
@@ -821,9 +961,9 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
             </button>
             <button
               type="button"
-              onClick={handleCloseAndClear}
+              onClick={handleCloseWindow}
               className="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-600 dark:text-neutral-300 flex items-center justify-center transition-colors cursor-pointer"
-              title="Close"
+              title="Close Window"
             >
               <X className="w-4 h-4" />
             </button>
@@ -842,10 +982,10 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
       >
         {/* Left: macOS Traffic Lights */}
         <div className="flex items-center gap-2">
-          {/* Close & Clear (Red) */}
+          {/* Close (Red) */}
           <button
             type="button"
-            onClick={handleCloseAndClear}
+            onClick={handleCloseWindow}
             className="w-3 h-3 rounded-full bg-[#FF5F56] hover:bg-[#FF5F56]/90 border border-[#E0443E]/70 flex items-center justify-center group/btn transition-transform active:scale-90 cursor-pointer"
             title="Close Window"
           >
@@ -1110,9 +1250,9 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
 
           {/* Apple-style Loading indicator */}
           {isLoading && (
-            <div className="flex items-center gap-2.5 text-xs text-neutral-500 dark:text-neutral-400 py-2.5 px-4 bg-white/90 dark:bg-[#252528]/90 border border-black/[0.04] dark:border-white/[0.06] rounded-[18px] w-fit shadow-xs">
-              <div className="w-3.5 h-3.5 border-2 border-[#2383e2] border-t-transparent rounded-full animate-spin" />
-              <span className="text-[11.5px] font-medium">Loading...</span>
+            <div className="flex items-center gap-2.5 text-xs text-neutral-500 dark:text-neutral-400 py-2.5 px-4 bg-white/90 dark:bg-[#252528]/90 border border-black/[0.04] dark:border-white/[0.06] rounded-[18px] w-fit shadow-xs animate-in fade-in duration-150">
+              <div className="w-3.5 h-3.5 border-2 border-[#2383e2] border-t-transparent rounded-full animate-spin shrink-0" />
+              <span className="text-[11.5px] font-medium">Analyzing sales metrics...</span>
             </div>
           )}
 
@@ -1120,54 +1260,58 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
         </div>
       </div>
 
-      {/* Suggested Quick Action Chips (Only shown initially before first interaction) */}
-      {messages.length <= 1 && !isLoading && (
-        <div className="px-3.5 py-2 bg-[#f6f6f6]/80 dark:bg-[#1e1e20]/80 border-t border-black/[0.04] dark:border-white/[0.06]">
-          <div className={`flex gap-1.5 overflow-x-auto overscroll-x-contain pb-0.5 no-scrollbar ${isFullscreen ? 'max-w-3xl mx-auto w-full' : ''}`}>
-            {quickPrompts.map((qp, idx) => (
-              <button
-                key={idx}
-                type="button"
-                onClick={() => {
-                  if (qp.action === 'create_form') {
-                    const ts = Date.now();
-                    const userMsg = createUserMessage('I would like to create a new order.');
-                    const modelMsg: ChatMessage = {
-                      id: `create-form-${ts}`,
-                      role: 'model',
-                      text: 'Please enter the order details in the form below and confirm:',
-                      timestamp: ts + 1,
-                      pendingCreateForm: { initialValues: {} },
-                    };
-                    setMessages((prev) => [...prev, userMsg, modelMsg]);
-                  } else if (qp.action === 'update_form') {
-                    const ts = Date.now();
-                    const userMsg = createUserMessage('I would like to edit an order.');
-                    const modelMsg: ChatMessage = {
-                      id: `update-form-${ts}`,
-                      role: 'model',
-                      text: 'Select the order to modify and adjust the fields below, then click confirm to save:',
-                      timestamp: ts + 1,
-                      pendingUpdateForm: {},
-                    };
-                    setMessages((prev) => [...prev, userMsg, modelMsg]);
-                  } else {
-                    handleSendMessage(qp.prompt);
-                  }
-                }}
-                className="whitespace-nowrap px-3 py-1.5 bg-white dark:bg-[#2c2c2e] hover:bg-neutral-100 dark:hover:bg-[#343438] border border-black/[0.06] dark:border-white/[0.08] rounded-full text-[11px] font-medium text-neutral-700 dark:text-neutral-200 transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95"
-              >
-                {qp.icon}
-                <span>{qp.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Apple Capsule Input Area */}
-      <div className="px-3.5 pt-3 pb-3 bg-[#f6f6f6]/95 dark:bg-[#202022]/95 border-t border-black/[0.06] dark:border-white/[0.08] backdrop-blur-xl">
+      {/* Apple Capsule Input Area & Quick Action Pills */}
+      <div className="px-3.5 pt-2.5 pb-3 bg-[#f6f6f6]/95 dark:bg-[#202022]/95 border-t border-black/[0.06] dark:border-white/[0.08] backdrop-blur-xl">
         <div className={isFullscreen ? 'max-w-3xl mx-auto w-full' : 'w-full'}>
+          {/* Suggested Quick Action Chips (Only shown initially before first interaction) */}
+          {messages.length <= 1 && !isLoading && (
+            <div className="mb-2 relative">
+              <div
+                ref={pillsContainerRef}
+                onWheel={handlePillsWheel}
+                className="flex gap-1.5 overflow-x-auto overscroll-x-contain pb-0.5 no-scrollbar snap-x snap-mandatory scroll-smooth"
+              >
+                {quickPrompts.map((qp, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => {
+                      if (qp.action === 'create_form') {
+                        const ts = Date.now();
+                        const userMsg = createUserMessage('I would like to create a new order.');
+                        const modelMsg: ChatMessage = {
+                          id: `create-form-${ts}`,
+                          role: 'model',
+                          text: 'Please enter the order details in the form below and confirm:',
+                          timestamp: ts + 1,
+                          pendingCreateForm: { initialValues: {} },
+                        };
+                        setMessages((prev) => [...prev, userMsg, modelMsg]);
+                      } else if (qp.action === 'update_form') {
+                        const ts = Date.now();
+                        const userMsg = createUserMessage('I would like to edit an order.');
+                        const modelMsg: ChatMessage = {
+                          id: `update-form-${ts}`,
+                          role: 'model',
+                          text: 'Select the order to modify and adjust the fields below, then click confirm to save:',
+                          timestamp: ts + 1,
+                          pendingUpdateForm: {},
+                        };
+                        setMessages((prev) => [...prev, userMsg, modelMsg]);
+                      } else {
+                        handleSendMessage(qp.prompt);
+                      }
+                    }}
+                    className="shrink-0 snap-start whitespace-nowrap px-3 py-1.5 bg-white dark:bg-[#2c2c2e] hover:bg-neutral-100 dark:hover:bg-[#343438] border border-black/[0.06] dark:border-white/[0.08] rounded-full text-[11px] font-medium text-neutral-700 dark:text-neutral-200 transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95"
+                  >
+                    {qp.icon}
+                    <span>{qp.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="relative flex items-center bg-white dark:bg-[#2c2c2e] border border-black/[0.08] dark:border-white/[0.1] rounded-[20px] p-2 focus-within:ring-2 focus-within:ring-[#2383e2]/40 focus-within:border-[#2383e2] transition-all shadow-2xs">
             <input
               ref={inputRef}
@@ -1211,13 +1355,34 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
             </div>
           </div>
 
-          <div className="hidden md:flex items-center justify-between text-[10px] text-neutral-400 dark:text-neutral-500 px-1.5 pt-2.5 pb-0.5 font-normal">
-            <span>
-              <kbd className="px-1 py-0.5 bg-black/[0.04] dark:bg-white/[0.08] rounded font-mono text-[9px] border border-black/[0.04] dark:border-white/[0.06]">Enter</kbd> to send
-            </span>
+          <div className="hidden md:flex items-center justify-between text-[10px] text-neutral-400 dark:text-neutral-500 pl-1.5 pr-0 pt-2.5 pb-0.5 font-normal">
             <span>
               <kbd className="px-1 py-0.5 bg-black/[0.04] dark:bg-white/[0.08] rounded font-mono text-[9px] border border-black/[0.04] dark:border-white/[0.06]">Ctrl + J</kbd> to open/close
             </span>
+
+            {/* Desktop Window Resize Grip (Aligned with the red baseline of Ctrl + J hint) */}
+            {!isFullscreen && (
+              <div
+                onMouseDown={handleResizeMouseDown}
+                className="w-5 h-5 flex items-center justify-end cursor-nwse-resize z-50 group/grip select-none pr-0 translate-y-[5px]"
+                title="Drag to resize window"
+              >
+                <svg
+                  width="11"
+                  height="11"
+                  viewBox="0 0 11 11"
+                  fill="none"
+                  className="text-neutral-400 dark:text-neutral-500 group-hover/grip:text-[#2383e2] transition-colors drop-shadow-2xs"
+                >
+                  <path
+                    d="M10 2L2 10M10 6L6 10M10 9L9 10"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </div>
+            )}
           </div>
         </div>
       </div>

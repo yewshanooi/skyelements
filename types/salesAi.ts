@@ -101,6 +101,7 @@ export interface ChatMessage {
   pendingUpdateForm?: PendingUpdateForm;
   actionExecuted?: string;
   error?: boolean;
+  errorMessage?: string;
 }
 
 export interface AiServerResponse {
@@ -122,4 +123,7 @@ export interface AiServerResponse {
   pendingCreateForm?: PendingCreateForm;
   pendingUpdateForm?: PendingUpdateForm;
   actionExecuted?: string;
+  error?: boolean;
+  errorMessage?: string;
 }
+

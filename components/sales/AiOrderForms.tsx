@@ -132,8 +132,8 @@ export const AiCreateOrderCard: FC<AiCreateOrderCardProps> = ({
         />
       </div>
 
-      {/* Row: Quantity & Price */}
-      <div className="grid grid-cols-2 gap-2">
+      {/* Row: Quantity, Selling Price & Cost */}
+      <div className="grid grid-cols-3 gap-2">
         <div>
           <label className="block text-[10.5px] font-medium text-neutral-600 dark:text-neutral-400 mb-1">
             Quantity
@@ -149,7 +149,7 @@ export const AiCreateOrderCard: FC<AiCreateOrderCardProps> = ({
         </div>
         <div>
           <label className="block text-[10.5px] font-medium text-neutral-600 dark:text-neutral-400 mb-1">
-            Selling Price (RM)
+            Price (RM)
           </label>
           <input
             type="number"
@@ -162,6 +162,35 @@ export const AiCreateOrderCard: FC<AiCreateOrderCardProps> = ({
             className="w-full px-2.5 py-1.5 bg-white dark:bg-[#28282c] border border-black/[0.08] dark:border-white/[0.1] rounded-xl text-[12px] text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 focus:outline-hidden focus:ring-1.5 focus:ring-[#2383e2]/50"
           />
         </div>
+        <div>
+          <label className="block text-[10.5px] font-medium text-neutral-600 dark:text-neutral-400 mb-1">
+            Cost (RM)
+          </label>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            value={cost}
+            onChange={(e) => setCost(e.target.value)}
+            placeholder="0.00"
+            disabled={isSubmitting}
+            className="w-full px-2.5 py-1.5 bg-white dark:bg-[#28282c] border border-black/[0.08] dark:border-white/[0.1] rounded-xl text-[12px] text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 focus:outline-hidden focus:ring-1.5 focus:ring-[#2383e2]/50"
+          />
+        </div>
+      </div>
+
+      {/* Live Computed Profit Indicator */}
+      <div className="flex items-center justify-between px-2.5 py-1 bg-black/[0.02] dark:bg-white/[0.03] rounded-xl border border-black/[0.04] dark:border-white/[0.04] text-[11px]">
+        <span className="text-neutral-500 dark:text-neutral-400">Net Profit:</span>
+        <span
+          className={`font-mono font-semibold ${
+            (Number(subtotal) || 0) - (Number(cost) || 0) >= 0
+              ? 'text-emerald-600 dark:text-emerald-400'
+              : 'text-rose-600 dark:text-rose-400'
+          }`}
+        >
+          RM {((Number(subtotal) || 0) - (Number(cost) || 0)).toFixed(2)}
+        </span>
       </div>
 
       {/* Row: Customer & Store */}
@@ -348,8 +377,20 @@ export const AiUpdateOrderCard: FC<AiUpdateOrderCardProps> = ({
   );
   const [subtotal, setSubtotal] = useState(activeSale ? String(activeSale.subtotal) : '');
   const [customer, setCustomer] = useState(activeSale?.customer || '');
+  const [filterQuery, setFilterQuery] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const filteredSales = useMemo(() => {
+    if (!filterQuery.trim()) return sales;
+    const q = filterQuery.toLowerCase().trim();
+    return sales.filter(
+      (s) =>
+        s.item.toLowerCase().includes(q) ||
+        s.customer.toLowerCase().includes(q) ||
+        (s.id && s.id.toLowerCase().includes(q))
+    );
+  }, [sales, filterQuery]);
 
   // Sync state when activeSale changes
   const handleSelectSale = (id: string) => {
@@ -373,7 +414,11 @@ export const AiUpdateOrderCard: FC<AiUpdateOrderCardProps> = ({
     const updates: Partial<SaleItem> = {};
     if (orderStatus !== activeSale.order_status) updates.order_status = orderStatus;
     if (paymentStatus !== activeSale.payment_status) updates.payment_status = paymentStatus;
-    if (Number(subtotal) !== activeSale.subtotal) updates.subtotal = Number(subtotal);
+    if (Number(subtotal) !== activeSale.subtotal) {
+      const newSubtotal = Number(subtotal);
+      updates.subtotal = newSubtotal;
+      updates.sales = Number((newSubtotal - (activeSale.cost || 0)).toFixed(2));
+    }
     if (customer.trim() !== activeSale.customer) updates.customer = customer.trim();
 
     if (Object.keys(updates).length === 0) {
@@ -442,16 +487,33 @@ export const AiUpdateOrderCard: FC<AiUpdateOrderCardProps> = ({
 
       {/* Select Order */}
       <div>
-        <label className="block text-[10.5px] font-medium text-neutral-600 dark:text-neutral-400 mb-1">
-          Select Order to Edit
-        </label>
+        <div className="flex items-center justify-between mb-1">
+          <label className="block text-[10.5px] font-medium text-neutral-600 dark:text-neutral-400">
+            Select Order to Edit
+          </label>
+          {sales.length > 6 && (
+            <span className="text-[10px] text-neutral-400">
+              {filteredSales.length} of {sales.length}
+            </span>
+          )}
+        </div>
+        {sales.length > 6 && (
+          <input
+            type="text"
+            value={filterQuery}
+            onChange={(e) => setFilterQuery(e.target.value)}
+            placeholder="Search order or customer..."
+            disabled={isSubmitting}
+            className="w-full mb-1.5 px-2.5 py-1 bg-white dark:bg-[#28282c] border border-black/[0.08] dark:border-white/[0.1] rounded-lg text-[11px] text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 focus:outline-hidden focus:ring-1.5 focus:ring-[#2383e2]/50"
+          />
+        )}
         <select
           value={activeSale?.id || ''}
           onChange={(e) => handleSelectSale(e.target.value)}
           disabled={isSubmitting}
           className="w-full px-2 py-1.5 bg-white dark:bg-[#28282c] border border-black/[0.08] dark:border-white/[0.1] rounded-xl text-[12px] text-neutral-900 dark:text-neutral-100 focus:outline-hidden focus:ring-1.5 focus:ring-[#2383e2]/50 cursor-pointer"
         >
-          {sales.map((s) => (
+          {filteredSales.map((s) => (
             <option key={s.id} value={s.id}>
               {s.item} — {s.customer} (RM {s.subtotal.toFixed(2)}) [{s.order_status}]
             </option>

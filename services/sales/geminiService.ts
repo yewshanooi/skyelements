@@ -163,11 +163,24 @@ function buildSystemInstruction(): string {
   const currentYear = now.getFullYear();
   const currentMonthNum = now.getMonth() + 1;
   const currentYearMonth = `${currentYear}-${String(currentMonthNum).padStart(2, '0')}`;
+  const monthStartDate = `${currentYearMonth}-01`;
+
+  const yesterdayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+  const yesterdayStr = yesterdayDate.toISOString().split('T')[0];
+
+  const sevenDaysAgoDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6);
+  const sevenDaysAgoStr = sevenDaysAgoDate.toISOString().split('T')[0];
 
   const lastMonthDate = new Date(currentYear, now.getMonth() - 1, 1);
   const lastMonthYear = lastMonthDate.getFullYear();
   const lastMonthNum = lastMonthDate.getMonth() + 1;
   const lastMonthYearMonth = `${lastMonthYear}-${String(lastMonthNum).padStart(2, '0')}`;
+  const lastMonthStartDate = `${lastMonthYearMonth}-01`;
+  const lastDayOfLastMonth = new Date(currentYear, now.getMonth(), 0).getDate();
+  const lastMonthEndDate = `${lastMonthYearMonth}-${String(lastDayOfLastMonth).padStart(2, '0')}`;
+
+  const yearStartDate = `${currentYear}-01-01`;
+  const yearEndDate = `${currentYear}-12-31`;
 
   const monthNames = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -177,15 +190,19 @@ function buildSystemInstruction(): string {
   const lastMonthName = monthNames[lastMonthNum - 1];
 
   const todayFormatted = `${String(now.getDate()).padStart(2, '0')}/${String(currentMonthNum).padStart(2, '0')}/${currentYear}`;
+  const yesterdayFormatted = `${String(yesterdayDate.getDate()).padStart(2, '0')}/${String(yesterdayDate.getMonth() + 1).padStart(2, '0')}/${yesterdayDate.getFullYear()}`;
   const currentMonthFormatted = `${String(currentMonthNum).padStart(2, '0')}/${currentYear}`;
   const lastMonthFormatted = `${String(lastMonthNum).padStart(2, '0')}/${lastMonthYear}`;
 
   return `You are an ultra-high-precision analytics and operations assistant integrated into the Sales Dashboard.
 
-### CALENDAR ANCHOR:
+### CALENDAR ANCHOR (PRE-COMPUTED EXACT DATES):
 - TODAY'S DATE: ${todayFormatted} (ISO: "${todayStr}")
-- CURRENT MONTH: ${currentMonthFormatted} ("${currentMonthName} ${currentYear}", ISO: "${currentYearMonth}")
-- LAST MONTH: ${lastMonthFormatted} ("${lastMonthName} ${lastMonthYear}", ISO: "${lastMonthYearMonth}")
+- YESTERDAY'S DATE: ${yesterdayFormatted} (ISO: "${yesterdayStr}")
+- CURRENT MONTH: ${currentMonthFormatted} ("${currentMonthName} ${currentYear}", ISO: "${currentYearMonth}", Start: "${monthStartDate}", End: "${todayStr}")
+- LAST MONTH: ${lastMonthFormatted} ("${lastMonthName} ${lastMonthYear}", ISO: "${lastMonthYearMonth}", Start: "${lastMonthStartDate}", End: "${lastMonthEndDate}")
+- LAST 7 DAYS: "${sevenDaysAgoStr}" to "${todayStr}"
+- CURRENT YEAR: ${currentYear} (Start: "${yearStartDate}", End: "${yearEndDate}")
 
 ### CENTRAL DATABASE SCHEMA (\`sales\` Table):
 - \`id\` (UUID): Unique primary key
@@ -212,7 +229,7 @@ function buildSystemInstruction(): string {
 3. **DETERMINISTIC METRICS TABLE & NO DUPLICATE MARKDOWN:**
    When invoking \`query_sales_metrics\`, provide a clean, informative \`chart_title\` (e.g. "Top 5 Customers by Total Spend", "Monthly Revenue & Profit Breakdown").
    ALWAYS select at most 1 or 2 metrics (e.g. \`["revenue", "profit"]\` or \`["revenue"]\`). NEVER request 3 or more metrics simultaneously.
-   CRITICAL: NEVER format data rows as a markdown table in your text response. A dedicated data table card is already automatically rendered for the user. In your text response, provide ONLY a 1-2 sentence executive summary or commentary highlighting the top numbers.
+   CRITICAL: NEVER format data rows as a markdown table in your text response. A dedicated data table and visual chart card is already automatically rendered for the user. In your text response, provide ONLY a 1-2 sentence executive summary or commentary highlighting the top numbers.
 4. **CURRENCY FORMATTING:**
    Always format currency as "RM X.XX" (e.g. RM 1,450.00).
 5. **DATE FORMATTING (MANDATORY):**
@@ -220,7 +237,15 @@ function buildSystemInstruction(): string {
    For monthly breakdowns, period labels, and trends, format as "MM/YYYY" (e.g. "09/2026").
    You may use "DD/MM" for compact item listings within the same year.
    (Note: For database query filters and create/update item actions, continue passing standard ISO "YYYY-MM-DD" internally).
-6. **DASHBOARD ACTIONS & USER ORDER CRUD FORMS:**
+6. **TEMPORAL FILTER MAPPING:**
+   Use the exact ISO dates from the CALENDAR ANCHOR when applying date filters:
+   - "this month" / "current month": filters: { start_date: "${monthStartDate}", end_date: "${todayStr}" }
+   - "last month": filters: { start_date: "${lastMonthStartDate}", end_date: "${lastMonthEndDate}" }
+   - "last 7 days" / "past week": filters: { start_date: "${sevenDaysAgoStr}", end_date: "${todayStr}" }
+   - "this year": filters: { start_date: "${yearStartDate}", end_date: "${todayStr}" }
+7. **CHRONOLOGICAL TREND SORTING:**
+   When grouping by date (\`dimensions: ['date']\`) or month (\`dimensions: ['month']\`), ALWAYS set \`order_by: 'dimension_asc'\` so the timeline displays in chronological order.
+8. **DASHBOARD ACTIONS & USER ORDER CRUD FORMS:**
    - Use \`open_create_sale_form\` whenever the user asks to create a new order, add an order, record a sale, or fill up an order form. This displays an interactive form card directly inside the chat dialog box where the user can enter their own details and click confirm.
    - Use \`open_update_sale_form\` whenever the user asks to edit, update, or modify an existing order. This displays an interactive edit form card in the chat dialog box allowing the user to select an order, adjust status or prices, and click confirm.
    - Use \`request_delete_sale_item\` when the user asks to remove an order.`;
@@ -324,85 +349,148 @@ export async function sendSalesAiMessage(
   newMessage: string,
   sales: SaleItem[] = []
 ): Promise<AiServerResponse> {
-  const apiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new Error(
-      'Google AI Studio API Key is not configured on the server. Please set GOOGLE_API_KEY in your environment variables (.env.local).'
-    );
-  }
-
-  const modelName = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
-  const systemInstruction = buildSystemInstruction();
-
-  // Prepare Gemini conversation payload (pruned to recent turns for efficiency)
-  const contents: Array<{
-    role: 'user' | 'model';
-    parts: Array<Record<string, unknown>>;
-  }> = [];
-
-  const recentHistory = history.slice(-8);
-  for (const msg of recentHistory) {
-    if (msg.role === 'user') {
-      contents.push({
-        role: 'user',
-        parts: [{ text: msg.text }],
-      });
-    } else if (msg.role === 'model' && msg.text) {
-      contents.push({
+  try {
+    const apiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return {
+        id: `err-${Date.now()}`,
         role: 'model',
-        parts: [{ text: msg.text }],
-      });
+        text: '⚠️ **Configuration Error**:\n\nGoogle AI Studio API Key is not configured on the server. Please set `GOOGLE_API_KEY` in your environment variables (.env.local).',
+        timestamp: Date.now(),
+        error: true,
+        errorMessage: 'Google AI Studio API Key is not configured on the server.',
+      };
     }
-  }
 
-  contents.push({
-    role: 'user',
-    parts: [{ text: newMessage }],
-  });
+    const primaryModel = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
+    // Only rely on Gemini 3.5 Flash Lite and Gemini 3.1 Flash Lite
+    const candidateModels = Array.from(
+      new Set([primaryModel, 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'])
+    );
 
-  const requestBody = {
-    systemInstruction: {
-      parts: [{ text: systemInstruction }],
-    },
-    contents,
-    tools: [
-      {
-        functionDeclarations: GEMINI_FUNCTION_DECLARATIONS,
+    const systemInstruction = buildSystemInstruction();
+
+    // Prepare Gemini conversation payload (pruned to recent turns for efficiency)
+    const contents: Array<{
+      role: 'user' | 'model';
+      parts: Array<Record<string, unknown>>;
+    }> = [];
+
+    const recentHistory = history.slice(-8);
+    for (const msg of recentHistory) {
+      if (msg.role === 'user') {
+        contents.push({
+          role: 'user',
+          parts: [{ text: msg.text }],
+        });
+      } else if (msg.role === 'model' && msg.text && !msg.error) {
+        contents.push({
+          role: 'model',
+          parts: [{ text: msg.text }],
+        });
+      }
+    }
+
+    contents.push({
+      role: 'user',
+      parts: [{ text: newMessage }],
+    });
+
+    const requestBody = {
+      systemInstruction: {
+        parts: [{ text: systemInstruction }],
       },
-    ],
-    generationConfig: {
-      temperature: 0.0,
-      maxOutputTokens: 2048,
-    },
-  };
-
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
-
-  const response = await fetchWithRetry(endpoint, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(requestBody),
-  });
-
-  if (!response.ok) {
-    const errorJson = await response.json().catch(() => ({}));
-    const message = errorJson?.error?.message || `Gemini API error: ${response.status} ${response.statusText}`;
-    throw new Error(message);
-  }
-
-  const result = await response.json();
-  const candidate = result.candidates?.[0];
-  if (!candidate || !candidate.content) {
-    return {
-      id: `msg-${Date.now()}`,
-      role: 'model',
-      text: 'I received an empty response from the AI model. Please try asking again.',
-      timestamp: Date.now(),
+      contents,
+      tools: [
+        {
+          functionDeclarations: GEMINI_FUNCTION_DECLARATIONS,
+        },
+      ],
+      generationConfig: {
+        temperature: 0.0,
+        maxOutputTokens: 2048,
+      },
     };
-  }
 
-  const parts = candidate.content.parts || [];
-  const functionCalls: Array<{ name: string; args: Record<string, unknown> }> = [];
+    let response: Response | null = null;
+    let lastErrorMsg = '';
+    let selectedModel = primaryModel;
+
+    for (const model of candidateModels) {
+      selectedModel = model;
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+      try {
+        const res = await fetchWithRetry(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestBody),
+        });
+
+        if (res.ok) {
+          response = res;
+          break;
+        }
+
+        const errorJson = await res.json().catch(() => ({}));
+        const message =
+          errorJson?.error?.message ||
+          `Gemini API error: ${res.status} ${res.statusText}`;
+        lastErrorMsg = message;
+
+        // If the model is experiencing high demand (503) or rate limit (429), try next candidate
+        if (
+          res.status === 503 ||
+          res.status === 429 ||
+          message.toLowerCase().includes('demand') ||
+          message.toLowerCase().includes('capacity')
+        ) {
+          console.warn(`Model ${model} unavailable (${res.status}): ${message}. Trying fallback model...`);
+          continue;
+        }
+
+        // For non-transient client errors (e.g. 400 bad request, 401 unauthorized), break and show error
+        response = res;
+        break;
+      } catch (fetchErr: unknown) {
+        lastErrorMsg = fetchErr instanceof Error ? fetchErr.message : 'Network request failed';
+      }
+    }
+
+    if (!response || !response.ok) {
+      const displayError = lastErrorMsg || 'The AI service is currently unavailable. Please try again later.';
+      return {
+        id: `err-${Date.now()}`,
+        role: 'model',
+        text: `⚠️ **AI Service Error**:\n\n${displayError}`,
+        timestamp: Date.now(),
+        error: true,
+        errorMessage: displayError,
+      };
+    }
+
+    const result = await response.json();
+    const candidate = result.candidates?.[0];
+    if (!candidate || !candidate.content) {
+      const blockReason = result.promptFeedback?.blockReason;
+      const finishReason = candidate?.finishReason;
+      let emptyMsg = 'I received an empty response from the AI model. Please try asking again.';
+      if (blockReason) {
+        emptyMsg = `The response was blocked by safety filters (${blockReason}). Please rephrase your query.`;
+      } else if (finishReason && finishReason !== 'STOP') {
+        emptyMsg = `The model stopped generating unexpectedly (${finishReason}). Please try asking again.`;
+      }
+      return {
+        id: `msg-${Date.now()}`,
+        role: 'model',
+        text: emptyMsg,
+        timestamp: Date.now(),
+        error: Boolean(blockReason),
+      };
+    }
+
+    const parts = candidate.content.parts || [];
+    const functionCalls: Array<{ name: string; args: Record<string, unknown> }> = [];
   let modelText = '';
 
   for (const part of parts) {
@@ -567,7 +655,8 @@ export async function sendSalesAiMessage(
     ];
 
     try {
-      const followupResp = await fetchWithRetry(endpoint, {
+      const followupEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${apiKey}`;
+      const followupResp = await fetchWithRetry(followupEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -583,6 +672,9 @@ export async function sendSalesAiMessage(
         if (followupText) {
           modelText = followupText;
         }
+      } else {
+        const errJson = await followupResp.json().catch(() => ({}));
+        console.warn('Failed to get followup summary from Gemini:', followupResp.status, errJson);
       }
     } catch (err) {
       console.warn('Failed to get followup summary from Gemini:', err);
@@ -621,4 +713,18 @@ export async function sendSalesAiMessage(
     text: modelText,
     timestamp: Date.now(),
   };
+} catch (err: unknown) {
+  console.error('Unhandled error in sendSalesAiMessage:', err);
+  const rawMsg = err instanceof Error ? err.message : String(err);
+  const message = rawMsg || 'An unexpected error occurred while communicating with the AI model.';
+  return {
+    id: `err-${Date.now()}`,
+    role: 'model',
+    text: `⚠️ **Error executing request**:\n\n${message}`,
+    timestamp: Date.now(),
+    error: true,
+    errorMessage: message,
+  };
 }
+}
+
