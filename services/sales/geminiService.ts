@@ -68,11 +68,21 @@ const GEMINI_FUNCTION_DECLARATIONS = [
             },
             category: {
               type: 'STRING',
-              description: 'Exact category filter',
+              description: 'Exact category filter, or comma-separated list of categories to compare (e.g. "Collectibles, Gift Cards")',
+            },
+            categories: {
+              type: 'ARRAY',
+              items: { type: 'STRING' },
+              description: 'Multiple categories to filter or compare (e.g. ["Collectibles", "Gift Cards"])',
             },
             marketplace: {
               type: 'STRING',
-              description: 'Exact marketplace filter (e.g. Shopee, Carousell)',
+              description: 'Exact marketplace filter (Shopee, Carousell), or comma-separated for comparison',
+            },
+            marketplaces: {
+              type: 'ARRAY',
+              items: { type: 'STRING' },
+              description: 'Multiple marketplaces to filter or compare (e.g. ["Shopee", "Carousell"])',
             },
             order_status: {
               type: 'STRING',
@@ -84,7 +94,12 @@ const GEMINI_FUNCTION_DECLARATIONS = [
             },
             customer: {
               type: 'STRING',
-              description: 'Customer name filter (case-insensitive substring)',
+              description: 'Customer name filter (case-insensitive substring), or comma-separated for comparison',
+            },
+            customers: {
+              type: 'ARRAY',
+              items: { type: 'STRING' },
+              description: 'Multiple customers to compare',
             },
           },
           description: 'Predicate filters to constrain the query dataset',
@@ -102,6 +117,11 @@ const GEMINI_FUNCTION_DECLARATIONS = [
         chart_title: {
           type: 'STRING',
           description: 'Concise, informative heading for the generated metrics table',
+        },
+        include_chart: {
+          type: 'BOOLEAN',
+          description:
+            'Set to true ONLY if the user explicitly requested a table, chart, graph, breakdown, or for complex multi-period reports (e.g. monthly trends, top 5/10 rankings). For easier, conversational queries (e.g. asking for total revenue, sales of a specific category, simple comparisons like A vs B, or quick questions without requesting a table/chart), set to false so you can answer directly in text without rendering a table/chart card.',
         },
       },
     },
@@ -223,32 +243,54 @@ function buildSystemInstruction(): string {
 ### CRITICAL OPERATIONAL DIRECTIVES:
 1. **ZERO LLM MATH (NON-NEGOTIABLE):** 
    You MUST NEVER calculate, sum, subtract, average, or guess numerical values yourself.
-   Whenever a user asks for revenue, profit, costs, order counts, averages, performance, summaries, monthly/daily trends, category breakdowns, customer rankings, or charts, you MUST call the \`query_sales_metrics\` function.
-2. **STRICT POSTGRESQL AGGREGATION:**
-   The central PostgreSQL database is the sole source of mathematical truth. When \`query_sales_metrics\` returns aggregated results, you must cite those exact database figures.
-3. **DETERMINISTIC METRICS TABLE & NO DUPLICATE MARKDOWN:**
-   When invoking \`query_sales_metrics\`, provide a clean, informative \`chart_title\` (e.g. "Top 5 Customers by Total Spend", "Monthly Revenue & Profit Breakdown").
-   ALWAYS select at most 1 or 2 metrics (e.g. \`["revenue", "profit"]\` or \`["revenue"]\`). NEVER request 3 or more metrics simultaneously.
-   CRITICAL: NEVER format data rows as a markdown table in your text response. A dedicated data table and visual chart card is already automatically rendered for the user. In your text response, provide ONLY a 1-2 sentence executive summary or commentary highlighting the top numbers.
+   Whenever a user asks for revenue, profit, costs, order counts, averages, performance, summaries, monthly/daily trends, category breakdowns, customer rankings, or charts, you MUST call the \`query_sales_metrics\` function first.
+
+2. **HANDLING QUERIES: DIRECT TEXT vs TABLE/CHART VISUALIZATION:**
+   - **EASIER / CONVERSATIONAL QUERIES (NO TABLE/CHART):**
+     When the user asks simple, direct questions such as:
+     - Total revenue, profit, costs, or order counts (e.g. "What is our revenue this month?", "How much did we make today?")
+     - Single category or entity metrics (e.g. "What are the sales for the Collectibles category?", "Who is our top customer?")
+     - Straightforward comparisons where no table/chart was requested (e.g. "Can you tell me about the total amount of sales for the collectibles category versus the gifts cards category?", "Compare Shopee vs Carousell")
+     -> Set \`include_chart: false\` in \`query_sales_metrics\`.
+     -> Answer directly, concisely, and naturally in your text response (1-3 sentences) using the exact database numbers.
+     -> State the figures clearly with currency formatting (RM X.XX). DO NOT tell the user to check a table or chart.
+   - **VISUAL / MULTI-ROW REPORTS (RENDER TABLE/CHART):**
+     -> Set \`include_chart: true\` ONLY when:
+     - The user explicitly requests a table, chart, graph, breakdown, or report (e.g. "in a table", "show chart", "break down by category", "plot trends").
+     - OR the data represents multi-period trends (e.g. monthly trends over many months) or rankings with > 2 rows (e.g. top 5/10 customers).
+     -> Provide a 1-2 sentence executive commentary highlighting the main takeaways alongside the rendered chart card.
+
+3. **COMPARISONS (CRITICAL):**
+   When comparing two or more entities (e.g. Category A vs Category B, Shopee vs Carousell, Alice vs Bob):
+   - ALWAYS query data for ALL compared items together. Use \`categories: ['Cat A', 'Cat B']\` or comma-separated \`category: 'Cat A, Cat B'\`.
+   - Group by that dimension (e.g. \`dimensions: ['category']\`).
+   - NEVER filter to only one of the items! Both/all items being compared must be present in the data.
+   - If the user simply asked for the comparison in text without requesting a table/chart, set \`include_chart: false\` and compare the numbers directly in your response text. If they requested a table/chart or breakdown, set \`include_chart: true\`.
+
 4. **CURRENCY FORMATTING:**
    Always format currency as "RM X.XX" (e.g. RM 1,450.00).
+
 5. **DATE FORMATTING (MANDATORY):**
    Always format dates presented to the user in "DD/MM/YYYY" format (e.g. "03/09/2026").
    For monthly breakdowns, period labels, and trends, format as "MM/YYYY" (e.g. "09/2026").
    You may use "DD/MM" for compact item listings within the same year.
    (Note: For database query filters and create/update item actions, continue passing standard ISO "YYYY-MM-DD" internally).
+
 6. **TEMPORAL FILTER MAPPING:**
    Use the exact ISO dates from the CALENDAR ANCHOR when applying date filters:
    - "this month" / "current month": filters: { start_date: "${monthStartDate}", end_date: "${todayStr}" }
    - "last month": filters: { start_date: "${lastMonthStartDate}", end_date: "${lastMonthEndDate}" }
    - "last 7 days" / "past week": filters: { start_date: "${sevenDaysAgoStr}", end_date: "${todayStr}" }
    - "this year": filters: { start_date: "${yearStartDate}", end_date: "${todayStr}" }
+
 7. **CHRONOLOGICAL TREND SORTING:**
    When grouping by date (\`dimensions: ['date']\`) or month (\`dimensions: ['month']\`), ALWAYS set \`order_by: 'dimension_asc'\` so the timeline displays in chronological order.
+
 8. **DASHBOARD ACTIONS & USER ORDER CRUD FORMS:**
    - Use \`open_create_sale_form\` whenever the user asks to create a new order, add an order, record a sale, or fill up an order form. This displays an interactive form card directly inside the chat dialog box where the user can enter their own details and click confirm.
    - Use \`open_update_sale_form\` whenever the user asks to edit, update, or modify an existing order. This displays an interactive edit form card in the chat dialog box allowing the user to select an order, adjust status or prices, and click confirm.
    - Use \`request_delete_sale_item\` when the user asks to remove an order.
+
 9. **TENANT ISOLATION & PRIVACY BOUNDARIES (STRICT):**
    You are strictly bound to the currently authenticated user's private workspace. You have NO access, visibility, or authorization to view, aggregate, or discuss any other user's sales data, administrative global data, or other accounts.
    If a user asks to view or query other users' data, compare with other accounts, or access global/system-wide datasets, you MUST politely refuse and state that you can only analyze and report on their own authenticated sales data.`;
@@ -366,9 +408,8 @@ export async function sendSalesAiMessage(
     }
 
     const primaryModel = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
-    // Only rely on Gemini 3.5 Flash Lite and Gemini 3.1 Flash Lite
     const candidateModels = Array.from(
-      new Set([primaryModel, 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'])
+      new Set([primaryModel, 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-2.5-flash-lite'])
     );
 
     const systemInstruction = buildSystemInstruction();
@@ -521,6 +562,11 @@ export async function sendSalesAiMessage(
     let pendingUpdateFormResult: PendingUpdateForm | undefined;
     let actionExecutedDescription = '';
 
+    const queryMetricsExecutions: Array<{
+      args: QuerySalesMetricsArgs;
+      queryResult: Awaited<ReturnType<typeof executeSalesMetricsQuery>>;
+    }> = [];
+
     const functionResponses: Array<{
       functionResponse: {
         name: string;
@@ -534,13 +580,10 @@ export async function sendSalesAiMessage(
       if (name === 'query_sales_metrics') {
         // Execute Deterministic Semantic Function-Calling against PostgreSQL
         try {
-          const queryResult = await executeSalesMetricsQuery(
-            args as unknown as QuerySalesMetricsArgs,
-            sales
-          );
+          const queryArgs = args as unknown as QuerySalesMetricsArgs;
+          const queryResult = await executeSalesMetricsQuery(queryArgs, sales);
 
-          resolvedChartSpec = queryResult.chartSpec;
-          actionExecutedDescription = `Generated analytics for ${resolvedChartSpec.title}`;
+          queryMetricsExecutions.push({ args: queryArgs, queryResult });
 
           functionResponses.push({
             functionResponse: {
@@ -647,19 +690,78 @@ export async function sendSalesAiMessage(
       }
     }
 
+    // Process and merge query metrics if any were called
+    if (queryMetricsExecutions.length > 0) {
+      if (queryMetricsExecutions.length === 1) {
+        resolvedChartSpec = queryMetricsExecutions[0].queryResult.chartSpec;
+      } else {
+        // Multi-call merging: merge rows from all query executions into a single dataset
+        const mergedData: Array<Record<string, unknown>> = [];
+        const seenKeys = new Set<string>();
+        const primaryDim = queryMetricsExecutions[0].queryResult.chartSpec.xAxisKey;
+
+        for (const exec of queryMetricsExecutions) {
+          for (const row of exec.queryResult.data) {
+            const keyVal = String(row[primaryDim] ?? JSON.stringify(row));
+            if (!seenKeys.has(keyVal)) {
+              seenKeys.add(keyVal);
+              mergedData.push(row);
+            }
+          }
+        }
+
+        const titleWithComparison = queryMetricsExecutions.find(
+          (e) =>
+            e.queryResult.chartSpec.title.toLowerCase().includes('vs') ||
+            e.queryResult.chartSpec.title.toLowerCase().includes('comparison')
+        );
+
+        resolvedChartSpec = {
+          ...queryMetricsExecutions[0].queryResult.chartSpec,
+          title: titleWithComparison ? titleWithComparison.queryResult.chartSpec.title : 'Sales Metrics Comparison',
+          data: mergedData,
+        };
+      }
+
+      // Decide whether to render the visual chart/table card or answer directly in text
+      const isVisualExplicitlyRequested = /\b(table|chart|graph|plot|breakdown|tabular|report)\b/i.test(newMessage);
+      const anyIncludeChartTrue = queryMetricsExecutions.some((e) => e.args.include_chart === true);
+      const allIncludeChartFalse = queryMetricsExecutions.every((e) => e.args.include_chart === false);
+
+      let shouldRenderChart = false;
+      if (anyIncludeChartTrue) {
+        shouldRenderChart = true;
+      } else if (allIncludeChartFalse) {
+        shouldRenderChart = false;
+      } else if (isVisualExplicitlyRequested) {
+        shouldRenderChart = true;
+      } else {
+        // For easier queries (<= 2 rows) where no table/chart was requested, answer directly in text!
+        const totalRows = resolvedChartSpec ? resolvedChartSpec.data.length : 0;
+        shouldRenderChart = totalRows > 2;
+      }
+
+      if (!shouldRenderChart) {
+        resolvedChartSpec = undefined;
+        actionExecutedDescription = '';
+      } else if (resolvedChartSpec) {
+        actionExecutedDescription = `Generated analytics for ${resolvedChartSpec.title}`;
+      }
+    }
+
     // Follow-up completion: Inject exact aggregate results back into LLM stream
     const followupContents = [
       ...contents,
       candidate.content,
       {
-        role: 'user' as const,
+        role: 'tool' as const,
         parts: functionResponses,
       },
     ];
 
     try {
       const followupEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${apiKey}`;
-      const followupResp = await fetchWithRetry(followupEndpoint, {
+      let followupResp = await fetchWithRetry(followupEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -668,6 +770,30 @@ export async function sendSalesAiMessage(
           generationConfig: { temperature: 0.0, maxOutputTokens: 1024 },
         }),
       });
+
+      // Fallback: If model prefers role 'user' for function response payload
+      if (!followupResp.ok) {
+        const fallbackContents = [
+          ...contents,
+          candidate.content,
+          {
+            role: 'user' as const,
+            parts: functionResponses,
+          },
+        ];
+        const retryResp = await fetchWithRetry(followupEndpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: systemInstruction }] },
+            contents: fallbackContents,
+            generationConfig: { temperature: 0.0, maxOutputTokens: 1024 },
+          }),
+        });
+        if (retryResp.ok) {
+          followupResp = retryResp;
+        }
+      }
 
       if (followupResp.ok) {
         const followupData = await followupResp.json();
@@ -683,7 +809,7 @@ export async function sendSalesAiMessage(
       console.warn('Failed to get followup summary from Gemini:', err);
     }
 
-    // Defense-in-depth: If structured chartSpec/table is attached, strip any redundant markdown tables from model text
+    // If structured chartSpec/table is attached, strip any redundant markdown tables from model commentary
     if (resolvedChartSpec && modelText) {
       modelText = modelText
         .split('\n')
@@ -694,6 +820,33 @@ export async function sendSalesAiMessage(
         .join('\n')
         .replace(/\n{3,}/g, '\n\n')
         .trim();
+    }
+
+    // Fallback: If modelText is empty, synthesize clean direct answer
+    if (!modelText || modelText.trim() === '') {
+      if (resolvedChartSpec) {
+        modelText = actionExecutedDescription || `Generated analytics for ${resolvedChartSpec.title}`;
+      } else if (queryMetricsExecutions.length > 0) {
+        const allRows = queryMetricsExecutions.flatMap((e) => e.queryResult.data);
+        if (allRows.length === 1) {
+          const r = allRows[0];
+          const label = String(r.label || r.category || r.marketplace || r.customer || r.item || 'Summary');
+          const parts: string[] = [];
+          if (r.revenue !== undefined) parts.push(`Revenue of RM ${Number(r.revenue).toFixed(2)}`);
+          if (r.profit !== undefined) parts.push(`Net Profit of RM ${Number(r.profit).toFixed(2)}`);
+          if (r.order_count !== undefined) parts.push(`${r.order_count} orders`);
+          modelText = `${label}: ${parts.join(', ')}.`;
+        } else if (allRows.length > 1) {
+          const lines = allRows.map((r) => {
+            const name = String(r.category || r.marketplace || r.customer || r.item || r.month || r.date || 'Item');
+            const parts: string[] = [];
+            if (r.revenue !== undefined) parts.push(`Revenue: RM ${Number(r.revenue).toFixed(2)}`);
+            if (r.profit !== undefined) parts.push(`Profit: RM ${Number(r.profit).toFixed(2)}`);
+            return `**${name}**: ${parts.join(', ')}`;
+          });
+          modelText = lines.join('\n\n');
+        }
+      }
     }
 
     return {

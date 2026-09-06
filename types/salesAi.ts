@@ -30,10 +30,17 @@ export interface SalesFilterParams {
   start_date?: string;
   end_date?: string;
   category?: string;
+  categories?: string[];
   marketplace?: string;
+  marketplaces?: string[];
   order_status?: string;
+  order_statuses?: string[];
   payment_status?: string;
+  payment_statuses?: string[];
   customer?: string;
+  customers?: string[];
+  item?: string;
+  items?: string[];
 }
 
 export interface QuerySalesMetricsArgs {
@@ -43,6 +50,7 @@ export interface QuerySalesMetricsArgs {
   order_by?: MetricSortOrder;
   limit?: number;
   chart_title?: string;
+  include_chart?: boolean;
 }
 
 export interface ChartSpec {
