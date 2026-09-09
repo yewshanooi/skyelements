@@ -1,7 +1,8 @@
 'use server';
 
 import { redirect } from 'next/navigation';
-import { getAuthenticatedClient, getUserProfile, LITHIUM_AVATAR_METADATA_KEY, type UserProfile } from './profile';
+import { getAuthenticatedClient } from './auth-server';
+import { getUserProfile, LITHIUM_AVATAR_METADATA_KEY, type UserProfile } from './profile';
 
 const MAX_DISPLAY_NAME_LENGTH = 80;
 const MAX_SYSTEM_INSTRUCTION_LENGTH = 4000;

@@ -1,6 +1,6 @@
 'use server';
 
-import { getAuthenticatedClient } from "./profile";
+import { getAuthenticatedClient } from "./auth-server";
 
 // ---------------------------------------------------------------------------
 // Types

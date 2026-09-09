@@ -70,6 +70,7 @@ interface SettingsDialogProps {
   onDeleteAllNotes?: () => Promise<void>
   onProfileUpdated?: (profile: UserProfile) => void
   onDeleteAccount?: () => Promise<void>
+  showCustomInstructions?: boolean
 }
 
 type ConfirmDialogType = "notes" | "chats" | "signout" | "account"
@@ -147,6 +148,7 @@ export function SettingsDialog({
   onDeleteAllNotes,
   onProfileUpdated,
   onDeleteAccount,
+  showCustomInstructions = Boolean(onDeleteAllChats || onDeleteAllNotes),
 }: SettingsDialogProps) {
   const { theme, setTheme } = useTheme()
   const isMobile = useIsMobile()
@@ -334,7 +336,7 @@ export function SettingsDialog({
     },
     account: {
       title: "Delete your account?",
-      description: accountError ?? "This will delete all your notes, chats, and account. This action cannot be undone.",
+      description: accountError ?? "This will delete all your account data. This action cannot be undone.",
       icon: Trash2,
       onConfirm: handleDeleteAccount,
       loading: deletingAccount,
@@ -393,7 +395,7 @@ export function SettingsDialog({
                     className="min-w-0 flex-1 text-sm"
                     value={form.displayName}
                     maxLength={80}
-                    placeholder="What should Lithium call you?"
+                    placeholder="What should we call you?"
                     onChange={(e) => {
                       setForm((prev) => ({ ...prev, displayName: e.target.value }))
                       setProfileError(null)
@@ -490,33 +492,37 @@ export function SettingsDialog({
       icon: Palette,
       content: (
         <>
-          <SettingsSection
-            title="Custom instructions"
-            description="Additional behavior, style, and tone preferences."
-          >
-            <div className="flex w-full items-start gap-2">
-              <Textarea
-                aria-label="Custom instructions"
-                className="min-w-0 flex-1 field-sizing-fixed resize-none overflow-y-auto scrollbar-thin text-sm"
-                value={form.systemInstruction}
-                maxLength={1000}
-                rows={4}
-                onChange={(e) => {
-                  setForm((prev) => ({ ...prev, systemInstruction: e.target.value }))
-                  setProfileError(null)
-                }}
-              />
-              {form.systemInstruction !== saved.systemInstruction && (
-                <SaveButton
-                  onClick={handleSaveProfile}
-                  loading={savingProfile}
-                  label="Save custom instructions"
-                />
-              )}
-            </div>
-          </SettingsSection>
+          {showCustomInstructions && (
+            <>
+              <SettingsSection
+                title="Custom instructions"
+                description="Additional behavior, style, and tone preferences."
+              >
+                <div className="flex w-full items-start gap-2">
+                  <Textarea
+                    aria-label="Custom instructions"
+                    className="min-w-0 flex-1 field-sizing-fixed resize-none overflow-y-auto scrollbar-thin text-sm"
+                    value={form.systemInstruction}
+                    maxLength={1000}
+                    rows={4}
+                    onChange={(e) => {
+                      setForm((prev) => ({ ...prev, systemInstruction: e.target.value }))
+                      setProfileError(null)
+                    }}
+                  />
+                  {form.systemInstruction !== saved.systemInstruction && (
+                    <SaveButton
+                      onClick={handleSaveProfile}
+                      loading={savingProfile}
+                      label="Save custom instructions"
+                    />
+                  )}
+                </div>
+              </SettingsSection>
 
-          <Separator />
+              <Separator />
+            </>
+          )}
 
           <SettingsSection title="Theme" description="Choose your preferred color.">
             <div className="grid grid-cols-3 gap-2 sm:gap-3">
@@ -546,30 +552,37 @@ export function SettingsDialog({
       icon: Database,
       content: (
         <>
-          <SettingsSection title="Your data" description="Manage your Lithium data.">
-            <SettingsRow
-              label="Clear notes"
-              action={
-                <ActionButton
-                  label="Clear"
-                  icon={Trash2}
-                  onClick={() => setConfirmDialog("notes")}
-                />
-              }
-            />
-            <SettingsRow
-              label="Clear chats"
-              action={
-                <ActionButton
-                  label="Clear"
-                  icon={Trash2}
-                  onClick={() => setConfirmDialog("chats")}
-                />
-              }
-            />
-          </SettingsSection>
-
-          <Separator />
+          {(onDeleteAllNotes || onDeleteAllChats) && (
+            <>
+              <SettingsSection title="Your data" description="Manage your Lithium data.">
+                {onDeleteAllNotes && (
+                  <SettingsRow
+                    label="Clear notes"
+                    action={
+                      <ActionButton
+                        label="Clear"
+                        icon={Trash2}
+                        onClick={() => setConfirmDialog("notes")}
+                      />
+                    }
+                  />
+                )}
+                {onDeleteAllChats && (
+                  <SettingsRow
+                    label="Clear chats"
+                    action={
+                      <ActionButton
+                        label="Clear"
+                        icon={Trash2}
+                        onClick={() => setConfirmDialog("chats")}
+                      />
+                    }
+                  />
+                )}
+              </SettingsSection>
+              <Separator />
+            </>
+          )}
 
           <SettingsSection
             title="Policy"

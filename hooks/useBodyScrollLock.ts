@@ -3,8 +3,6 @@
 import { useEffect } from 'react';
 
 let lockCount = 0;
-let scrollY = 0;
-let scrollX = 0;
 
 let originalBodyStyles = {
   overflow: '',
@@ -24,23 +22,15 @@ let originalHtmlStyles = {
 };
 
 /**
- * Robust scroll lock for desktop and mobile browsers (including iOS Safari & WebKit).
- * Sets position: fixed with scroll offset retention on body to prevent underlying viewport scrolling.
+ * Robust scroll lock for desktop and mobile browsers.
+ * With `scrollbar-gutter: stable` defined on the root, the scrollbar channel remains stable
+ * without injecting artificial paddingRight (which creates a blank vertical space).
  */
 export function lockBodyScroll() {
   if (typeof window === 'undefined' || typeof document === 'undefined') return;
 
   if (lockCount === 0) {
-    // 1. Capture current scroll offsets
-    scrollY = window.scrollY || window.pageYOffset || document.documentElement.scrollTop || 0;
-    scrollX = window.scrollX || window.pageXOffset || document.documentElement.scrollLeft || 0;
-
-    // 2. Compute scrollbar width on desktop to prevent layout jitter
-    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
-    const bodyComputedPaddingRight = window.getComputedStyle(document.body).paddingRight;
-    const currentPadding = parseFloat(bodyComputedPaddingRight) || 0;
-
-    // 3. Save original inline styles
+    // 1. Save original inline styles
     originalBodyStyles = {
       overflow: document.body.style.overflow,
       position: document.body.style.position,
@@ -57,23 +47,13 @@ export function lockBodyScroll() {
       overscrollBehavior: document.documentElement.style.overscrollBehavior,
     };
 
-    // 4. Apply lock styles to HTML root
+    // 2. Apply lock styles to HTML root and document body
+    // Do NOT inject scrollbarWidth into paddingRight because scrollbar-gutter: stable already preserves the gutter.
     document.documentElement.style.overflow = 'hidden';
     document.documentElement.style.overscrollBehavior = 'none';
 
-    // 5. Apply fixed positioning and lock to document body
     document.body.style.overflow = 'hidden';
-    document.body.style.position = 'fixed';
-    document.body.style.top = `-${scrollY}px`;
-    document.body.style.left = `-${scrollX}px`;
-    document.body.style.right = '0px';
-    document.body.style.width = '100%';
-    document.body.style.height = '100%';
     document.body.style.overscrollBehavior = 'none';
-
-    if (scrollbarWidth > 0) {
-      document.body.style.paddingRight = `${currentPadding + scrollbarWidth}px`;
-    }
   }
 
   lockCount++;
@@ -99,13 +79,6 @@ export function unlockBodyScroll() {
     document.body.style.height = originalBodyStyles.height;
     document.body.style.paddingRight = originalBodyStyles.paddingRight;
     document.body.style.overscrollBehavior = originalBodyStyles.overscrollBehavior;
-
-    // 3. Restore exact scroll position
-    window.scrollTo({
-      left: scrollX,
-      top: scrollY,
-      behavior: 'instant' as ScrollBehavior,
-    });
   }
 }
 

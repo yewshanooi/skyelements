@@ -148,6 +148,7 @@
     @apply font-sans;
     overflow-x: hidden;
     max-width: 100%;
+    scrollbar-gutter: stable;
   }
   button:not(:disabled), [role="button"]:not(:disabled) {
     cursor: pointer;
@@ -216,6 +217,31 @@
 
 ::-webkit-scrollbar-corner {
   background: transparent;
+}
+
+/* Prevent Radix Dialog / react-remove-scroll from hiding the vertical scrollbar and shifting layout */
+html body[data-scroll-locked],
+body[data-scroll-locked] {
+  overflow: visible !important;
+  overflow-x: hidden !important;
+  margin-right: 0px !important;
+  padding-right: 0px !important;
+  position: static !important;
+  --removed-body-scroll-bar-size: 0px !important;
+}
+
+.with-scroll-bars-hidden {
+  overflow: visible !important;
+  overflow-x: hidden !important;
+  padding-right: 0px !important;
+}
+
+.right-scroll-bar-position {
+  right: 0px !important;
+}
+
+.width-before-scroll-bar {
+  margin-right: 0px !important;
 }
 
 /* Markdown prose for Lithium chat */

@@ -8,7 +8,7 @@ import {
   type ThinkingEffort,
 } from "@/lib/models";
 import { buildOptimizedHistory } from "@/lib/chat-context";
-import { getAuthenticatedClient } from "./profile";
+import { getAuthenticatedClient } from "./auth-server";
 
 // ---------------------------------------------------------------------------
 // Types
