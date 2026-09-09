@@ -28,7 +28,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion"
 import { ThemeToggle } from "./theme-client";
-import { useBodyScrollLock } from "@/lib/sales/useBodyScrollLock";
+import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 
 interface NavigationBarProps {
   forceShow?: boolean

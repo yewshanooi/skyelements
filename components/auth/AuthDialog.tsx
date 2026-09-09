@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { X } from "lucide-react";
 import { AuthCard, type AuthMode } from "./AuthCard";
-import { useBodyScrollLock } from "@/lib/sales/useBodyScrollLock";
+import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 
 interface AuthDialogProps {
   isOpen: boolean;

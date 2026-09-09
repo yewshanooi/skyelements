@@ -4,23 +4,23 @@ import { useState, useEffect, useMemo, useRef, useCallback, Suspense } from 'rea
 import dynamic from 'next/dynamic';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import type { User } from '@supabase/supabase-js';
-import { AuthProvider, useAuth } from '@/lib/sales/AuthContext';
-import { Header } from '@/components/sales/Header';
-import { SaleModal } from '@/components/sales/SaleModal';
-import { AuthModal } from '@/components/sales/AuthModal';
-import { InvoiceViewerModal } from '@/components/sales/InvoiceViewerModal';
-import { UnauthenticatedLanding } from '@/components/sales/UnauthenticatedLanding';
-import { ErrorBoundary } from '@/components/sales/ErrorBoundary';
-import type { SaleItem, ViewMode, StoreType, SortField, SortOrder } from '@/types/sales';
+import { AuthProvider, useAuth } from '@/sales/context/AuthContext';
+import { Header } from '@/sales/layout/Header';
+import { SaleModal } from '@/sales/modals/SaleModal';
+import { AuthDialog } from '@/components/auth/AuthDialog';
+import { InvoiceViewerModal } from '@/sales/modals/InvoiceViewerModal';
+import { UnauthenticatedLanding } from '@/sales/layout/UnauthenticatedLanding';
+import { ErrorBoundary } from '@/sales/layout/ErrorBoundary';
+import type { SaleItem, ViewMode, StoreType, SortField, SortOrder } from '@/sales/types';
 import {
   fetchSalesAction,
   createSaleAction,
   updateSaleAction,
   deleteSaleAction,
   batchDeleteSalesAction,
-} from '@/services/sales/salesActions';
-import { normalizeCoordinates } from '@/lib/sales/locationParser';
-import { evaluateSalesFormula, STORAGE_KEY_FORMULA, DEFAULT_FORMULA } from '@/lib/sales/formulaEngine';
+} from '@/sales/services/salesActions';
+import { normalizeCoordinates } from '@/sales/lib/locationParser';
+import { evaluateSalesFormula, STORAGE_KEY_FORMULA, DEFAULT_FORMULA } from '@/sales/lib/formulaEngine';
 import {
   filterSales,
   parseFiltersFromSearchParams,
@@ -29,8 +29,9 @@ import {
   saveFiltersToStorage,
   loadFiltersFromStorage,
   type FilterState,
-} from '@/lib/sales/filterUtils';
-import { formatDateDisplay } from '@/lib/sales/dateUtils';
+} from '@/sales/lib/filterUtils';
+import { formatDateDisplay } from '@/sales/lib/dateUtils';
+import { useSalesModals } from '@/sales/hooks/useSalesModals';
 
 const ViewLoading = () => (
   <div className="flex flex-col items-center justify-center py-24 space-y-3">
@@ -41,31 +42,31 @@ const ViewLoading = () => (
 
 // Dynamically import heavy and browser-only components
 const TableView = dynamic(
-  () => import('@/components/sales/TableView').then((m) => ({ default: m.TableView })),
+  () => import('@/sales/views/table/TableView').then((m) => ({ default: m.TableView })),
   { ssr: false, loading: () => <ViewLoading /> }
 );
 const ChartView = dynamic(
-  () => import('@/components/sales/ChartView').then((m) => ({ default: m.ChartView })),
+  () => import('@/sales/views/chart/ChartView').then((m) => ({ default: m.ChartView })),
   { ssr: false, loading: () => <ViewLoading /> }
 );
 const TimelineView = dynamic(
-  () => import('@/components/sales/TimelineView').then((m) => ({ default: m.TimelineView })),
+  () => import('@/sales/views/timeline/TimelineView').then((m) => ({ default: m.TimelineView })),
   { ssr: false, loading: () => <ViewLoading /> }
 );
 const MapView = dynamic(
-  () => import('@/components/sales/MapView').then((m) => ({ default: m.MapView })),
+  () => import('@/sales/views/map/MapView').then((m) => ({ default: m.MapView })),
   { ssr: false, loading: () => <ViewLoading /> }
 );
 const KanbanBoardView = dynamic(
-  () => import('@/components/sales/KanbanBoardView').then((m) => ({ default: m.KanbanBoardView })),
+  () => import('@/sales/views/kanban/KanbanBoardView').then((m) => ({ default: m.KanbanBoardView })),
   { ssr: false, loading: () => <ViewLoading /> }
 );
 const NotionImportModal = dynamic(
-  () => import('@/components/sales/NotionImportModal').then((m) => ({ default: m.NotionImportModal })),
+  () => import('@/sales/modals/NotionImportModal').then((m) => ({ default: m.NotionImportModal })),
   { ssr: false }
 );
 const AiAssistantDrawer = dynamic(
-  () => import('@/components/sales/AiAssistantDrawer').then((m) => ({ default: m.AiAssistantDrawer })),
+  () => import('@/sales/ai/AiAssistantDrawer').then((m) => ({ default: m.AiAssistantDrawer })),
   { ssr: false }
 );
 
@@ -244,48 +245,13 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  // Modals state
-  const [isSaleModalOpen, setIsSaleModalOpen] = useState(false);
-  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-  const [editingSale, setEditingSale] = useState<SaleItem | null>(null);
-  const [defaultStoreForNewSale, setDefaultStoreForNewSale] = useState<StoreType | string | undefined>(undefined);
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [authModalMode, setAuthModalMode] = useState<'login' | 'signup'>('login');
-  const [invoiceSale, setInvoiceSale] = useState<SaleItem | null>(null);
-  const [selectedMapSale, setSelectedMapSale] = useState<SaleItem | null>(null);
-  const [isAiOpen, setIsAiOpen] = useState<boolean>(false);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-
-  // Restore AI Assistant drawer state from sessionStorage after hydration
-  useEffect(() => {
-    try {
-      if (sessionStorage.getItem('sales_ai_drawer_open') === 'true') {
-        setIsAiOpen(true);
-      }
-    } catch { }
-  }, []);
-
-  const handleToggleAi = useCallback(() => {
-    setIsAiOpen((prev) => {
-      const next = !prev;
-      try {
-        sessionStorage.setItem('sales_ai_drawer_open', String(next));
-      } catch { }
-      return next;
-    });
-  }, []);
-
-  const handleCloseAi = useCallback(() => {
-    setIsAiOpen(false);
-    try {
-      sessionStorage.setItem('sales_ai_drawer_open', 'false');
-    } catch { }
-  }, []);
-
-  const handleOpenAuth = useCallback((mode: 'login' | 'signup' = 'login') => {
-    setAuthModalMode(mode);
-    setIsAuthModalOpen(true);
-  }, []);
+  const {
+    isSaleModalOpen, setIsSaleModalOpen, isImportModalOpen, setIsImportModalOpen,
+    editingSale, setEditingSale, defaultStoreForNewSale, setDefaultStoreForNewSale,
+    isAuthModalOpen, setIsAuthModalOpen, authModalMode, invoiceSale, setInvoiceSale,
+    selectedMapSale, setSelectedMapSale, isAiOpen, selectedIds, setSelectedIds,
+    handleToggleAi, handleCloseAi, handleOpenAuth,
+  } = useSalesModals();
 
   // Global keyboard shortcut to toggle AI Assistant (Ctrl+J or Cmd+J)
   useEffect(() => {
@@ -521,7 +487,7 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
     return (
       <>
         <UnauthenticatedLanding onOpenAuth={handleOpenAuth} />
-        <AuthModal
+        <AuthDialog
           isOpen={isAuthModalOpen}
           onClose={() => setIsAuthModalOpen(false)}
           defaultMode={authModalMode}
@@ -646,7 +612,7 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
         onClose={() => setInvoiceSale(null)}
       />
 
-      <AuthModal
+      <AuthDialog
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
         defaultMode={authModalMode}

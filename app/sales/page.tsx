@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
-import { UnauthenticatedLanding } from "@/components/sales/UnauthenticatedLanding";
+import { UnauthenticatedLanding } from "@/sales/layout/UnauthenticatedLanding";
 
 export const metadata: Metadata = {
   title: "Sales Dashboard",

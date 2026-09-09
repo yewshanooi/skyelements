@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { SalesClient } from "../sales-client";
-import type { ViewMode } from "@/types/sales";
-import { fetchSalesAction } from "@/services/sales/salesActions";
+import type { ViewMode } from "@/sales/types";
+import { fetchSalesAction } from "@/sales/services/salesActions";
 
 const VALID_VIEWS: ViewMode[] = ['table', 'board', 'chart', 'timeline', 'map'];
 
