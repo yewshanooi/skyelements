@@ -18,13 +18,14 @@ import {
 import type { WidgetWidth } from '@/sales/types/chart';
 import type { TrendDataPoint } from '@/sales/lib/chartUtils';
 import { SegmentedControl } from '../ChartControls';
+import { ChartTooltipCard, ChartTooltipRow } from '../ChartTooltip';
 
 interface RevenueTrendWidgetProps {
   data: TrendDataPoint[];
   granularity: 'daily' | 'weekly' | 'monthly';
   onGranularityChange: (g: 'daily' | 'weekly' | 'monthly') => void;
   chartType: 'area' | 'bar' | 'line';
-  onChartTypeChange: (t: 'area' | 'bar' | 'line') => void;
+  onChartTypeChange: (c: 'area' | 'bar' | 'line') => void;
   metric: 'all' | 'profit' | 'revenue' | 'cumulative';
   onMetricChange: (m: 'all' | 'profit' | 'revenue' | 'cumulative') => void;
   currentWidth?: WidgetWidth;
@@ -50,25 +51,21 @@ const TrendTooltipContent = ({
 }) => {
   if (active && payload && payload.length) {
     return (
-      <div className="p-3 bg-white dark:bg-[#1a1a1a] border border-neutral-200 dark:border-neutral-700 shadow-xl rounded-xl text-xs space-y-1.5 min-w-[170px]">
-        <p className="font-bold text-neutral-900 dark:text-neutral-100 border-b border-neutral-200/60 dark:border-neutral-800 pb-1">
-          {label}
-        </p>
+      <ChartTooltipCard title={label} minWidthClass="min-w-[210px]">
         {payload.map((entry, i) => {
           const color = entry.color || entry.fill || entry.stroke || '#888888';
           const numVal = typeof entry.value === 'number' ? entry.value : Number(entry.value) || 0;
           return (
-            <div key={i} className="flex justify-between items-center gap-3">
-              <span style={{ color }} className="font-medium">
-                {entry.name}:
-              </span>
-              <span className="font-mono font-bold text-neutral-900 dark:text-neutral-100">
-                RM {numVal.toFixed(2)}
-              </span>
-            </div>
+            <ChartTooltipRow
+              key={i}
+              label={entry.name || ''}
+              colorDot={color}
+              value={`RM ${numVal.toFixed(2)}`}
+              valueClass="font-mono font-bold text-neutral-800 dark:text-neutral-200"
+            />
           );
         })}
-      </div>
+      </ChartTooltipCard>
     );
   }
   return null;

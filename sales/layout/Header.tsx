@@ -58,6 +58,209 @@ const VIEWS: ViewTabConfig[] = [
   { id: 'map', label: 'Map', Icon: MapPin },
 ];
 
+/* =========================================================================
+   MOBILE FLOATING NAVIGATION + EXPANDING SEARCH
+   - Isolated state machine: opening/closing search won't re-render parent Header
+   - Outside click / key listeners registered ONLY when search is open
+   - Synchronous input.blur() on dismiss for instant iOS/Android keyboard collapse
+   - onMouseDown / onTouchStart preventDefault on Clear (X) keeps keyboard focused
+   - Pixel-perfect h-12 (48px) circle and pill alignment with safe-area spacing
+   ========================================================================= */
+interface MobileFloatingNavProps {
+  activeView: ViewMode;
+  onSelectView: (view: ViewMode) => void;
+  searchQuery?: string;
+  onSearchChange?: (query: string) => void;
+}
+
+const MobileFloatingNav: FC<MobileFloatingNavProps> = ({
+  activeView,
+  onSelectView,
+  searchQuery = '',
+  onSearchChange,
+}) => {
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Focus search input smoothly after expansion animation finishes, or blur when closed
+  useEffect(() => {
+    if (isSearchOpen) {
+      const timer = setTimeout(() => {
+        searchInputRef.current?.focus();
+      }, 280);
+      return () => clearTimeout(timer);
+    } else {
+      searchInputRef.current?.blur();
+    }
+  }, [isSearchOpen]);
+
+  // Outside click & escape handlers active ONLY while search is open
+  useEffect(() => {
+    if (!isSearchOpen) return;
+
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      if (
+        searchContainerRef.current &&
+        !searchContainerRef.current.contains(event.target as Node)
+      ) {
+        searchInputRef.current?.blur();
+        setIsSearchOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        searchInputRef.current?.blur();
+        setIsSearchOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside, { passive: true });
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isSearchOpen]);
+
+  const handleCloseSearch = () => {
+    searchInputRef.current?.blur();
+    setIsSearchOpen(false);
+  };
+
+  return (
+    <div
+      className="fixed inset-x-0 z-40 flex items-center justify-center px-3 pointer-events-none select-none md:hidden transform-gpu will-change-transform"
+      style={{ bottom: 'max(1rem, env(safe-area-inset-bottom, 1rem))' }}
+    >
+      {/* Natural container holding the base nav row + search capsule expanding from the right */}
+      <div className="relative flex items-center gap-2.5 max-w-full pointer-events-none">
+        {/* Base: Navigation Capsule Pill */}
+        <nav
+          className={`pointer-events-auto h-12 flex items-center gap-0.5 p-1 bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-xl border border-neutral-200/90 dark:border-neutral-800/90 rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.14)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.5)] ${
+            isSearchOpen ? 'pointer-events-none select-none' : ''
+          }`}
+          aria-label="Sales View Navigation"
+        >
+          {VIEWS.map((v) => {
+            const isActive = activeView === v.id;
+            const TabIcon = v.Icon;
+            return (
+              <button
+                key={v.id}
+                type="button"
+                onClick={() => onSelectView(v.id)}
+                className={`flex flex-col items-center justify-center h-full min-w-[50px] sm:min-w-[58px] px-2 rounded-full transition-all duration-200 cursor-pointer ${
+                  isActive
+                    ? 'bg-neutral-200/90 dark:bg-neutral-700/80 text-[#2383e2] dark:text-[#388bfd] font-semibold shadow-2xs scale-100'
+                    : 'text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200'
+                }`}
+                title={v.label}
+              >
+                <TabIcon className="w-4.5 h-4.5 shrink-0" />
+                <span className="text-[10px] leading-none mt-0.5 tracking-tight font-medium">
+                  {v.label}
+                </span>
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Spacer reserving exact 48px width of search bubble in flex layout */}
+        <div className="w-12 h-12 shrink-0 pointer-events-none" />
+
+        {/* Unified Expanding Search Capsule: Anchored at right-0, smoothly expands across nav bar */}
+        <div
+          ref={searchContainerRef}
+          className={`absolute right-0 top-0 h-12 z-20 pointer-events-auto rounded-full bg-white dark:bg-[#1c1c1e] backdrop-blur-xl border border-neutral-200/90 dark:border-neutral-800/90 shadow-[0_8px_32px_rgba(0,0,0,0.14)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.5)] overflow-hidden transition-[width] duration-300 ease-out flex items-center transform-gpu will-change-[width] ${
+            isSearchOpen
+              ? 'w-full'
+              : 'w-12 hover:bg-neutral-100 dark:hover:bg-neutral-800 cursor-pointer'
+          }`}
+        >
+          {/* Search Bubble Button Trigger (visible when closed, fades out when opened) */}
+          <button
+            type="button"
+            onClick={() => setIsSearchOpen(true)}
+            className={`w-12 h-full absolute right-0 top-0 flex items-center justify-center cursor-pointer transition-opacity duration-150 ${
+              isSearchOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'
+            }`}
+            aria-label="Search Dashboard"
+            title="Search Dashboard"
+            aria-expanded={isSearchOpen}
+          >
+            <Search className="w-5 h-5 text-neutral-700 dark:text-neutral-300" />
+            {searchQuery && searchQuery.length > 0 && (
+              <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-[#2383e2] rounded-full ring-2 ring-white dark:ring-[#1c1c1e]" />
+            )}
+          </button>
+
+          {/* Active Search Input Form (fades in as capsule expands) */}
+          <form
+            role="search"
+            onSubmit={(e) => {
+              e.preventDefault();
+              searchInputRef.current?.blur();
+            }}
+            className={`flex items-center gap-2 w-full h-full min-w-0 px-2.5 py-1.5 transition-opacity duration-200 ${
+              isSearchOpen ? 'opacity-100 delay-100' : 'opacity-0 pointer-events-none'
+            }`}
+          >
+            <div className="relative flex-1 min-w-0 flex items-center h-full">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none shrink-0" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                placeholder="Search..."
+                value={searchQuery}
+                onChange={(e) => onSearchChange && onSearchChange(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') {
+                    handleCloseSearch();
+                  }
+                }}
+                enterKeyHint="search"
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck={false}
+                aria-label="Search sales orders"
+                className="w-full h-full pl-9 pr-8 text-xs bg-neutral-100 dark:bg-[#252525] border border-neutral-200 dark:border-neutral-700 rounded-full focus:outline-hidden focus:ring-2 focus:ring-[#2383e2]/20 focus:border-[#2383e2] text-neutral-900 dark:text-neutral-100 placeholder-neutral-400"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onTouchStart={(e) => e.preventDefault()}
+                  onClick={() => {
+                    onSearchChange?.('');
+                    searchInputRef.current?.focus();
+                  }}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 p-0.5 cursor-pointer"
+                  title="Clear search"
+                  aria-label="Clear search"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={handleCloseSearch}
+              className="px-3 py-1.5 text-xs font-semibold text-[#2383e2] dark:text-[#388bfd] hover:opacity-80 cursor-pointer shrink-0 rounded-full"
+              aria-label="Done searching"
+            >
+              Done
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 
 export const Header: FC<HeaderProps> = ({
   activeView,
@@ -91,38 +294,35 @@ export const Header: FC<HeaderProps> = ({
     }
   }, [user]);
 
-  // Mobile state for More (...) dropdown menu & floating Search popover
+  // Mobile state for More (...) dropdown menu
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
-  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
-
   const moreMenuRef = useRef<HTMLDivElement>(null);
-  const mobileSearchRef = useRef<HTMLDivElement>(null);
 
-  // Close more menu & mobile search on outside click
+  // Close more menu on outside click / tap only when open
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
+    if (!isMoreMenuOpen) return;
+
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
       if (moreMenuRef.current && !moreMenuRef.current.contains(event.target as Node)) {
         setIsMoreMenuOpen(false);
-      }
-      if (mobileSearchRef.current && !mobileSearchRef.current.contains(event.target as Node)) {
-        setIsMobileSearchOpen(false);
       }
     };
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setIsMoreMenuOpen(false);
-        setIsMobileSearchOpen(false);
       }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside, { passive: true });
     document.addEventListener('keydown', handleKeyDown);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, []);
+  }, [isMoreMenuOpen]);
 
   const currentViewLabel = VIEWS.find((v) => v.id === activeView)?.label || 'Table';
 
@@ -485,99 +685,14 @@ export const Header: FC<HeaderProps> = ({
       </div>
 
       {/* =========================================================================
-          3. FLOATING BOTTOM BAR (Apple Music UI: Navigation Capsule + Search Bubble)
+          3. FLOATING BOTTOM BAR (Navigation Capsule + Search Bubble / Expanding Search)
          ========================================================================= */}
-      <div
-        className="fixed inset-x-0 z-40 flex items-center justify-center gap-2.5 px-3 pointer-events-none select-none md:hidden transform-gpu will-change-transform"
-        style={{ bottom: 'max(1rem, env(safe-area-inset-bottom, 1rem))' }}
-      >
-        {/* Navigation Capsule Pill */}
-        <nav
-          className="pointer-events-auto flex items-center gap-0.5 p-1 bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-xl border border-neutral-200/90 dark:border-neutral-800/90 rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.14)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
-          aria-label="Sales View Navigation"
-        >
-          {VIEWS.map((v) => {
-            const isActive = activeView === v.id;
-            const TabIcon = v.Icon;
-            return (
-              <button
-                key={v.id}
-                type="button"
-                onClick={() => onSelectView(v.id)}
-                className={`flex flex-col items-center justify-center min-w-[52px] sm:min-w-[60px] px-2 py-1 rounded-full transition-all duration-200 cursor-pointer ${
-                  isActive
-                    ? 'bg-neutral-200/90 dark:bg-neutral-700/80 text-[#2383e2] dark:text-[#388bfd] font-semibold shadow-2xs scale-100'
-                    : 'text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200'
-                }`}
-                title={v.label}
-              >
-                <TabIcon className="w-5 h-5 md:w-3.5 md:h-3.5 shrink-0" />
-                <span className="text-[10px] leading-tight mt-0.5 tracking-tight font-medium">
-                  {v.label}
-                </span>
-              </button>
-            );
-          })}
-        </nav>
-
-        {/* Floating Search Bubble (Next to Navigation Capsule on the same row) */}
-        <div className="relative pointer-events-auto" ref={mobileSearchRef}>
-          <button
-            type="button"
-            onClick={() => setIsMobileSearchOpen((prev) => !prev)}
-            className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 cursor-pointer shadow-[0_8px_32px_rgba(0,0,0,0.14)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.5)] border ${
-              isMobileSearchOpen || (searchQuery && searchQuery.length > 0)
-                ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 border-neutral-900 dark:border-white shadow-md scale-105'
-                : 'bg-white/95 dark:bg-[#1c1c1e]/95 text-neutral-700 dark:text-neutral-300 border-neutral-200/90 dark:border-neutral-800/90 hover:bg-neutral-100 dark:hover:bg-neutral-800 active:scale-95'
-            }`}
-            aria-label="Search Dashboard"
-            title="Search Dashboard"
-          >
-            <Search className="w-5 h-5" />
-            {searchQuery && searchQuery.length > 0 && !isMobileSearchOpen && (
-              <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-[#2383e2] rounded-full ring-2 ring-white dark:ring-[#1c1c1e]" />
-            )}
-          </button>
-
-          {/* Floating Search Sheet Popover above the bottom bar */}
-          {isMobileSearchOpen && (
-            <div
-              className="fixed inset-x-3 sm:inset-x-auto sm:w-96 mx-auto bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-xl border border-neutral-200/90 dark:border-neutral-700/80 rounded-2xl shadow-2xl p-2.5 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200 pointer-events-auto transform-gpu will-change-transform"
-              style={{ bottom: 'calc(max(1rem, env(safe-area-inset-bottom, 1rem)) + 3.375rem)' }}
-            >
-              <div className="flex items-center gap-2">
-                <div className="relative flex-1 flex items-center">
-                  <Search className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none" />
-                  <input
-                    type="text"
-                    placeholder="Search..."
-                    value={searchQuery}
-                    onChange={(e) => onSearchChange && onSearchChange(e.target.value)}
-                    className="w-full pl-8 pr-8 py-2 text-xs bg-neutral-100 dark:bg-[#252525] border border-neutral-200 dark:border-neutral-700 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-[#2383e2]/20 focus:border-[#2383e2] text-neutral-900 dark:text-neutral-100 placeholder-neutral-400"
-                  />
-                  {searchQuery && (
-                    <button
-                      type="button"
-                      onClick={() => onSearchChange && onSearchChange('')}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 p-0.5 cursor-pointer"
-                      title="Clear search"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsMobileSearchOpen(false)}
-                  className="px-2.5 py-1 text-xs font-semibold text-[#2383e2] dark:text-[#388bfd] hover:opacity-80 cursor-pointer shrink-0"
-                >
-                  Done
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+      <MobileFloatingNav
+        activeView={activeView}
+        onSelectView={onSelectView}
+        searchQuery={searchQuery}
+        onSearchChange={onSearchChange}
+      />
 
       {userProfile && (
         <SettingsDialog

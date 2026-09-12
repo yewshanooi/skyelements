@@ -2,7 +2,6 @@
 
 import type { FC } from 'react';
 import type { WidgetWidth } from '@/sales/types/chart';
-import { CHART_PALETTE } from '@/sales/types/chart';
 import type { TopProductPoint } from '@/sales/lib/chartUtils';
 
 interface TopItemsWidgetProps {
@@ -16,57 +15,65 @@ export const TopItemsWidget: FC<TopItemsWidgetProps> = ({
   currentWidth = '4/4',
   isModal = false,
 }) => {
-  const topProductsGrid =
-    currentWidth === '1/4'
-      ? 'grid grid-cols-1 gap-2.5'
-      : currentWidth === '2/4'
-      ? 'grid grid-cols-1 xl:grid-cols-2 gap-2.5'
-      : 'grid grid-cols-1 md:grid-cols-2 gap-3';
+  const isTwoColumn = currentWidth === '4/4' || isModal;
+  const layoutClass = isTwoColumn
+    ? 'grid grid-cols-1 md:grid-cols-2 gap-2.5'
+    : 'space-y-2';
 
-  const itemsToDisplay = isModal ? data.slice(0, 50) : data.slice(0, 10);
+  const itemsToDisplay = isModal ? data.slice(0, 30) : data.slice(0, 10);
 
   return (
     <div className="space-y-3 min-w-0">
-      <div className={`${topProductsGrid} ${isModal ? '' : 'max-h-[380px] overflow-y-auto pr-1 pb-3'}`}>
-        {itemsToDisplay.map((item, idx) => (
-          <div
-            key={item.item}
-            className="p-3 rounded-xl bg-neutral-50/70 dark:bg-[#252525]/60 border border-neutral-200/70 dark:border-neutral-800/80 space-y-2 min-w-0"
-          >
-            <div className="flex items-center justify-between gap-2 min-w-0">
-              <div className="flex items-center gap-2 min-w-0 flex-1">
-                <span className="w-5 h-5 rounded-md bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300 flex items-center justify-center font-bold text-[10px] shrink-0">
+      <div className={`${layoutClass} ${isModal ? '' : 'max-h-[360px] overflow-y-auto pr-1 pb-3'}`}>
+        {itemsToDisplay.map((item, idx) => {
+          const rankBadgeClass =
+            idx === 0
+              ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
+              : idx === 1
+              ? 'bg-slate-400/15 text-slate-600 dark:text-slate-300 border border-slate-400/30'
+              : idx === 2
+              ? 'bg-amber-700/15 text-amber-700 dark:text-amber-500 border border-amber-700/30'
+              : 'bg-neutral-200/80 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400';
+
+          return (
+            <div
+              key={item.item}
+              className="p-2.5 sm:p-3 rounded-xl bg-neutral-50/70 dark:bg-[#252525]/60 border border-neutral-200/70 dark:border-neutral-800/80 flex items-center justify-between gap-2.5 hover:border-neutral-300 dark:hover:border-neutral-700 transition-colors min-w-0"
+            >
+              <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                <div
+                  className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[11px] shrink-0 ${rankBadgeClass}`}
+                >
                   {idx + 1}
-                </span>
-                <span className="font-semibold text-xs text-neutral-900 dark:text-neutral-100 truncate flex-1 min-w-0" title={item.item}>
-                  {item.item}
-                </span>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div
+                    className="font-semibold text-xs text-neutral-900 dark:text-neutral-100 truncate"
+                    title={item.item}
+                  >
+                    {item.item}
+                  </div>
+                  <div className="text-[11px] text-neutral-400 flex items-center gap-1.5 truncate">
+                    <span className="shrink-0">
+                      {item.units} {item.units === 1 ? 'item' : 'items'}
+                    </span>
+                    <span>•</span>
+                    <span className="truncate">{item.category}</span>
+                  </div>
+                </div>
               </div>
 
-              <span className="font-mono text-xs font-bold text-neutral-900 dark:text-neutral-100 shrink-0 whitespace-nowrap">
-                RM {item.profit.toFixed(2)}
-              </span>
+              <div className="text-right shrink-0">
+                <div className="font-mono text-xs sm:text-sm font-bold text-neutral-900 dark:text-neutral-100">
+                  RM {item.profit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </div>
+                <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+                  {item.margin}% margin
+                </div>
+              </div>
             </div>
-
-            <div className="w-full h-1.5 bg-neutral-200/70 dark:bg-neutral-800 rounded-full overflow-hidden">
-              <div
-                className="h-full rounded-full transition-all duration-500"
-                style={{
-                  width: `${Math.min(100, Math.max(0, item.profitShare))}%`,
-                  backgroundColor: CHART_PALETTE[idx % CHART_PALETTE.length],
-                }}
-              />
-            </div>
-
-            <div className="flex items-center justify-between gap-2 text-[10px] sm:text-[11px] text-neutral-400 min-w-0">
-              <span className="truncate min-w-0 flex-1">{item.category}</span>
-              <span className="shrink-0 whitespace-nowrap">{item.units} item(s)</span>
-              <span className="text-emerald-600 dark:text-emerald-400 font-medium shrink-0 whitespace-nowrap">
-                Margin: {item.margin}%
-              </span>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

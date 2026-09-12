@@ -148,6 +148,10 @@ export const ChartModal: FC<ChartModalProps> = ({
 
   const Icon = widget.icon;
 
+  const isCompactListWidget = widget.id === 'top_items' || widget.id === 'top_customers';
+  const isPaymentWidget = widget.id === 'payment_methods';
+  const isListWidget = isCompactListWidget || isPaymentWidget;
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/70 backdrop-blur-xs animate-in fade-in duration-200 overscroll-none"
@@ -158,7 +162,13 @@ export const ChartModal: FC<ChartModalProps> = ({
       }}
     >
       <div
-        className="bg-white dark:bg-[#1a1a1a] rounded-xl sm:rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-2xl w-full max-w-6xl max-h-[76dvh] sm:max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 overscroll-contain"
+        className={`bg-white dark:bg-[#1a1a1a] rounded-xl sm:rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-2xl w-full max-w-6xl ${
+          isCompactListWidget
+            ? 'max-h-[420px] sm:max-h-[470px]'
+            : isPaymentWidget
+            ? 'max-h-[460px] sm:max-h-[515px]'
+            : 'max-h-[76dvh] sm:max-h-[90vh]'
+        } flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 overscroll-contain`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-neutral-200/80 dark:border-neutral-800 flex items-center justify-between gap-2">
@@ -189,7 +199,7 @@ export const ChartModal: FC<ChartModalProps> = ({
           </div>
         </div>
 
-        <div className="p-3.5 sm:p-6 overflow-y-auto overscroll-contain flex-1">
+        <div className={`p-3.5 ${isListWidget ? 'sm:p-5' : 'sm:p-6'} overflow-y-auto overscroll-contain flex-1 scrollbar-thin`}>
           {children}
         </div>
       </div>

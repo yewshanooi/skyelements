@@ -265,24 +265,21 @@ export const KanbanBoardView: FC<KanbanBoardViewProps> = ({
                           )}
                         </div>
 
-                        {/* Customer & Profit Row */}
-                        <div className="flex justify-between items-center text-xs pt-2 border-t border-neutral-100 dark:border-neutral-800/80">
-                          <div className="flex items-center gap-1.5 text-neutral-500 dark:text-neutral-400 text-[11px] truncate max-w-[180px]">
+                        {/* Customer Row */}
+                        <div className="flex items-center text-xs pt-2 border-t border-neutral-100 dark:border-neutral-800/80">
+                          <div className="flex items-center gap-1.5 text-neutral-500 dark:text-neutral-400 text-[11px] truncate min-w-0">
                             <User className="w-3 h-3 shrink-0" />
                             <span className="truncate">{sale.customer}</span>
                             {sale.date && (
                               <>
                                 <span className="text-neutral-300 dark:text-neutral-700">•</span>
-                                <span className="flex items-center gap-0.5 text-[10px] text-neutral-400">
+                                <span className="flex items-center gap-0.5 text-[10px] text-neutral-400 shrink-0">
                                   <Calendar className="w-2.5 h-2.5" />
                                   {formatDayMonth(sale.date)}
                                 </span>
                               </>
                             )}
                           </div>
-                          <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-xs">
-                            RM {sale.sales.toFixed(2)}
-                          </span>
                         </div>
                       </div>
                     );

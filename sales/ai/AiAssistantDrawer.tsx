@@ -1433,26 +1433,28 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
                 <kbd className="px-1 py-0.5 bg-black/[0.04] dark:bg-white/[0.08] rounded font-mono text-[9px] border border-black/[0.04] dark:border-white/[0.06]">Ctrl + J</kbd> to open/close
               </span>
 
-              {/* Desktop Window Resize Grip (Aligned with the red baseline of Ctrl + J hint) */}
+              {/* Desktop Window Resize Grip */}
               {!isFullscreen && (
                 <div
                   onMouseDown={handleResizeMouseDown}
-                  className="w-5 h-5 flex items-center justify-end cursor-nwse-resize z-50 group/grip select-none pr-0 translate-y-[5px]"
+                  className={`p-1 rounded-md cursor-se-resize flex items-center justify-center transition-colors z-50 touch-none select-none ${
+                    isResizing
+                      ? 'text-blue-500 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40'
+                      : 'text-neutral-400 dark:text-neutral-500 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40'
+                  }`}
                   title="Drag to resize window"
                 >
                   <svg
-                    width="11"
-                    height="11"
-                    viewBox="0 0 11 11"
+                    className="w-3.5 h-3.5"
+                    viewBox="0 0 24 24"
                     fill="none"
-                    className="text-neutral-400 dark:text-neutral-500 group-hover/grip:text-[#2383e2] transition-colors drop-shadow-2xs"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
                   >
-                    <path
-                      d="M10 2L2 10M10 6L6 10M10 9L9 10"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                    />
+                    <line x1="21" y1="9" x2="9" y2="21" />
+                    <line x1="21" y1="15" x2="15" y2="21" />
+                    <line x1="21" y1="21" x2="21.01" y2="21" />
                   </svg>
                 </div>
               )}

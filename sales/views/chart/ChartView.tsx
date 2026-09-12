@@ -131,9 +131,9 @@ const ALL_WIDGET_CONFIGS: WidgetConfig[] = [
   {
     id: 'top_customers',
     title: 'Customer Leaderboard',
-    subtitle: 'Top customers by spending and order volume',
+    subtitle: 'Top customers ranked by net profit',
     category: 'customers',
-    description: 'Top buyers ranked by spending and profit.',
+    description: 'Top buyers ranked by net profit.',
     icon: Users,
     defaultWidth: '2/4',
     allowedWidths: ALL_WIDGET_WIDTHS,
@@ -141,9 +141,9 @@ const ALL_WIDGET_CONFIGS: WidgetConfig[] = [
   {
     id: 'basket_tiers',
     title: 'Order Size Distribution',
-    subtitle: 'Transaction breakdown by price tier',
+    subtitle: 'Order volume by price tier',
     category: 'breakdown',
-    description: 'Order volume and revenue by price tier.',
+    description: 'Order volume by price tier.',
     icon: ShoppingBag,
     defaultWidth: '2/4',
     allowedWidths: ALL_WIDGET_WIDTHS,
@@ -151,9 +151,9 @@ const ALL_WIDGET_CONFIGS: WidgetConfig[] = [
   {
     id: 'payment_methods',
     title: 'Payment Methods',
-    subtitle: 'Payment method usage and settlement breakdown',
+    subtitle: 'Profit and order volume by payment method',
     category: 'operations',
-    description: 'Usage and revenue by payment method.',
+    description: 'Net profit by payment method.',
     icon: CreditCard,
     defaultWidth: '1/4',
     allowedWidths: ALL_WIDGET_WIDTHS,
@@ -161,7 +161,7 @@ const ALL_WIDGET_CONFIGS: WidgetConfig[] = [
   {
     id: 'fulfillment_pipeline',
     title: 'Fulfillment Status',
-    subtitle: 'Delivery stages and pending orders',
+    subtitle: 'Delivery stages and pending profit',
     category: 'operations',
     description: 'Fulfillment completion and delivery stages.',
     icon: Truck,
@@ -171,9 +171,9 @@ const ALL_WIDGET_CONFIGS: WidgetConfig[] = [
   {
     id: 'day_of_week',
     title: 'Sales by Day of Week',
-    subtitle: 'Revenue and order volume patterns',
+    subtitle: 'Daily net profit velocity',
     category: 'operations',
-    description: 'Daily revenue and order volume velocity.',
+    description: 'Daily net profit velocity.',
     icon: Calendar,
     defaultWidth: '2/4',
     allowedWidths: ALL_WIDGET_WIDTHS,
@@ -181,9 +181,9 @@ const ALL_WIDGET_CONFIGS: WidgetConfig[] = [
   {
     id: 'top_items',
     title: 'Top Orders',
-    subtitle: 'Order performance ranked by net profit',
+    subtitle: 'Top products ranked by net profit',
     category: 'breakdown',
-    description: 'Top orders ranked by realized profit.',
+    description: 'Top items ranked by realized profit.',
     icon: Award,
     defaultWidth: '4/4',
     allowedWidths: ALL_WIDGET_WIDTHS,
@@ -269,9 +269,9 @@ export const ChartView: FC<ChartViewProps> = ({
     const defaults: ChartSubcontrolsState = {
       trendGranularity: 'monthly',
       trendChartType: 'area',
-      trendMetric: 'all',
+      trendMetric: 'profit',
       donutBreakdown: 'items',
-      categorySortBy: 'revenue',
+      categorySortBy: 'profit',
     };
     if (typeof window !== 'undefined') {
       try {
@@ -401,13 +401,13 @@ export const ChartView: FC<ChartViewProps> = ({
   );
 
   const basketTiersData = useMemo(
-    () => computeBasketTiers(filteredSales, kpiStats.totalSubtotal),
-    [filteredSales, kpiStats.totalSubtotal]
+    () => computeBasketTiers(filteredSales, kpiStats.totalSubtotal, kpiStats.totalSales),
+    [filteredSales, kpiStats.totalSubtotal, kpiStats.totalSales]
   );
 
   const paymentMethodsData = useMemo(
-    () => computePaymentMethods(filteredSales, kpiStats.totalSubtotal),
-    [filteredSales, kpiStats.totalSubtotal]
+    () => computePaymentMethods(filteredSales, kpiStats.totalSubtotal, kpiStats.totalSales),
+    [filteredSales, kpiStats.totalSubtotal, kpiStats.totalSales]
   );
 
   const fulfillmentData = useMemo(
@@ -768,7 +768,13 @@ export const ChartView: FC<ChartViewProps> = ({
         return <StoreComparisonWidget data={storeComparisonData} />;
 
       case 'top_customers':
-        return <TopCustomersWidget data={topCustomersData} isModal={isModal} />;
+        return (
+          <TopCustomersWidget
+            data={topCustomersData}
+            currentWidth={currentWidth}
+            isModal={isModal}
+          />
+        );
 
       case 'basket_tiers':
         return (
@@ -780,7 +786,13 @@ export const ChartView: FC<ChartViewProps> = ({
         );
 
       case 'payment_methods':
-        return <PaymentMethodsWidget data={paymentMethodsData} isModal={isModal} />;
+        return (
+          <PaymentMethodsWidget
+            data={paymentMethodsData}
+            currentWidth={currentWidth}
+            isModal={isModal}
+          />
+        );
 
       case 'fulfillment_pipeline':
         return <FulfillmentPipelineWidget data={fulfillmentData} />;

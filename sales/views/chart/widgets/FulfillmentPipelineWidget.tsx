@@ -21,9 +21,9 @@ export const FulfillmentPipelineWidget: FC<FulfillmentPipelineWidgetProps> = ({ 
           </div>
         </div>
         <div className="text-right">
-          <div className="text-[10px] text-neutral-400">Pending Revenue</div>
+          <div className="text-[10px] text-neutral-400">Pending Profit</div>
           <div className="text-xs font-mono font-bold text-amber-600 dark:text-amber-400">
-            RM {data.pendingRevenue.toFixed(2)}
+            RM {data.pendingProfit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
         </div>
       </div>

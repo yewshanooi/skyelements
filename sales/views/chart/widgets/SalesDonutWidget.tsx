@@ -6,6 +6,7 @@ import type { WidgetWidth } from '@/sales/types/chart';
 import { CHART_PALETTE } from '@/sales/types/chart';
 import type { DonutDataPoint } from '@/sales/lib/chartUtils';
 import { SegmentedControl } from '../ChartControls';
+import { ChartTooltipCard, ChartTooltipRow } from '../ChartTooltip';
 
 interface SalesDonutWidgetProps {
   data: DonutDataPoint[];
@@ -110,15 +111,21 @@ export const SalesDonutWidget: FC<SalesDonutWidgetProps> = ({
                   if (active && payload && payload.length) {
                     const d = payload[0];
                     const pct = totalSales > 0 ? ((Number(d.value) / totalSales) * 100).toFixed(1) : '0';
+                    const color = d.payload?.color;
                     return (
-                      <div className="p-3 bg-white dark:bg-[#1a1a1a] border border-neutral-200 dark:border-neutral-700 shadow-xl rounded-xl text-xs space-y-1">
-                        <p className="font-semibold text-neutral-900 dark:text-neutral-100">
-                          {d.name}
-                        </p>
-                        <p className="text-emerald-600 dark:text-emerald-400 font-mono font-bold">
-                          RM {Number(d.value).toFixed(2)} ({pct}%)
-                        </p>
-                      </div>
+                      <ChartTooltipCard title={d.name} minWidthClass="min-w-[190px]">
+                        <ChartTooltipRow
+                          label="Net Profit"
+                          colorDot={color}
+                          value={`RM ${Number(d.value).toFixed(2)}`}
+                          valueClass="font-mono font-bold text-neutral-800 dark:text-neutral-200"
+                        />
+                        <ChartTooltipRow
+                          label="Share"
+                          value={`${pct}%`}
+                          valueClass="font-mono font-medium text-neutral-700 dark:text-neutral-300"
+                        />
+                      </ChartTooltipCard>
                     );
                   }
                   return null;

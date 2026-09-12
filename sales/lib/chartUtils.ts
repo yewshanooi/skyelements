@@ -285,12 +285,13 @@ export interface TopCustomerPoint {
   totalProfit: number;
   orders: number;
   aov: number;
+  margin: number;
   lastDate: string;
   topCategory: string;
 }
 
 /**
- * Aggregates customer leaderboard.
+ * Aggregates customer leaderboard ranked by total net profit.
  */
 export const computeTopCustomers = (filteredSales: SaleItem[]): TopCustomerPoint[] => {
   const map = new Map<string, { customer: string; totalRevenue: number; totalProfit: number; orders: number; lastDate: string; categories: Record<string, number> }>();
@@ -335,11 +336,12 @@ export const computeTopCustomers = (filteredSales: SaleItem[]): TopCustomerPoint
         totalProfit: Number(c.totalProfit.toFixed(2)),
         orders: c.orders,
         aov: Number((c.totalRevenue / c.orders).toFixed(2)),
+        margin: c.totalRevenue > 0 ? Number(((c.totalProfit / c.totalRevenue) * 100).toFixed(1)) : 0,
         lastDate: c.lastDate,
         topCategory: topCat,
       };
     })
-    .sort((a, b) => b.totalRevenue - a.totalRevenue)
+    .sort((a, b) => b.totalProfit - a.totalProfit)
     .slice(0, 10);
 };
 
@@ -353,14 +355,17 @@ export interface BasketTierPoint {
   color: string;
   pctOrders: number;
   pctRevenue: number;
+  pctProfit: number;
+  margin: number;
 }
 
 /**
- * Aggregates basket size tiers.
+ * Aggregates basket size tiers with profit analytics.
  */
 export const computeBasketTiers = (
   filteredSales: SaleItem[],
-  totalSubtotal: number
+  totalSubtotal: number,
+  totalSales?: number
 ): BasketTierPoint[] => {
   const tiers = [
     { key: '< RM 50', min: 0, max: 49.99, count: 0, revenue: 0, profit: 0, color: '#3b82f6' },
@@ -370,25 +375,32 @@ export const computeBasketTiers = (
     { key: '> RM 500', min: 500, max: Infinity, count: 0, revenue: 0, profit: 0, color: '#f43f5e' },
   ];
 
+  let calculatedProfit = 0;
   filteredSales.forEach((s) => {
     const val = s.subtotal || 0;
+    const p = s.sales || 0;
+    calculatedProfit += p;
     for (const t of tiers) {
       if (val >= t.min && val <= t.max) {
         t.count += 1;
         t.revenue += val;
-        t.profit += s.sales || 0;
+        t.profit += p;
         break;
       }
     }
   });
 
+  const finalTotalSales = totalSales !== undefined ? totalSales : calculatedProfit;
   const totalOrders = filteredSales.length;
+
   return tiers.map((t) => ({
     ...t,
     revenue: Number(t.revenue.toFixed(2)),
     profit: Number(t.profit.toFixed(2)),
     pctOrders: totalOrders > 0 ? Number(((t.count / totalOrders) * 100).toFixed(1)) : 0,
     pctRevenue: totalSubtotal > 0 ? Number(((t.revenue / totalSubtotal) * 100).toFixed(1)) : 0,
+    pctProfit: finalTotalSales > 0 ? Number(((t.profit / finalTotalSales) * 100).toFixed(1)) : 0,
+    margin: t.revenue > 0 ? Number(((t.profit / t.revenue) * 100).toFixed(1)) : 0,
   }));
 };
 
@@ -399,17 +411,21 @@ export interface PaymentMethodPoint {
   profit: number;
   avgTicket: number;
   sharePct: number;
+  profitShare: number;
+  margin: number;
 }
 
 /**
- * Aggregates payment methods breakdown.
+ * Aggregates payment methods breakdown ranked by net profit.
  */
 export const computePaymentMethods = (
   filteredSales: SaleItem[],
-  totalSubtotal: number
+  totalSubtotal: number,
+  totalSales?: number
 ): PaymentMethodPoint[] => {
   const map = new Map<string, { method: string; count: number; revenue: number; profit: number }>();
 
+  let calculatedProfit = 0;
   filteredSales.forEach((s) => {
     const meth = s.payment_method || 'Unspecified';
     const cur = map.get(meth) || {
@@ -421,8 +437,11 @@ export const computePaymentMethods = (
     cur.count += 1;
     cur.revenue += s.subtotal || 0;
     cur.profit += s.sales || 0;
+    calculatedProfit += s.sales || 0;
     map.set(meth, cur);
   });
+
+  const finalTotalSales = totalSales !== undefined ? totalSales : calculatedProfit;
 
   return Array.from(map.values())
     .map((p) => ({
@@ -431,42 +450,47 @@ export const computePaymentMethods = (
       profit: Number(p.profit.toFixed(2)),
       avgTicket: Number((p.revenue / p.count).toFixed(2)),
       sharePct: totalSubtotal > 0 ? Number(((p.revenue / totalSubtotal) * 100).toFixed(1)) : 0,
+      profitShare: finalTotalSales > 0 ? Number(((p.profit / finalTotalSales) * 100).toFixed(1)) : 0,
+      margin: p.revenue > 0 ? Number(((p.profit / p.revenue) * 100).toFixed(1)) : 0,
     }))
-    .sort((a, b) => b.revenue - a.revenue);
+    .sort((a, b) => b.profit - a.profit);
 };
 
 export interface FulfillmentPipelineData {
-  orderStatuses: Array<{ status: string; count: number; revenue: number; pct: number }>;
-  paymentStatuses: Array<{ status: string; count: number; revenue: number; pct: number }>;
+  orderStatuses: Array<{ status: string; count: number; revenue: number; profit: number; pct: number }>;
+  paymentStatuses: Array<{ status: string; count: number; revenue: number; profit: number; pct: number }>;
   completionRate: string;
   pendingRevenue: number;
+  pendingProfit: number;
 }
 
 /**
- * Aggregates fulfillment pipeline and delivery status.
+ * Aggregates fulfillment pipeline and delivery status with profit tracking.
  */
 export const computeFulfillmentData = (filteredSales: SaleItem[]): FulfillmentPipelineData => {
-  const orderStatusCounts: Record<string, { count: number; revenue: number }> = {
-    Delivered: { count: 0, revenue: 0 },
-    Shipped: { count: 0, revenue: 0 },
-    Processing: { count: 0, revenue: 0 },
+  const orderStatusCounts: Record<string, { count: number; revenue: number; profit: number }> = {
+    Delivered: { count: 0, revenue: 0, profit: 0 },
+    Shipped: { count: 0, revenue: 0, profit: 0 },
+    Processing: { count: 0, revenue: 0, profit: 0 },
   };
 
-  const paymentStatusCounts: Record<string, { count: number; revenue: number }> = {
-    Paid: { count: 0, revenue: 0 },
-    Processing: { count: 0, revenue: 0 },
-    'On Hold': { count: 0, revenue: 0 },
+  const paymentStatusCounts: Record<string, { count: number; revenue: number; profit: number }> = {
+    Paid: { count: 0, revenue: 0, profit: 0 },
+    Processing: { count: 0, revenue: 0, profit: 0 },
+    'On Hold': { count: 0, revenue: 0, profit: 0 },
   };
 
   filteredSales.forEach((s) => {
     if (s.order_status && orderStatusCounts[s.order_status]) {
       orderStatusCounts[s.order_status].count += 1;
       orderStatusCounts[s.order_status].revenue += s.subtotal || 0;
+      orderStatusCounts[s.order_status].profit += s.sales || 0;
     }
 
     if (s.payment_status && paymentStatusCounts[s.payment_status]) {
       paymentStatusCounts[s.payment_status].count += 1;
       paymentStatusCounts[s.payment_status].revenue += s.subtotal || 0;
+      paymentStatusCounts[s.payment_status].profit += s.sales || 0;
     }
   });
 
@@ -476,22 +500,27 @@ export const computeFulfillmentData = (filteredSales: SaleItem[]): FulfillmentPi
 
   const pendingRevenue =
     (paymentStatusCounts['Processing']?.revenue || 0) + (paymentStatusCounts['On Hold']?.revenue || 0);
+  const pendingProfit =
+    (paymentStatusCounts['Processing']?.profit || 0) + (paymentStatusCounts['On Hold']?.profit || 0);
 
   return {
     orderStatuses: Object.entries(orderStatusCounts).map(([status, d]) => ({
       status,
       count: d.count,
       revenue: Number(d.revenue.toFixed(2)),
+      profit: Number(d.profit.toFixed(2)),
       pct: totalOrders > 0 ? Number(((d.count / totalOrders) * 100).toFixed(1)) : 0,
     })),
     paymentStatuses: Object.entries(paymentStatusCounts).map(([status, d]) => ({
       status,
       count: d.count,
       revenue: Number(d.revenue.toFixed(2)),
+      profit: Number(d.profit.toFixed(2)),
       pct: totalOrders > 0 ? Number(((d.count / totalOrders) * 100).toFixed(1)) : 0,
     })),
     completionRate,
     pendingRevenue: Number(pendingRevenue.toFixed(2)),
+    pendingProfit: Number(pendingProfit.toFixed(2)),
   };
 };
 

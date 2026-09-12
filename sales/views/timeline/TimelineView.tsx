@@ -474,12 +474,12 @@ export const TimelineView: FC<TimelineViewProps> = ({
                       style={{
                         transform: `translateX(${leftPos}px)`,
                       }}
-                      className="relative flex items-center transition-transform duration-200"
+                      className="relative flex items-center transition-transform duration-200 hover:z-20"
                     >
                       <div
                         onClick={() => onSelectSale(sale)}
                         title={`${sale.item} • ${formatDateDisplay(sale.date)} • RM ${sale.sales.toFixed(2)}`}
-                        className="group cursor-pointer bg-white dark:bg-[#252525] hover:bg-blue-50/80 dark:hover:bg-blue-950/40 border border-neutral-200/90 dark:border-neutral-700/80 hover:border-blue-400 dark:hover:border-blue-500 rounded-lg px-3 py-1.5 shadow-2xs hover:shadow-md transition-all flex items-center gap-2 max-w-sm whitespace-nowrap"
+                        className="group cursor-pointer bg-white dark:bg-[#252525] hover:bg-blue-50 dark:hover:bg-[#1e2638] border border-neutral-200/90 dark:border-neutral-700/80 hover:border-blue-400 dark:hover:border-blue-500 rounded-lg px-3 py-1.5 shadow-2xs hover:shadow-md transition-all flex items-center gap-2 max-w-sm whitespace-nowrap"
                       >
                         <FileText className="w-3.5 h-3.5 text-neutral-400 group-hover:text-blue-500 shrink-0 transition-colors" />
                         <span className="text-xs font-medium text-neutral-800 dark:text-neutral-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 truncate">

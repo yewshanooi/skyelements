@@ -14,6 +14,7 @@ import {
 import type { WidgetWidth } from '@/sales/types/chart';
 import type { CategoryMatrixPoint } from '@/sales/lib/chartUtils';
 import { SegmentedControl } from '../ChartControls';
+import { ChartTooltipCard, ChartTooltipRow, ChartTooltipDivider } from '../ChartTooltip';
 
 interface CategoryProfitabilityWidgetProps {
   data: CategoryMatrixPoint[];
@@ -71,27 +72,36 @@ export const CategoryProfitabilityWidget: FC<CategoryProfitabilityWidgetProps> =
                 if (active && payload && payload.length) {
                   const d = payload[0].payload as CategoryMatrixPoint;
                   return (
-                    <div className="p-3 bg-white dark:bg-[#1a1a1a] border border-neutral-200 dark:border-neutral-700 shadow-xl rounded-xl text-xs space-y-1.5">
-                      <p className="font-bold text-neutral-900 dark:text-neutral-100">{d.category}</p>
-                      <div className="space-y-0.5">
-                        <div className="flex justify-between gap-4 text-blue-600 dark:text-blue-400">
-                          <span>Gross Revenue:</span>
-                          <span className="font-mono font-bold">RM {d.revenue.toFixed(2)}</span>
-                        </div>
-                        <div className="flex justify-between gap-4 text-emerald-600 dark:text-emerald-400">
-                          <span>Net Profit:</span>
-                          <span className="font-mono font-bold">RM {d.profit.toFixed(2)}</span>
-                        </div>
-                        <div className="flex justify-between gap-4 text-amber-600 dark:text-amber-400">
-                          <span>Margin:</span>
-                          <span className="font-mono font-bold">{d.margin}%</span>
-                        </div>
-                        <div className="flex justify-between gap-4 text-neutral-400 text-[11px] pt-1 border-t border-neutral-200 dark:border-neutral-800">
-                          <span>Orders:</span>
-                          <span>{d.orders} orders ({d.quantity} items)</span>
-                        </div>
-                      </div>
-                    </div>
+                    <ChartTooltipCard title={d.category} minWidthClass="min-w-[210px]">
+                      <ChartTooltipRow
+                        label="Gross Revenue"
+                        colorDot="#3b82f6"
+                        value={`RM ${d.revenue.toFixed(2)}`}
+                        valueClass="font-mono font-bold text-neutral-800 dark:text-neutral-200"
+                      />
+                      <ChartTooltipRow
+                        label="Net Profit"
+                        colorDot="#10b981"
+                        value={`RM ${d.profit.toFixed(2)}`}
+                        valueClass="font-mono font-bold text-neutral-800 dark:text-neutral-200"
+                      />
+                      <ChartTooltipRow
+                        label="Margin"
+                        value={`${d.margin}%`}
+                        valueClass="font-mono font-bold text-neutral-800 dark:text-neutral-200"
+                      />
+                      <ChartTooltipDivider />
+                      <ChartTooltipRow
+                        label="Orders"
+                        value={d.orders}
+                        valueClass="font-mono font-medium text-neutral-700 dark:text-neutral-300"
+                      />
+                      <ChartTooltipRow
+                        label="Items"
+                        value={d.quantity}
+                        valueClass="font-mono font-medium text-neutral-700 dark:text-neutral-300"
+                      />
+                    </ChartTooltipCard>
                   );
                 }
                 return null;
