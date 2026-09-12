@@ -183,7 +183,8 @@ export function extractInvoiceFileNames(rawInvoice?: string): string[] {
 }
 
 /**
- * Determine MIME type based on file extension
+ * Determine MIME type based on file extension.
+ * Strictly limited to safe document and image types.
  */
 function getMimeType(filename: string): string {
   const ext = filename.split('.').pop()?.toLowerCase();
@@ -197,10 +198,6 @@ function getMimeType(filename: string): string {
       return 'image/jpeg';
     case 'webp':
       return 'image/webp';
-    case 'gif':
-      return 'image/gif';
-    case 'svg':
-      return 'image/svg+xml';
     default:
       return 'application/octet-stream';
   }
@@ -539,18 +536,26 @@ export async function executeNotionImport({
           batch.map(async ({ item, index }) => {
             try {
               const zipEntry = zipFiles.get(item.invoice_matched_file!);
-              if (zipEntry) {
-                const blob = await zipEntry.async('blob');
-                const cleanFileName = item.invoice_matched_file!.split('/').pop()?.split('\\').pop() || 'invoice.pdf';
-                const file = new File([blob], cleanFileName, {
-                  type: blob.type || getMimeType(cleanFileName),
-                });
-
-                const uploadRes = await uploadInvoiceFile(file, userId);
-                preparedSales[index].invoice_url = uploadRes.path; // Store storage path
-                preparedSales[index].invoice_name = cleanFileName;
-                totalInvoicesUploaded++;
+              if (!zipEntry) {
+                return;
               }
+              const cleanFileName = item.invoice_matched_file!.split('/').pop()?.split('\\').pop() || 'invoice.pdf';
+              const ext = cleanFileName.split('.').pop()?.toLowerCase() || '';
+              const allowedExtensions = ['pdf', 'png', 'jpg', 'jpeg', 'webp'];
+              if (!allowedExtensions.includes(ext)) {
+                console.warn(`[notionImport] Skipping invoice with unpermitted format: ${cleanFileName}`);
+                return;
+              }
+
+              const blob = await zipEntry.async('blob');
+              const file = new File([blob], cleanFileName, {
+                type: blob.type || getMimeType(cleanFileName),
+              });
+
+              const uploadRes = await uploadInvoiceFile(file, userId);
+              preparedSales[index].invoice_url = uploadRes.path; // Store storage path
+              preparedSales[index].invoice_name = cleanFileName;
+              totalInvoicesUploaded++;
             } catch (err: unknown) {
               const msg = err instanceof Error ? err.message : String(err);
               console.warn(`Failed to upload invoice for ${item.item}:`, msg);

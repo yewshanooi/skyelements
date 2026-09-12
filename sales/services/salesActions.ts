@@ -68,16 +68,70 @@ async function resolveCoordinates(
 }
 
 /**
+ * Validates and sanitizes invoice storage paths and URLs.
+ * Prevents javascript: pseudo-protocols and cross-tenant path injection.
+ */
+function sanitizeInvoiceUrl(url?: string | null, userId?: string): string | null {
+  if (!url) return null;
+  const trimmed = url.trim();
+  if (
+    !trimmed ||
+    trimmed.toLowerCase().startsWith('javascript:') ||
+    trimmed.toLowerCase().startsWith('data:')
+  ) {
+    return null;
+  }
+
+  const storagePath = extractStoragePath(trimmed, 'invoices');
+  if (storagePath) {
+    if (userId && (!storagePath.startsWith(`${userId}/`) || storagePath.includes('..'))) {
+      return null;
+    }
+    return storagePath;
+  }
+
+  if (trimmed.startsWith('https://') || trimmed.startsWith('http://') || trimmed.startsWith('blob:')) {
+    return trimmed;
+  }
+
+  return null;
+}
+
+/**
+ * Whitelist of columns permitted in update payloads to prevent mass-assignment attacks.
+ */
+const ALLOWED_UPDATE_COLUMNS = new Set([
+  'quantity',
+  'item',
+  'category',
+  'marketplace',
+  'payment_method',
+  'customer',
+  'date',
+  'subtotal',
+  'cost',
+  'order_status',
+  'payment_status',
+  'invoice_url',
+  'invoice_name',
+  'location',
+  'latitude',
+  'longitude',
+  'notes',
+]);
+
+/**
  * Helper to remove attached invoice files from private Supabase Storage
  */
 async function cleanupInvoiceFiles(
   supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
   invoiceUrls: (string | null | undefined)[]
 ): Promise<void> {
   try {
     const paths = invoiceUrls
       .map((url) => extractStoragePath(url, 'invoices'))
-      .filter((p): p is string => Boolean(p));
+      .filter((p): p is string => Boolean(p && p.startsWith(`${userId}/`) && !p.includes('..')));
 
     if (paths.length > 0) {
       await supabase.storage.from('invoices').remove(paths);
@@ -98,29 +152,34 @@ export async function createSaleAction(sale: Omit<SaleItem, 'id'>): Promise<Sale
     throw new Error('You must be signed in to create sales records.');
   }
 
+  const rawItem = String(sale.item || '').trim();
+  if (!rawItem) {
+    throw new Error('Order item name is required.');
+  }
+
   const { lat, lng } = await resolveCoordinates(sale.location, sale.latitude, sale.longitude);
 
   const { data, error } = await supabase
     .from('sales')
     .insert({
       user_id: user.id,
-      quantity: sale.quantity !== undefined && sale.quantity !== null && !isNaN(Number(sale.quantity)) ? Number(sale.quantity) : 0,
-      item: sale.item,
-      category: sale.category || '',
-      marketplace: sale.marketplace || '',
-      payment_method: sale.payment_method || '',
-      customer: sale.customer || '',
+      quantity: sale.quantity !== undefined && sale.quantity !== null && !isNaN(Number(sale.quantity)) ? Math.max(0, Math.round(Number(sale.quantity))) : 0,
+      item: rawItem.slice(0, 500),
+      category: String(sale.category || '').slice(0, 100),
+      marketplace: String(sale.marketplace || '').slice(0, 100),
+      payment_method: String(sale.payment_method || '').slice(0, 100),
+      customer: String(sale.customer || '').slice(0, 500),
       date: sale.date || new Date().toISOString().split('T')[0],
-      subtotal: Number(sale.subtotal) || 0,
-      cost: Number(sale.cost) || 0,
-      order_status: sale.order_status || '',
-      payment_status: sale.payment_status || '',
-      invoice_url: sale.invoice_url || null,
-      invoice_name: sale.invoice_name || null,
-      location: sale.location || null,
+      subtotal: Math.max(0, Number(sale.subtotal) || 0),
+      cost: Math.max(0, Number(sale.cost) || 0),
+      order_status: String(sale.order_status || '').slice(0, 100),
+      payment_status: String(sale.payment_status || '').slice(0, 100),
+      invoice_url: sanitizeInvoiceUrl(sale.invoice_url, user.id),
+      invoice_name: sale.invoice_name ? String(sale.invoice_name).slice(0, 255) : null,
+      location: sale.location ? String(sale.location).slice(0, 1000) : null,
       latitude: lat,
       longitude: lng,
-      notes: sale.notes || null,
+      notes: sale.notes ? String(sale.notes).slice(0, 5000) : null,
     })
     .select(SALES_SELECT_COLUMNS)
     .single();
@@ -151,8 +210,21 @@ export async function updateSaleAction(
 
   const dbPayload: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(updates)) {
-    if (key === 'id' || key === 'sales' || key === 'created_at' || key === 'user_id') continue;
+    if (!ALLOWED_UPDATE_COLUMNS.has(key)) continue;
     dbPayload[key] = value === undefined ? null : value;
+  }
+
+  if (typeof dbPayload.item === 'string') {
+    dbPayload.item = dbPayload.item.trim().slice(0, 500);
+    if (!dbPayload.item) {
+      throw new Error('Order item name cannot be empty.');
+    }
+  }
+  if (typeof dbPayload.notes === 'string') {
+    dbPayload.notes = dbPayload.notes.slice(0, 5000);
+  }
+  if (typeof dbPayload.location === 'string') {
+    dbPayload.location = dbPayload.location.slice(0, 1000);
   }
 
   if (updates.location !== undefined || updates.latitude !== undefined || updates.longitude !== undefined) {
@@ -165,12 +237,12 @@ export async function updateSaleAction(
     if (lng !== null || updates.longitude !== undefined) dbPayload.longitude = lng;
   }
 
-  // Explicitly ensure invoice removal is honored if present in payload
+  // Explicitly ensure invoice removal or sanitized update is honored
   if ('invoice_url' in updates) {
-    dbPayload.invoice_url = updates.invoice_url || null;
+    dbPayload.invoice_url = sanitizeInvoiceUrl(updates.invoice_url, user.id);
   }
   if ('invoice_name' in updates) {
-    dbPayload.invoice_name = updates.invoice_name || null;
+    dbPayload.invoice_name = updates.invoice_name ? String(updates.invoice_name).slice(0, 255) : null;
   }
 
   const { data, error } = await supabase
@@ -211,7 +283,7 @@ export async function deleteSaleAction(id: string): Promise<void> {
     .maybeSingle();
 
   if (sale?.invoice_url) {
-    await cleanupInvoiceFiles(supabase, [sale.invoice_url]);
+    await cleanupInvoiceFiles(supabase, user.id, [sale.invoice_url]);
   }
 
   // 2. Delete sale record
@@ -251,7 +323,7 @@ export async function batchDeleteSalesAction(ids: string[]): Promise<void> {
     .eq('user_id', user.id);
 
   if (sales && sales.length > 0) {
-    await cleanupInvoiceFiles(supabase, sales.map((s) => s.invoice_url));
+    await cleanupInvoiceFiles(supabase, user.id, sales.map((s) => s.invoice_url));
   }
 
   // 2. Delete records
@@ -287,27 +359,33 @@ export async function createSalesBatchAction(
     return [];
   }
 
+  // Bound batch size to prevent server timeout / memory exhaustion attacks
+  if (salesItems.length > 2000) {
+    throw new Error('Batch size exceeds maximum limit of 2,000 items.');
+  }
+
   const rowsToInsert = salesItems.map((sale) => {
+    const rawItem = String(sale.item || '').trim();
     const norm = normalizeCoordinates(sale.latitude, sale.longitude);
     return {
       user_id: user.id,
-      quantity: sale.quantity !== undefined && sale.quantity !== null && !isNaN(Number(sale.quantity)) ? Number(sale.quantity) : 0,
-      item: sale.item,
-      category: sale.category || '',
-      marketplace: sale.marketplace || '',
-      payment_method: sale.payment_method || '',
-      customer: sale.customer || '',
+      quantity: sale.quantity !== undefined && sale.quantity !== null && !isNaN(Number(sale.quantity)) ? Math.max(0, Math.round(Number(sale.quantity))) : 0,
+      item: (rawItem || 'Untitled Item').slice(0, 500),
+      category: String(sale.category || '').slice(0, 100),
+      marketplace: String(sale.marketplace || '').slice(0, 100),
+      payment_method: String(sale.payment_method || '').slice(0, 100),
+      customer: String(sale.customer || '').slice(0, 500),
       date: sale.date || new Date().toISOString().split('T')[0],
-      subtotal: Number(sale.subtotal) || 0,
-      cost: Number(sale.cost) || 0,
-      order_status: sale.order_status || '',
-      payment_status: sale.payment_status || '',
-      invoice_url: sale.invoice_url || null,
-      invoice_name: sale.invoice_name || null,
-      location: sale.location || null,
+      subtotal: Math.max(0, Number(sale.subtotal) || 0),
+      cost: Math.max(0, Number(sale.cost) || 0),
+      order_status: String(sale.order_status || '').slice(0, 100),
+      payment_status: String(sale.payment_status || '').slice(0, 100),
+      invoice_url: sanitizeInvoiceUrl(sale.invoice_url, user.id),
+      invoice_name: sale.invoice_name ? String(sale.invoice_name).slice(0, 255) : null,
+      location: sale.location ? String(sale.location).slice(0, 1000) : null,
       latitude: norm ? norm.lat : (sale.latitude ?? null),
       longitude: norm ? norm.lng : (sale.longitude ?? null),
-      notes: sale.notes || null,
+      notes: sale.notes ? String(sale.notes).slice(0, 5000) : null,
     };
   });
 
@@ -345,27 +423,44 @@ export async function getInvoiceSignedUrlAction(
   filePathOrUrl: string,
   expiresInSeconds = 3600
 ): Promise<string> {
-  if (!filePathOrUrl || filePathOrUrl.startsWith('data:') || filePathOrUrl.startsWith('blob:')) {
+  const supabase = await createClient();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return '';
+  }
+
+  if (!filePathOrUrl || typeof filePathOrUrl !== 'string') {
+    return '';
+  }
+
+  if (filePathOrUrl.startsWith('blob:')) {
     return filePathOrUrl;
   }
 
   const path = extractStoragePath(filePathOrUrl, 'invoices');
-  if (!path) return filePathOrUrl;
+  if (!path) return '';
+
+  // Enforce tenant boundary: storage path must begin with authenticated user's ID
+  if (!path.startsWith(`${user.id}/`) || path.includes('..')) {
+    console.warn(`[getInvoiceSignedUrlAction] Unauthorized access attempt for path: ${path}`);
+    return '';
+  }
 
   try {
-    const supabase = await createClient();
+    const validExpiry = Math.min(Math.max(expiresInSeconds, 60), 86400);
     const { data, error } = await supabase.storage
       .from('invoices')
-      .createSignedUrl(path, expiresInSeconds);
+      .createSignedUrl(path, validExpiry);
 
     if (error || !data?.signedUrl) {
-      return filePathOrUrl;
+      return '';
     }
 
     return data.signedUrl;
   } catch (err) {
     console.error('[getInvoiceSignedUrlAction] Error generating signed URL:', err);
-    return filePathOrUrl;
+    return '';
   }
 }
 
@@ -378,13 +473,24 @@ export async function deleteInvoiceFileAction(
 ): Promise<boolean> {
   if (!filePathOrUrl && !saleId) return false;
 
-  try {
-    const supabase = await createClient();
+  const supabase = await createClient();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
 
+  if (authError || !user) {
+    throw new Error('You must be signed in to manage invoices.');
+  }
+
+  try {
     // 1. Remove from storage bucket if file path/URL exists
     if (filePathOrUrl) {
       const path = extractStoragePath(filePathOrUrl, 'invoices');
       if (path) {
+        // Enforce user ownership and disallow traversal
+        if (!path.startsWith(`${user.id}/`) || path.includes('..')) {
+          console.warn(`[deleteInvoiceFileAction] Unauthorized delete path attempt: ${path}`);
+          return false;
+        }
+
         const { error } = await supabase.storage
           .from('invoices')
           .remove([path]);
@@ -397,17 +503,14 @@ export async function deleteInvoiceFileAction(
 
     // 2. If saleId is provided, clear the invoice columns in the database row
     if (saleId) {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { error: dbError } = await supabase
-          .from('sales')
-          .update({ invoice_url: null, invoice_name: null })
-          .eq('id', saleId)
-          .eq('user_id', user.id);
+      const { error: dbError } = await supabase
+        .from('sales')
+        .update({ invoice_url: null, invoice_name: null })
+        .eq('id', saleId)
+        .eq('user_id', user.id);
 
-        if (dbError) {
-          console.error('[deleteInvoiceFileAction] DB invoice reset error:', dbError);
-        }
+      if (dbError) {
+        console.error('[deleteInvoiceFileAction] DB invoice reset error:', dbError);
       }
       revalidatePath('/sales');
       revalidatePath('/sales/[view]', 'page');
@@ -428,14 +531,20 @@ export async function deleteInvoiceFilesAction(
 ): Promise<boolean> {
   if (!filePathsOrUrls || filePathsOrUrls.length === 0) return false;
 
+  const supabase = await createClient();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    throw new Error('You must be signed in to manage invoices.');
+  }
+
   const paths = filePathsOrUrls
     .map((p) => extractStoragePath(p, 'invoices'))
-    .filter((p): p is string => Boolean(p));
+    .filter((p): p is string => Boolean(p && p.startsWith(`${user.id}/`) && !p.includes('..')));
 
   if (paths.length === 0) return false;
 
   try {
-    const supabase = await createClient();
     const { error } = await supabase.storage
       .from('invoices')
       .remove(paths);

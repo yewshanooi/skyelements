@@ -498,19 +498,19 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
   }> = [
       {
         label: 'Monthly Trend',
-        prompt: 'Show our monthly revenue and net profit breakdown in a table.',
+        prompt: 'Show our monthly revenue and net profit breakdown.',
         icon: <CalendarDays className="w-3 h-3 text-blue-500" />,
         action: 'send',
       },
       {
         label: 'Category Breakdown',
-        prompt: 'Break down revenue and net profit by product category in a table.',
+        prompt: 'Break down revenue and net profit by product category.',
         icon: <ChartPie className="w-3 h-3 text-purple-500" />,
         action: 'send',
       },
       {
         label: 'Top 5 Customers',
-        prompt: 'Who are our top 5 customers ranked by total spend? Show in a table.',
+        prompt: 'Who are our top 5 customers ranked by total spend?',
         icon: <Trophy className="w-3 h-3 text-amber-500" />,
         action: 'send',
       },
@@ -1353,7 +1353,7 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
                           setMessages((prev) => [...prev, userMsg, modelMsg]);
                         } else if (qp.action === 'update_form') {
                           const ts = Date.now();
-                          const userMsg = createUserMessage('I would like to edit an order.');
+                          const userMsg = createUserMessage('I would like to edit an existing order.');
                           const modelMsg: ChatMessage = {
                             id: `update-form-${ts}`,
                             role: 'model',

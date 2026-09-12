@@ -35,6 +35,16 @@ interface MapViewProps {
 
 const STORAGE_KEY_MAP_VIEWPORT = 'sales_dashboard_map_viewport_v1';
 
+const escapeHtml = (str?: string | number | null): string => {
+  if (str === undefined || str === null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+};
+
 const MAP_STYLE = {
   version: 8 as const,
   sources: {
@@ -254,16 +264,16 @@ export const MapView: FC<MapViewProps> = ({
         popupContent.className = 'p-3.5 min-w-[230px] max-w-[270px] text-xs font-sans bg-white dark:bg-[#202020] text-neutral-900 dark:text-neutral-100 transition-colors';
         popupContent.innerHTML = `
           <div class="flex items-start justify-between gap-2 border-b pb-2.5 pr-6 border-neutral-100 dark:border-neutral-800">
-            <span class="font-semibold text-neutral-900 dark:text-neutral-100 leading-snug line-clamp-2">${sale.item}</span>
+            <span class="font-semibold text-neutral-900 dark:text-neutral-100 leading-snug line-clamp-2">${escapeHtml(sale.item)}</span>
           </div>
           <div class="space-y-1.5 pt-2 text-neutral-600 dark:text-neutral-300">
             <div class="flex items-center justify-between text-xs">
               <span class="text-neutral-400 dark:text-neutral-500 font-medium">Customer:</span>
-              <span class="font-medium text-neutral-800 dark:text-neutral-200">${sale.customer}</span>
+              <span class="font-medium text-neutral-800 dark:text-neutral-200">${escapeHtml(sale.customer)}</span>
             </div>
             <div class="flex items-center justify-between text-xs">
               <span class="text-neutral-400 dark:text-neutral-500 font-medium">Date:</span>
-              <span class="text-neutral-700 dark:text-neutral-300 font-mono text-[11px]">${formatDateDisplay(sale.date)}</span>
+              <span class="text-neutral-700 dark:text-neutral-300 font-mono text-[11px]">${escapeHtml(formatDateDisplay(sale.date))}</span>
             </div>
             <div class="flex items-center justify-between text-xs">
               <span class="text-neutral-400 dark:text-neutral-500 font-medium">Net Sales:</span>
@@ -275,7 +285,7 @@ export const MapView: FC<MapViewProps> = ({
                       <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
                       <circle cx="12" cy="10" r="3"/>
                     </svg>
-                    <span class="line-clamp-2">${sale.location}</span>
+                    <span class="line-clamp-2">${escapeHtml(sale.location)}</span>
                   </div>`
             : ''
           }

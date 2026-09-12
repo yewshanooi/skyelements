@@ -9,6 +9,7 @@ import {
   PAYMENT_METHODS,
 } from '@/sales/types';
 import { executeSalesMetricsQuery } from './salesAnalyticsEngine';
+import { createClient } from '@/utils/supabase/server';
 import type {
   ChartSpec,
   QuerySalesMetricsArgs,
@@ -395,6 +396,42 @@ export async function sendSalesAiMessage(
   sales: SaleItem[] = []
 ): Promise<AiServerResponse> {
   try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return {
+        id: `err-${Date.now()}`,
+        role: 'model',
+        text: '⚠️ **Authentication Required**:\n\nYou must be signed in to use the AI Assistant.',
+        timestamp: Date.now(),
+        error: true,
+        errorMessage: 'Authentication required.',
+      };
+    }
+
+    if (!newMessage || typeof newMessage !== 'string' || !newMessage.trim()) {
+      return {
+        id: `err-${Date.now()}`,
+        role: 'model',
+        text: 'Please enter a valid message.',
+        timestamp: Date.now(),
+        error: true,
+        errorMessage: 'Message cannot be empty.',
+      };
+    }
+
+    // Limit input message length to prevent resource exhaustion / DoS
+    const sanitizedMessage = newMessage.trim().slice(0, 4000);
+
+    // Sanitize user sales to ensure tenancy
+    const userSales = Array.isArray(sales)
+      ? sales.filter((s) => !s.user_id || s.user_id === user.id)
+      : [];
+
     const apiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
     if (!apiKey) {
       return {
@@ -420,24 +457,24 @@ export async function sendSalesAiMessage(
       parts: Array<Record<string, unknown>>;
     }> = [];
 
-    const recentHistory = history.slice(-8);
+    const recentHistory = (Array.isArray(history) ? history : []).slice(-8);
     for (const msg of recentHistory) {
       if (msg.role === 'user') {
         contents.push({
           role: 'user',
-          parts: [{ text: msg.text }],
+          parts: [{ text: String(msg.text || '').slice(0, 4000) }],
         });
       } else if (msg.role === 'model' && msg.text && !msg.error) {
         contents.push({
           role: 'model',
-          parts: [{ text: msg.text }],
+          parts: [{ text: String(msg.text || '').slice(0, 4000) }],
         });
       }
     }
 
     contents.push({
       role: 'user',
-      parts: [{ text: newMessage }],
+      parts: [{ text: sanitizedMessage }],
     });
 
     const requestBody = {
@@ -581,7 +618,7 @@ export async function sendSalesAiMessage(
         // Execute Deterministic Semantic Function-Calling against PostgreSQL
         try {
           const queryArgs = args as unknown as QuerySalesMetricsArgs;
-          const queryResult = await executeSalesMetricsQuery(queryArgs, sales);
+          const queryResult = await executeSalesMetricsQuery(queryArgs, userSales);
 
           queryMetricsExecutions.push({ args: queryArgs, queryResult });
 
@@ -663,7 +700,7 @@ export async function sendSalesAiMessage(
       } else if (name === 'request_delete_sale_item') {
         const id = String(args.id || '');
         const searchHint = String(args.item_name || args.customer || '');
-        const target = findBestMatchingSale(sales, id, searchHint);
+        const target = findBestMatchingSale(userSales, id, searchHint);
 
         const targetId = target ? target.id : id;
         const itemName = target ? target.item : String(args.item_name || 'Item');

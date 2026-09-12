@@ -24,9 +24,27 @@ const escapeHtml = (str?: string | number | null) => {
 };
 
 /**
+ * Validates that a URL strictly uses safe web schemes (https, http, or blob).
+ * Prevents javascript: pseudo-protocols and data: HTML injection.
+ */
+const isSafeUrl = (url?: string | null): boolean => {
+  if (!url) return false;
+  const trimmed = url.trim();
+  return (
+    trimmed.startsWith('https://') ||
+    trimmed.startsWith('http://') ||
+    trimmed.startsWith('blob:')
+  );
+};
+
+/**
  * Print an image document directly via an isolated hidden iframe
  */
 const printImageDocument = (url: string, title: string) => {
+  if (!isSafeUrl(url)) {
+    console.warn('Blocked printing from unsafe image URL');
+    return;
+  }
   const iframe = document.createElement('iframe');
   iframe.style.position = 'fixed';
   iframe.style.right = '0';
@@ -123,6 +141,10 @@ const printImageDocument = (url: string, title: string) => {
  * Print a PDF document
  */
 const printPdfDocument = (url: string) => {
+  if (!isSafeUrl(url)) {
+    console.warn('Blocked printing from unsafe PDF URL');
+    return;
+  }
   const iframe = document.createElement('iframe');
   iframe.style.position = 'fixed';
   iframe.style.right = '0';
@@ -140,7 +162,9 @@ const printPdfDocument = (url: string) => {
       iframe.contentWindow?.print();
     } catch (err) {
       console.warn('Cross-origin PDF print restricted, opening in new tab:', err);
-      window.open(url, '_blank');
+      if (isSafeUrl(url)) {
+        window.open(url, '_blank', 'noopener,noreferrer');
+      }
     } finally {
       setTimeout(() => {
         if (document.body.contains(iframe)) {
@@ -504,11 +528,11 @@ const InvoiceViewerModalContent: FC<{ sale: SaleItem; onClose: () => void }> = (
             </div>
           </div>
           <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
-            {resolvedUrl && (
+            {isSafeUrl(resolvedUrl) && (
               <a
                 href={resolvedUrl}
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 className="p-1.5 sm:p-2 text-neutral-500 hover:text-blue-600 dark:text-neutral-400 dark:hover:text-blue-400 hover:bg-neutral-200/60 dark:hover:bg-neutral-800 rounded-lg transition-colors cursor-pointer"
                 title="Open in new tab"
               >
@@ -542,17 +566,24 @@ const InvoiceViewerModalContent: FC<{ sale: SaleItem; onClose: () => void }> = (
                   <span>Loading...</span>
                 </div>
               ) : isPdf ? (
-                <iframe
-                  src={pdfViewerUrl}
-                  className="w-full h-[460px] rounded border-0 bg-white"
-                  title="PDF Invoice Preview"
-                />
-              ) : (
+                isSafeUrl(pdfViewerUrl) ? (
+                  <iframe
+                    src={pdfViewerUrl}
+                    className="w-full h-[460px] rounded border-0 bg-white"
+                    title="PDF Invoice Preview"
+                    sandbox="allow-scripts allow-same-origin allow-popups"
+                  />
+                ) : (
+                  <div className="text-xs text-neutral-500 py-12">Invalid or unsafe PDF URL</div>
+                )
+              ) : isSafeUrl(resolvedUrl) ? (
                 <img
                   src={resolvedUrl}
                   alt="Invoice receipt preview"
                   className="max-h-[420px] object-contain rounded"
                 />
+              ) : (
+                <div className="text-xs text-neutral-500 py-12">Invalid or unsafe image URL</div>
               )}
             </div>
           ) : (
