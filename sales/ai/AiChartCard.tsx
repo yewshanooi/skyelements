@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, type FC } from 'react';
+import { useState, useMemo, memo, type FC } from 'react';
 import { Table as TableIcon, BarChart3 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -135,7 +135,7 @@ const CustomTooltip: FC<CustomTooltipProps> = ({ active, payload, label }) => {
   return null;
 };
 
-export const AiChartCard: FC<AiChartCardProps> = ({ chartSpec }) => {
+export const AiChartCard: FC<AiChartCardProps> = memo(({ chartSpec }) => {
   const { title, data, xAxisKey, dataKeys } = chartSpec;
   const [viewMode, setViewMode] = useState<'table' | 'chart'>('table');
 
@@ -344,6 +344,8 @@ export const AiChartCard: FC<AiChartCardProps> = ({ chartSpec }) => {
       )}
     </div>
   );
-};
+});
+
+AiChartCard.displayName = 'AiChartCard';
 
 export const AiMetricsTable = AiChartCard;

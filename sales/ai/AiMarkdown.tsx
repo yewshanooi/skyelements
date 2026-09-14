@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import type { FC } from 'react';
 import { Check, Copy } from 'lucide-react';
 
@@ -8,7 +8,7 @@ interface AiMarkdownProps {
   content: string;
 }
 
-export const AiMarkdown: FC<AiMarkdownProps> = ({ content }) => {
+export const AiMarkdown: FC<AiMarkdownProps> = memo(({ content }) => {
   if (!content) return null;
 
   // Split lines to detect block elements like tables, code blocks, lists, headers
@@ -154,7 +154,9 @@ export const AiMarkdown: FC<AiMarkdownProps> = ({ content }) => {
   }
 
   return <div className="space-y-1 leading-normal text-[12.5px] select-text">{elements}</div>;
-};
+});
+
+AiMarkdown.displayName = 'AiMarkdown';
 
 function CodeBlock({ code, language }: { code: string; language?: string }) {
   const [copied, setCopied] = useState(false);

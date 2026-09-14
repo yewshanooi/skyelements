@@ -88,6 +88,64 @@ interface SpeechRecognitionInstance {
 }
 
 const STORAGE_KEY_CHAT_HISTORY = 'sales_dashboard_ai_chat_history_v1';
+const STORAGE_KEY_WINDOW_STATE = 'sales_ai_window_state';
+const STORAGE_KEY_DIALOG_STATE = 'sales_ai_dialog_state';
+const STORAGE_KEY_LAST_EXPANDED_STATE = 'sales_ai_last_expanded_state';
+
+export type DialogWindowState = 'windowed' | 'minimized' | 'fullscreen';
+
+function getSavedWindowState(): DialogWindowState {
+  try {
+    if (typeof window === 'undefined') return 'windowed';
+    const saved =
+      localStorage.getItem(STORAGE_KEY_WINDOW_STATE) ||
+      localStorage.getItem(STORAGE_KEY_DIALOG_STATE) ||
+      sessionStorage.getItem(STORAGE_KEY_WINDOW_STATE) ||
+      sessionStorage.getItem(STORAGE_KEY_DIALOG_STATE);
+
+    if (saved === 'minimized' || saved === 'fullscreen' || saved === 'windowed') {
+      return saved;
+    }
+    if (saved === 'full screen') {
+      return 'fullscreen';
+    }
+  } catch {
+    /* ignore */
+  }
+  return 'windowed';
+}
+
+function getSavedLastExpandedState(): 'windowed' | 'fullscreen' {
+  try {
+    if (typeof window === 'undefined') return 'windowed';
+    const saved =
+      localStorage.getItem(STORAGE_KEY_LAST_EXPANDED_STATE) ||
+      sessionStorage.getItem(STORAGE_KEY_LAST_EXPANDED_STATE);
+    if (saved === 'fullscreen' || saved === 'full screen') {
+      return 'fullscreen';
+    }
+  } catch {
+    /* ignore */
+  }
+  return 'windowed';
+}
+
+function saveWindowStateToStorage(state: DialogWindowState) {
+  try {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem(STORAGE_KEY_WINDOW_STATE, state);
+    localStorage.setItem(STORAGE_KEY_DIALOG_STATE, state);
+    sessionStorage.setItem(STORAGE_KEY_WINDOW_STATE, state);
+    sessionStorage.setItem(STORAGE_KEY_DIALOG_STATE, state);
+    if (state === 'fullscreen' || state === 'windowed') {
+      localStorage.setItem(STORAGE_KEY_LAST_EXPANDED_STATE, state);
+      sessionStorage.setItem(STORAGE_KEY_LAST_EXPANDED_STATE, state);
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
 
 function createInitialWelcomeMessage(): ChatMessage {
   const ts = Date.now();
@@ -119,6 +177,45 @@ function createErrorMessage(errorMessageText: string): ChatMessage {
     error: true,
   };
 }
+
+// Quick Action Prompts (3 Analytics based + 2 Sales Order CRUD based) - Defined statically outside component
+const QUICK_PROMPTS: Array<{
+  label: string;
+  prompt: string;
+  icon: React.ReactNode;
+  action: 'send' | 'create_form' | 'update_form';
+}> = [
+  {
+    label: 'Monthly Trend',
+    prompt: 'Show our monthly revenue and net profit breakdown.',
+    icon: <CalendarDays className="w-3 h-3 text-blue-500" />,
+    action: 'send',
+  },
+  {
+    label: 'Category Breakdown',
+    prompt: 'Break down revenue and net profit by product category.',
+    icon: <ChartPie className="w-3 h-3 text-purple-500" />,
+    action: 'send',
+  },
+  {
+    label: 'Top 5 Customers',
+    prompt: 'Who are our top 5 customers ranked by total spend?',
+    icon: <Trophy className="w-3 h-3 text-amber-500" />,
+    action: 'send',
+  },
+  {
+    label: 'Create New Order',
+    prompt: 'Create New Order',
+    icon: <Plus className="w-3 h-3 text-emerald-500" />,
+    action: 'create_form',
+  },
+  {
+    label: 'Edit Existing Order',
+    prompt: 'Edit Existing Order',
+    icon: <Pencil className="w-3 h-3 text-orange-500" />,
+    action: 'update_form',
+  },
+];
 
 export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
   isOpen,
@@ -155,11 +252,18 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
   const speechRecognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Abort pending request on unmount
+  // Abort pending request & stop speech recognition on unmount
   useEffect(() => {
     return () => {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
+      }
+      if (speechRecognitionRef.current) {
+        try {
+          speechRecognitionRef.current.stop();
+        } catch {
+          /* ignore */
+        }
       }
     };
   }, []);
@@ -213,9 +317,53 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
     }
   }, [messages]);
 
-  // Floating Window Geometry (Position & Dimensions)
-  const [isMinimized, setIsMinimized] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  // Floating Window Geometry (Position & Dimensions & State)
+  const [isMinimized, setIsMinimized] = useState<boolean>(() => {
+    return getSavedWindowState() === 'minimized';
+  });
+
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(() => {
+    const saved = getSavedWindowState();
+    if (saved === 'fullscreen') return true;
+    if (saved === 'minimized') {
+      return getSavedLastExpandedState() === 'fullscreen';
+    }
+    return false;
+  });
+
+  const isInitialMountRef = useRef(true);
+
+  // Persist dialog state (minimized, fullscreen, windowed) across page refreshes
+  useEffect(() => {
+    if (isInitialMountRef.current) {
+      isInitialMountRef.current = false;
+      return;
+    }
+    if (isMinimized) {
+      saveWindowStateToStorage('minimized');
+    } else if (isFullscreen) {
+      saveWindowStateToStorage('fullscreen');
+    } else {
+      saveWindowStateToStorage('windowed');
+    }
+  }, [isMinimized, isFullscreen]);
+
+  // Mobile touch swipe-down to dismiss state & closing animation
+  const [isClosing, setIsClosing] = useState(false);
+  const [mobileDragOffsetY, setMobileDragOffsetY] = useState(0);
+  const [isMobileDragging, setIsMobileDragging] = useState(false);
+  const mobileTouchStartRef = useRef<{ y: number; time: number }>({ y: 0, time: 0 });
+
+  // Gentle auto-focus when drawer opens or restores from minimized
+  useEffect(() => {
+    if (isOpen && !isMinimized && !isClosing) {
+      const timer = setTimeout(() => {
+        inputRef.current?.focus();
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, isMinimized, isClosing]);
+
 
   const [position, setPosition] = useState<{ x: number; y: number } | null>(() => {
     try {
@@ -251,12 +399,6 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
     posY: 0,
   });
 
-  // Mobile touch swipe-down to dismiss state & closing animation
-  const [isClosing, setIsClosing] = useState(false);
-  const [mobileDragOffsetY, setMobileDragOffsetY] = useState(0);
-  const [isMobileDragging, setIsMobileDragging] = useState(false);
-  const mobileTouchStartRef = useRef<{ y: number; time: number }>({ y: 0, time: 0 });
-
   const handleMobileTouchStart = (e: React.TouchEvent) => {
     if ((e.target as HTMLElement).closest('button, input, textarea, a') || isClosing) return;
     mobileTouchStartRef.current = {
@@ -288,6 +430,7 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
     setTimeout(() => {
       setIsMinimized(false);
       setIsFullscreen(false);
+      saveWindowStateToStorage('windowed');
       setIsClosing(false);
       setMobileDragOffsetY(0);
       onClose();
@@ -312,9 +455,18 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
     }
   };
 
-  // Calculate default position when not explicitly set
+  // Calculate default position when not explicitly set or clamp within viewport boundaries
   const getEffectivePosition = () => {
-    if (position) return position;
+    if (typeof window === 'undefined') return { x: 16, y: 16 };
+    const maxX = Math.max(8, window.innerWidth - size.width - 16);
+    const maxY = Math.max(8, window.innerHeight - size.height - 16);
+
+    if (position) {
+      return {
+        x: Math.min(Math.max(8, position.x), maxX),
+        y: Math.min(Math.max(8, position.y), maxY),
+      };
+    }
     const defaultX = Math.max(16, window.innerWidth - size.width - 24);
     const defaultY = Math.max(16, window.innerHeight - size.height - 24);
     return { x: defaultX, y: defaultY };
@@ -328,8 +480,20 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
     setSize({ width: defaultW, height: defaultH });
     setPosition({ x: defaultX, y: defaultY });
     setIsFullscreen(false);
-    localStorage.removeItem('sales_ai_window_pos');
-    localStorage.removeItem('sales_ai_window_size');
+    setIsMinimized(false);
+    saveWindowStateToStorage('windowed');
+    try {
+      localStorage.removeItem('sales_ai_window_pos');
+      localStorage.removeItem('sales_ai_window_size');
+      localStorage.removeItem(STORAGE_KEY_WINDOW_STATE);
+      localStorage.removeItem(STORAGE_KEY_DIALOG_STATE);
+      localStorage.removeItem(STORAGE_KEY_LAST_EXPANDED_STATE);
+      sessionStorage.removeItem(STORAGE_KEY_WINDOW_STATE);
+      sessionStorage.removeItem(STORAGE_KEY_DIALOG_STATE);
+      sessionStorage.removeItem(STORAGE_KEY_LAST_EXPANDED_STATE);
+    } catch {
+      /* ignore */
+    }
   };
 
   const handleMinimize = () => {
@@ -415,6 +579,7 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
 
   // Resizing state & handlers for desktop floating window
   const [isResizing, setIsResizing] = useState(false);
+  const resizeAnimationFrameRef = useRef<number | null>(null);
   const resizeStartRef = useRef<{ mouseX: number; mouseY: number; startW: number; startH: number }>({
     mouseX: 0,
     mouseY: 0,
@@ -425,16 +590,29 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
   useEffect(() => {
     const handleResizeMove = (e: MouseEvent) => {
       if (!isResizing) return;
-      const deltaX = e.clientX - resizeStartRef.current.mouseX;
-      const deltaY = e.clientY - resizeStartRef.current.mouseY;
 
-      const newWidth = Math.min(Math.max(340, resizeStartRef.current.startW + deltaX), window.innerWidth - 32);
-      const newHeight = Math.min(Math.max(420, resizeStartRef.current.startH + deltaY), window.innerHeight - 32);
+      if (resizeAnimationFrameRef.current !== null) {
+        cancelAnimationFrame(resizeAnimationFrameRef.current);
+      }
 
-      setSize({ width: newWidth, height: newHeight });
+      resizeAnimationFrameRef.current = requestAnimationFrame(() => {
+        if (!isResizing) return;
+        const deltaX = e.clientX - resizeStartRef.current.mouseX;
+        const deltaY = e.clientY - resizeStartRef.current.mouseY;
+
+        const newWidth = Math.min(Math.max(340, resizeStartRef.current.startW + deltaX), window.innerWidth - 32);
+        const newHeight = Math.min(Math.max(420, resizeStartRef.current.startH + deltaY), window.innerHeight - 32);
+
+        setSize({ width: newWidth, height: newHeight });
+      });
     };
 
     const handleResizeUp = () => {
+      if (resizeAnimationFrameRef.current !== null) {
+        cancelAnimationFrame(resizeAnimationFrameRef.current);
+        resizeAnimationFrameRef.current = null;
+      }
+
       if (isResizing) {
         setIsResizing(false);
         try {
@@ -448,13 +626,16 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
     };
 
     if (isResizing) {
-      window.addEventListener('mousemove', handleResizeMove);
+      window.addEventListener('mousemove', handleResizeMove, { passive: true });
       window.addEventListener('mouseup', handleResizeUp);
       document.body.style.userSelect = 'none';
       document.body.style.cursor = 'nwse-resize';
     }
 
     return () => {
+      if (resizeAnimationFrameRef.current !== null) {
+        cancelAnimationFrame(resizeAnimationFrameRef.current);
+      }
       window.removeEventListener('mousemove', handleResizeMove);
       window.removeEventListener('mouseup', handleResizeUp);
       document.body.style.userSelect = '';
@@ -489,44 +670,6 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
     setIsDragging(true);
   };
 
-  // Quick Action Prompts (3 Analytics based + 2 Sales Order CRUD based)
-  const quickPrompts: Array<{
-    label: string;
-    prompt: string;
-    icon: React.ReactNode;
-    action: 'send' | 'create_form' | 'update_form';
-  }> = [
-      {
-        label: 'Monthly Trend',
-        prompt: 'Show our monthly revenue and net profit breakdown.',
-        icon: <CalendarDays className="w-3 h-3 text-blue-500" />,
-        action: 'send',
-      },
-      {
-        label: 'Category Breakdown',
-        prompt: 'Break down revenue and net profit by product category.',
-        icon: <ChartPie className="w-3 h-3 text-purple-500" />,
-        action: 'send',
-      },
-      {
-        label: 'Top 5 Customers',
-        prompt: 'Who are our top 5 customers ranked by total spend?',
-        icon: <Trophy className="w-3 h-3 text-amber-500" />,
-        action: 'send',
-      },
-      {
-        label: 'Create New Order',
-        prompt: 'Create New Order',
-        icon: <Plus className="w-3 h-3 text-emerald-500" />,
-        action: 'create_form',
-      },
-      {
-        label: 'Edit Existing Order',
-        prompt: 'Edit Existing Order',
-        icon: <Pencil className="w-3 h-3 text-orange-500" />,
-        action: 'update_form',
-      },
-    ];
 
   // Stop ongoing AI chat execution handler
   const handleStopExecution = () => {
@@ -671,9 +814,13 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
       if (!isLoading) {
         handleSendMessage();
       }
-    } else if (e.key === 'Escape' && isLoading) {
+    } else if (e.key === 'Escape') {
       e.preventDefault();
-      handleStopExecution();
+      if (isLoading) {
+        handleStopExecution();
+      } else if (!inputQuery.trim()) {
+        handleCloseWindow();
+      }
     }
   };
 
@@ -885,7 +1032,19 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
   // Minimized Floating Pill UI (Preserves conversation state)
   if (isMinimized) {
     return (
-      <div className="fixed bottom-4 right-4 sm:bottom-5 sm:right-6 z-50 animate-in fade-in slide-in-from-bottom-2 duration-150">
+      <div
+        role="button"
+        tabIndex={0}
+        aria-label="Expand AI Assistant"
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            setIsMinimized(false);
+          }
+        }}
+        data-dialog-state="minimized"
+        className="fixed bottom-4 right-4 sm:bottom-5 sm:right-6 z-50 animate-in fade-in slide-in-from-bottom-2 duration-150"
+      >
         <div
           onClick={() => setIsMinimized(false)}
           className="flex items-center gap-2.5 px-3 sm:px-3.5 py-2 bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-2xl border border-black/10 dark:border-white/15 rounded-full shadow-[0_12px_40px_rgba(0,0,0,0.25)] hover:shadow-[0_16px_50px_rgba(0,0,0,0.35)] hover:scale-105 transition-all cursor-pointer select-none group"
@@ -975,6 +1134,10 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
 
       {/* Main AI Assistant Dialog (Fixed iOS Bottom Sheet on Mobile with Swipe Down to Dismiss, Floating Draggable Window on Desktop) */}
       <div
+        role="dialog"
+        aria-label="AI Assistant"
+        aria-modal="false"
+        data-dialog-state={isFullscreen ? 'fullscreen' : 'windowed'}
         style={isMobileScreen ? mobileSheetStyle : desktopWindowStyle}
         className={`fixed z-50 flex flex-col bg-white/98 dark:bg-[#1c1c1e]/98 backdrop-blur-2xl border border-black/[0.08] dark:border-white/[0.12] overflow-hidden font-sans overscroll-contain
           /* Fixed iOS Bottom Sheet Layout on Mobile */
@@ -1335,7 +1498,7 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
                   onWheel={handlePillsWheel}
                   className="flex gap-1.5 overflow-x-auto overscroll-x-contain pb-0.5 no-scrollbar snap-x snap-mandatory scroll-smooth"
                 >
-                  {quickPrompts.map((qp, idx) => (
+                  {QUICK_PROMPTS.map((qp, idx) => (
                     <button
                       key={idx}
                       type="button"
