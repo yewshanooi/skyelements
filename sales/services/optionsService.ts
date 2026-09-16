@@ -348,23 +348,6 @@ export function addOption(type: OptionType, newOption: string): string[] {
   return setOptions(type, next);
 }
 
-export function addOptionsBatch(type: OptionType, newOptions: string[]): string[] {
-  const current = getOptions(type);
-  const currentLower = new Set(current.map((opt) => opt.toLowerCase()));
-  const additions: string[] = [];
-
-  for (const opt of newOptions) {
-    const trimmed = opt.trim();
-    if (trimmed && !currentLower.has(trimmed.toLowerCase())) {
-      currentLower.add(trimmed.toLowerCase());
-      additions.push(trimmed);
-    }
-  }
-
-  if (additions.length === 0) return current;
-  const next = [...current, ...additions];
-  return setOptions(type, next);
-}
 
 export function removeOption(type: OptionType, optionToRemove: string): string[] {
   const current = getOptions(type);

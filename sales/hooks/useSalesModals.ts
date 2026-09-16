@@ -3,7 +3,6 @@ import type { SaleItem, StoreType } from '@/sales/types';
 
 export function useSalesModals() {
   const [isSaleModalOpen, setIsSaleModalOpen] = useState(false);
-  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [editingSale, setEditingSale] = useState<SaleItem | null>(null);
   const [defaultStoreForNewSale, setDefaultStoreForNewSale] = useState<StoreType | string | undefined>();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -38,7 +37,7 @@ export function useSalesModals() {
   }, []);
 
   return {
-    isSaleModalOpen, setIsSaleModalOpen, isImportModalOpen, setIsImportModalOpen,
+    isSaleModalOpen, setIsSaleModalOpen,
     editingSale, setEditingSale, defaultStoreForNewSale, setDefaultStoreForNewSale,
     isAuthModalOpen, setIsAuthModalOpen, authModalMode, invoiceSale, setInvoiceSale,
     selectedMapSale, setSelectedMapSale, isAiOpen, selectedIds, setSelectedIds,

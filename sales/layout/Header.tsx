@@ -11,7 +11,6 @@ import {
   Plus,
   LogIn,
   Download,
-  Upload,
   Search,
   X,
   Trash2,
@@ -31,7 +30,6 @@ interface HeaderProps {
   onSelectView: (view: ViewMode) => void;
   onOpenAuth: () => void;
   onExportCsv: () => void;
-  onOpenImport?: () => void;
   onOpenNewSale?: (defaultStore?: StoreType | string) => void;
   searchQuery?: string;
   onSearchChange?: (query: string) => void;
@@ -267,7 +265,6 @@ export const Header: FC<HeaderProps> = ({
   onSelectView,
   onOpenAuth,
   onExportCsv,
-  onOpenImport,
   onOpenNewSale,
   searchQuery = '',
   onSearchChange,
@@ -340,7 +337,7 @@ export const Header: FC<HeaderProps> = ({
             </h1>
           </div>
 
-          {/* Top Right: (...) More Options Button with Dropdown (Ask AI, Import, Export, Settings) */}
+          {/* Top Right: (...) More Options Button with Dropdown (Ask AI, Export, Settings) */}
           <div className="relative shrink-0 flex items-center gap-1.5" ref={moreMenuRef}>
             {/* If items are selected on mobile, provide quick delete/deselect buttons matching web version */}
             {selectedIdsCount > 0 && (
@@ -402,8 +399,9 @@ export const Header: FC<HeaderProps> = ({
                   </>
                 )}
 
-                {/* 2. AI Assistant, Import, Export Section */}
-                {/* Ask AI Assistant */}
+                {/* 2. AI Assistant, Export Section */}
+
+                {/* AI Assistant */}
                 {onToggleAi && (
                   <button
                     type="button"
@@ -424,21 +422,6 @@ export const Header: FC<HeaderProps> = ({
                         Active
                       </span>
                     )}
-                  </button>
-                )}
-
-                {/* Import Notion */}
-                {user && onOpenImport && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onOpenImport();
-                      setIsMoreMenuOpen(false);
-                    }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-800 dark:text-neutral-200 transition-colors text-left cursor-pointer"
-                  >
-                    <Upload className="w-4 h-4 text-neutral-600 dark:text-neutral-400" />
-                    <span>Import from Notion</span>
                   </button>
                 )}
 
@@ -548,19 +531,6 @@ export const Header: FC<HeaderProps> = ({
               >
                 <Sparkles className={`w-3 h-3 ${isAiOpen ? 'text-white' : 'text-purple-600 dark:text-purple-400'}`} />
                 <span>Ask AI</span>
-              </button>
-            )}
-
-            {/* Import Notion Button */}
-            {user && onOpenImport && (
-              <button
-                type="button"
-                onClick={onOpenImport}
-                className="px-2.5 py-1 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-neutral-100 border border-neutral-200/70 dark:border-neutral-700/70 rounded-md text-[11px] font-medium transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                title="Import from Notion"
-              >
-                <Upload className="w-3 h-3" />
-                <span>Import</span>
               </button>
             )}
 

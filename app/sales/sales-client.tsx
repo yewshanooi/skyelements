@@ -61,10 +61,6 @@ const KanbanBoardView = dynamic(
   () => import('@/sales/views/kanban/KanbanBoardView').then((m) => ({ default: m.KanbanBoardView })),
   { ssr: false, loading: () => <ViewLoading /> }
 );
-const NotionImportModal = dynamic(
-  () => import('@/sales/modals/NotionImportModal').then((m) => ({ default: m.NotionImportModal })),
-  { ssr: false }
-);
 const AiAssistantDrawer = dynamic(
   () => import('@/sales/ai/AiAssistantDrawer').then((m) => ({ default: m.AiAssistantDrawer })),
   { ssr: false }
@@ -246,7 +242,7 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
   }, []);
 
   const {
-    isSaleModalOpen, setIsSaleModalOpen, isImportModalOpen, setIsImportModalOpen,
+    isSaleModalOpen, setIsSaleModalOpen,
     editingSale, setEditingSale, defaultStoreForNewSale, setDefaultStoreForNewSale,
     isAuthModalOpen, setIsAuthModalOpen, authModalMode, invoiceSale, setInvoiceSale,
     selectedMapSale, setSelectedMapSale, isAiOpen, selectedIds, setSelectedIds,
@@ -388,14 +384,6 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
     window.history.pushState(null, '', newUrl);
   }, [filters, sortField, sortOrder]);
 
-  const handleImportComplete = useCallback((newSales: SaleItem[]) => {
-    setSales((prev) => {
-      const existingIds = new Set(prev.map((s) => s.id));
-      const filteredNew = newSales.filter((s) => !existingIds.has(s.id));
-      return [...filteredNew, ...prev];
-    });
-  }, []);
-
   const handleExportCsv = useCallback(() => {
     if (sales.length === 0) return;
 
@@ -504,7 +492,6 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
         onSelectView={handleSelectView}
         onOpenAuth={() => handleOpenAuth('login')}
         onExportCsv={handleExportCsv}
-        onOpenImport={() => setIsImportModalOpen(true)}
         onOpenNewSale={handleOpenNew}
         searchQuery={filters.search}
         onSearchChange={handleSearchChange}
@@ -618,17 +605,6 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
         defaultMode={authModalMode}
         redirectTo={`/sales/${currentView}`}
       />
-
-      {isImportModalOpen && (
-        <Suspense fallback={null}>
-          <NotionImportModal
-            isOpen={isImportModalOpen}
-            onClose={() => setIsImportModalOpen(false)}
-            userId={user?.id}
-            onImportComplete={handleImportComplete}
-          />
-        </Suspense>
-      )}
 
       {isAiOpen && (
         <Suspense fallback={null}>
