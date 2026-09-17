@@ -120,6 +120,17 @@ const ALLOWED_UPDATE_COLUMNS = new Set([
   'notes',
 ]);
 
+function revalidateSalesPaths(): void {
+  revalidatePath('/sales');
+  revalidatePath('/sales/[view]', 'page');
+}
+
+async function getAuthUser(supabase: Awaited<ReturnType<typeof createClient>>, errorMessage = 'You must be signed in.') {
+  const { data: { user }, error } = await supabase.auth.getUser();
+  if (error || !user) throw new Error(errorMessage);
+  return user;
+}
+
 /**
  * Helper to remove attached invoice files from private Supabase Storage
  */
@@ -146,11 +157,7 @@ async function cleanupInvoiceFiles(
  */
 export async function createSaleAction(sale: Omit<SaleItem, 'id'>): Promise<SaleItem> {
   const supabase = await createClient();
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-  if (authError || !user) {
-    throw new Error('You must be signed in to create sales records.');
-  }
+  const user = await getAuthUser(supabase, 'You must be signed in to create sales records.');
 
   const rawItem = String(sale.item || '').trim();
   if (!rawItem) {
@@ -189,8 +196,7 @@ export async function createSaleAction(sale: Omit<SaleItem, 'id'>): Promise<Sale
     throw new Error(`Failed to create sale: ${error.message}`);
   }
 
-  revalidatePath('/sales');
-  revalidatePath('/sales/[view]', 'page');
+  revalidateSalesPaths();
   return mapRowToSaleItem(data);
 }
 
@@ -202,11 +208,7 @@ export async function updateSaleAction(
   updates: Partial<SaleItem>
 ): Promise<SaleItem> {
   const supabase = await createClient();
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-  if (authError || !user) {
-    throw new Error('You must be signed in to update sales records.');
-  }
+  const user = await getAuthUser(supabase, 'You must be signed in to update sales records.');
 
   const dbPayload: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(updates)) {
@@ -258,48 +260,16 @@ export async function updateSaleAction(
     throw new Error(`Failed to update sale: ${error.message}`);
   }
 
-  revalidatePath('/sales');
-  revalidatePath('/sales/[view]', 'page');
+  revalidateSalesPaths();
   return mapRowToSaleItem(data);
 }
 
 /**
  * Server Action: Delete a sale and clean up invoice file from private storage
+ * Delegates to batchDeleteSalesAction (DRY)
  */
 export async function deleteSaleAction(id: string): Promise<void> {
-  const supabase = await createClient();
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-  if (authError || !user) {
-    throw new Error('You must be signed in to delete sales records.');
-  }
-
-  // 1. Fetch sale to check for attached invoice
-  const { data: sale } = await supabase
-    .from('sales')
-    .select('invoice_url')
-    .eq('id', id)
-    .eq('user_id', user.id)
-    .maybeSingle();
-
-  if (sale?.invoice_url) {
-    await cleanupInvoiceFiles(supabase, user.id, [sale.invoice_url]);
-  }
-
-  // 2. Delete sale record
-  const { error } = await supabase
-    .from('sales')
-    .delete()
-    .eq('id', id)
-    .eq('user_id', user.id);
-
-  if (error) {
-    console.error('[deleteSaleAction] DB delete error:', error);
-    throw new Error(`Failed to delete sale: ${error.message}`);
-  }
-
-  revalidatePath('/sales');
-  revalidatePath('/sales/[view]', 'page');
+  return batchDeleteSalesAction([id]);
 }
 
 /**
@@ -309,11 +279,7 @@ export async function batchDeleteSalesAction(ids: string[]): Promise<void> {
   if (!ids || ids.length === 0) return;
 
   const supabase = await createClient();
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-  if (authError || !user) {
-    throw new Error('You must be signed in to delete sales records.');
-  }
+  const user = await getAuthUser(supabase, 'You must be signed in to delete sales records.');
 
   // 1. Fetch sales to find attached invoices
   const { data: sales } = await supabase
@@ -338,8 +304,7 @@ export async function batchDeleteSalesAction(ids: string[]): Promise<void> {
     throw new Error(`Failed to delete sales: ${error.message}`);
   }
 
-  revalidatePath('/sales');
-  revalidatePath('/sales/[view]', 'page');
+  revalidateSalesPaths();
 }
 
 
@@ -401,11 +366,7 @@ export async function deleteInvoiceFileAction(
   if (!filePathOrUrl && !saleId) return false;
 
   const supabase = await createClient();
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-  if (authError || !user) {
-    throw new Error('You must be signed in to manage invoices.');
-  }
+  const user = await getAuthUser(supabase, 'You must be signed in to manage invoices.');
 
   try {
     // 1. Remove from storage bucket if file path/URL exists
@@ -439,51 +400,12 @@ export async function deleteInvoiceFileAction(
       if (dbError) {
         console.error('[deleteInvoiceFileAction] DB invoice reset error:', dbError);
       }
-      revalidatePath('/sales');
-      revalidatePath('/sales/[view]', 'page');
+      revalidateSalesPaths();
     }
 
     return true;
   } catch (err) {
     console.error('[deleteInvoiceFileAction] Unexpected error removing invoice:', err);
-    return false;
-  }
-}
-
-/**
- * Server Action: Batch remove multiple invoice files from Supabase Storage bucket 'invoices'
- */
-export async function deleteInvoiceFilesAction(
-  filePathsOrUrls: (string | undefined | null)[]
-): Promise<boolean> {
-  if (!filePathsOrUrls || filePathsOrUrls.length === 0) return false;
-
-  const supabase = await createClient();
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-  if (authError || !user) {
-    throw new Error('You must be signed in to manage invoices.');
-  }
-
-  const paths = filePathsOrUrls
-    .map((p) => extractStoragePath(p, 'invoices'))
-    .filter((p): p is string => Boolean(p && p.startsWith(`${user.id}/`) && !p.includes('..')));
-
-  if (paths.length === 0) return false;
-
-  try {
-    const { error } = await supabase.storage
-      .from('invoices')
-      .remove(paths);
-
-    if (error) {
-      console.error('[deleteInvoiceFilesAction] Batch removal error:', error);
-      return false;
-    }
-
-    return true;
-  } catch (err) {
-    console.error('[deleteInvoiceFilesAction] Unexpected error batch removing invoices:', err);
     return false;
   }
 }

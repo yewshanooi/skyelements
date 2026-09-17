@@ -71,7 +71,7 @@ const ALL_FILTER_PROPERTIES: { id: PropertyType; label: string }[] = [
 ];
 
 export const NotionFilterBar: FC<NotionFilterBarProps> = ({
-  storageKeyPrefix = 'default',
+  storageKeyPrefix: _storageKeyPrefix = 'default',
   showSort = true,
   sortField = 'date',
   sortOrder = 'desc',

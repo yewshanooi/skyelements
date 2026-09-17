@@ -14,7 +14,6 @@ import {
   Square,
   Upload,
   X,
-  Calculator,
   Table as TableIcon,
   RotateCcw,
 } from 'lucide-react';
@@ -89,6 +88,32 @@ const MIN_COLUMN_WIDTHS: Record<ColumnId, number> = {
 };
 
 const STORAGE_KEY_COLUMN_WIDTHS = 'sales_dashboard_table_column_widths_v2';
+
+const TABLE_COLUMNS: {
+  id: ColumnId;
+  label?: string;
+  icon?: string;
+  sortField?: SortField;
+  align?: 'right' | 'center';
+  isFormula?: boolean;
+}[] = [
+  { id: 'select' },
+  { id: 'quantity', label: 'Quantity', icon: '123', sortField: 'quantity', align: 'right' },
+  { id: 'item', label: 'Order', icon: '📦', sortField: 'item' },
+  { id: 'category', label: 'Category', icon: '🗄️', sortField: 'category' },
+  { id: 'marketplace', label: 'Store', icon: '🏪', sortField: 'marketplace' },
+  { id: 'payment_method', label: 'Payment Method', icon: '💳' },
+  { id: 'customer', label: 'Customer', icon: '👤', sortField: 'customer' },
+  { id: 'date', label: 'Date', icon: '📅', sortField: 'date' },
+  { id: 'subtotal', label: 'Subtotal (in MYR)', icon: '🏷️', sortField: 'subtotal', align: 'right' },
+  { id: 'cost', label: 'Cost(s)', icon: '🏷️', sortField: 'cost', align: 'right' },
+  { id: 'sales', label: 'Sales (in MYR)', icon: '💰', align: 'right', isFormula: true },
+  { id: 'order_status', label: 'Order Status', icon: '🚚' },
+  { id: 'payment_status', label: 'Payment Status', icon: '💳' },
+  { id: 'invoice', label: 'Invoice', icon: '🧾' },
+  { id: 'location', label: 'Location', icon: '📍' },
+  { id: 'actions' },
+];
 
 interface TableViewProps {
   sales: SaleItem[];
@@ -253,46 +278,40 @@ export const TableView: FC<TableViewProps> = ({
 
   const resizeRafRef = useRef<number | null>(null);
 
-  const handleStartResize = (
-    e: React.MouseEvent<HTMLDivElement>,
-    colId: ColumnId
-  ) => {
-    e.preventDefault();
-    e.stopPropagation();
-
+  const startColumnResize = (startX: number, colId: ColumnId) => {
     dragOccurredRef.current = true;
-    const startX = e.clientX;
     const startWidth = columnWidths[colId];
     setResizingCol(colId);
 
-    const handleMouseMove = (moveEvent: MouseEvent) => {
+    const onMove = (clientX: number) => {
       if (resizeRafRef.current !== null) {
         cancelAnimationFrame(resizeRafRef.current);
       }
       resizeRafRef.current = requestAnimationFrame(() => {
-        const deltaX = moveEvent.clientX - startX;
+        const deltaX = clientX - startX;
         const minW = MIN_COLUMN_WIDTHS[colId] || 50;
         const newWidth = Math.max(minW, Math.round(startWidth + deltaX));
-        setColumnWidths((prev) => {
-          if (prev[colId] === newWidth) return prev;
-          return {
-            ...prev,
-            [colId]: newWidth,
-          };
-        });
+        setColumnWidths((prev) => (prev[colId] === newWidth ? prev : { ...prev, [colId]: newWidth }));
       });
     };
 
-    const handleMouseUp = () => {
+    const handleMouseMove = (e: MouseEvent) => onMove(e.clientX);
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches[0]) onMove(e.touches[0].clientX);
+    };
+
+    const cleanup = () => {
       if (resizeRafRef.current !== null) {
         cancelAnimationFrame(resizeRafRef.current);
         resizeRafRef.current = null;
       }
       setResizingCol(null);
       window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('mouseup', cleanup);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', cleanup);
+      window.removeEventListener('touchcancel', cleanup);
 
-      // Prevent any click event that might bubble or synthesize from this mouse release
       const preventClick = (clickEvent: MouseEvent) => {
         clickEvent.stopPropagation();
         clickEvent.preventDefault();
@@ -305,58 +324,10 @@ export const TableView: FC<TableViewProps> = ({
     };
 
     window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
-  };
-
-  const handleStartResizeTouch = (
-    e: React.TouchEvent<HTMLDivElement>,
-    colId: ColumnId
-  ) => {
-    e.stopPropagation();
-    if (!e.touches[0]) return;
-
-    dragOccurredRef.current = true;
-    const startX = e.touches[0].clientX;
-    const startWidth = columnWidths[colId];
-    setResizingCol(colId);
-
-    const handleTouchMove = (moveEvent: TouchEvent) => {
-      if (!moveEvent.touches[0]) return;
-      if (resizeRafRef.current !== null) {
-        cancelAnimationFrame(resizeRafRef.current);
-      }
-      const clientX = moveEvent.touches[0].clientX;
-      resizeRafRef.current = requestAnimationFrame(() => {
-        const deltaX = clientX - startX;
-        const minW = MIN_COLUMN_WIDTHS[colId] || 50;
-        const newWidth = Math.max(minW, Math.round(startWidth + deltaX));
-        setColumnWidths((prev) => {
-          if (prev[colId] === newWidth) return prev;
-          return {
-            ...prev,
-            [colId]: newWidth,
-          };
-        });
-      });
-    };
-
-    const handleTouchEnd = () => {
-      if (resizeRafRef.current !== null) {
-        cancelAnimationFrame(resizeRafRef.current);
-        resizeRafRef.current = null;
-      }
-      setResizingCol(null);
-      window.removeEventListener('touchmove', handleTouchMove);
-      window.removeEventListener('touchend', handleTouchEnd);
-      window.removeEventListener('touchcancel', handleTouchEnd);
-      setTimeout(() => {
-        dragOccurredRef.current = false;
-      }, 100);
-    };
-
+    window.addEventListener('mouseup', cleanup);
     window.addEventListener('touchmove', handleTouchMove, { passive: true });
-    window.addEventListener('touchend', handleTouchEnd);
-    window.addEventListener('touchcancel', handleTouchEnd);
+    window.addEventListener('touchend', cleanup);
+    window.addEventListener('touchcancel', cleanup);
   };
 
   const handleResetColumnWidth = (e: React.MouseEvent, colId: ColumnId) => {
@@ -390,8 +361,15 @@ export const TableView: FC<TableViewProps> = ({
           e.preventDefault();
           e.stopPropagation();
         }}
-        onMouseDown={(e) => handleStartResize(e, colId)}
-        onTouchStart={(e) => handleStartResizeTouch(e, colId)}
+        onMouseDown={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          startColumnResize(e.clientX, colId);
+        }}
+        onTouchStart={(e) => {
+          e.stopPropagation();
+          if (e.touches[0]) startColumnResize(e.touches[0].clientX, colId);
+        }}
         onDoubleClick={(e) => handleResetColumnWidth(e, colId)}
         title="Drag to resize column (Double-click to reset)"
         className={`absolute right-0 top-0 bottom-0 w-3 -mr-1.5 cursor-col-resize flex items-center justify-center z-20 select-none group/resizer hover:bg-transparent ${isResizing ? 'pointer-events-auto' : ''
@@ -574,6 +552,38 @@ export const TableView: FC<TableViewProps> = ({
     );
   };
 
+  type OptionField = 'category' | 'marketplace' | 'order_status' | 'payment_status' | 'payment_method';
+
+  const renderOptionPickerCell = (sale: SaleItem, field: OptionField) => {
+    const isActive = activeOptionPicker?.saleId === sale.id && activeOptionPicker?.field === field;
+    const value = sale[field];
+
+    return (
+      <td
+        key={field}
+        onClick={() => setActiveOptionPicker(isActive ? null : { saleId: sale.id, field })}
+        className={`px-3 py-2 border-r border-neutral-200/60 dark:border-neutral-800 relative cursor-pointer hover:bg-neutral-100/60 dark:hover:bg-neutral-800/40 transition-colors select-none ${
+          isActive ? 'z-30' : ''
+        }`}
+      >
+        <div className="flex items-center min-h-[22px] w-full min-w-0">
+          {value ? <TagPill text={value} type={field} /> : null}
+        </div>
+        {isActive && (
+          <TableOptionPicker
+            type={field}
+            currentValue={value}
+            onSelect={(val) => {
+              if (onUpdateSale) onUpdateSale(sale.id, { [field]: val });
+              setActiveOptionPicker(null);
+            }}
+            onClose={() => setActiveOptionPicker(null)}
+          />
+        )}
+      </td>
+    );
+  };
+
   const handleResetFilters = () => {
     onFiltersChange({
       search: '',
@@ -612,203 +622,83 @@ export const TableView: FC<TableViewProps> = ({
           >
             {/* Dynamic Column Width Group */}
             <colgroup>
-              <col style={{ width: `${columnWidths.select}px` }} />
-              <col style={{ width: `${columnWidths.quantity}px` }} />
-              <col style={{ width: `${columnWidths.item}px` }} />
-              <col style={{ width: `${columnWidths.category}px` }} />
-              <col style={{ width: `${columnWidths.marketplace}px` }} />
-              <col style={{ width: `${columnWidths.payment_method}px` }} />
-              <col style={{ width: `${columnWidths.customer}px` }} />
-              <col style={{ width: `${columnWidths.date}px` }} />
-              <col style={{ width: `${columnWidths.subtotal}px` }} />
-              <col style={{ width: `${columnWidths.cost}px` }} />
-              <col style={{ width: `${columnWidths.sales}px` }} />
-              <col style={{ width: `${columnWidths.order_status}px` }} />
-              <col style={{ width: `${columnWidths.payment_status}px` }} />
-              <col style={{ width: `${columnWidths.invoice}px` }} />
-              <col style={{ width: `${columnWidths.location}px` }} />
-              <col style={{ width: `${columnWidths.actions}px` }} />
+              {(Object.keys(DEFAULT_COLUMN_WIDTHS) as ColumnId[]).map((colId) => (
+                <col key={colId} style={{ width: `${columnWidths[colId]}px` }} />
+              ))}
             </colgroup>
 
             {/* Table Header */}
             <thead>
               <tr className="border-b border-neutral-200/80 dark:border-neutral-800 bg-[#fbfbfa] dark:bg-[#1f1f1f] text-neutral-500 dark:text-neutral-400 font-medium h-9">
-                <th className="px-2 text-center border-r border-neutral-200/60 dark:border-neutral-800 relative select-none">
-                  <button
-                    onClick={toggleSelectAll}
-                    className="flex items-center justify-center text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 cursor-pointer mx-auto"
-                    title={selectedIds.length > 0 ? 'Deselect all' : 'Select all'}
-                  >
-                    {selectedIds.length > 0 && selectedIds.length === filteredAndSortedSales.length ? (
-                      <CheckSquare className="w-3.5 h-3.5 text-blue-600" />
-                    ) : (
-                      <Square className="w-3.5 h-3.5" />
-                    )}
-                  </button>
-                  {renderResizeHandle('select')}
-                </th>
+                {TABLE_COLUMNS.map((col) => {
+                  if (col.id === 'select') {
+                    return (
+                      <th key={col.id} className="px-2 text-center border-r border-neutral-200/60 dark:border-neutral-800 relative select-none">
+                        <button
+                          onClick={toggleSelectAll}
+                          className="flex items-center justify-center text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 cursor-pointer mx-auto"
+                          title={selectedIds.length > 0 ? 'Deselect all' : 'Select all'}
+                        >
+                          {selectedIds.length > 0 && selectedIds.length === filteredAndSortedSales.length ? (
+                            <CheckSquare className="w-3.5 h-3.5 text-blue-600" />
+                          ) : (
+                            <Square className="w-3.5 h-3.5" />
+                          )}
+                        </button>
+                        {renderResizeHandle('select')}
+                      </th>
+                    );
+                  }
 
-                <th
-                  onClick={() => handleSort('quantity')}
-                  className="px-3 py-2 cursor-pointer hover:bg-neutral-200/40 dark:hover:bg-neutral-800/40 border-r border-neutral-200/60 dark:border-neutral-800 group whitespace-nowrap text-right relative select-none"
-                  title="Click to sort by quantity"
-                >
-                  <div className="flex items-center justify-end gap-1 overflow-hidden">
-                    <span className="font-mono text-neutral-400">123</span>
-                    <span className="truncate">Quantity</span>
-                    {renderSortIcon('quantity')}
-                  </div>
-                  {renderResizeHandle('quantity')}
-                </th>
+                  if (col.id === 'actions') {
+                    return (
+                      <th key={col.id} className="px-2 py-2 text-center whitespace-nowrap relative select-none">
+                        {renderResizeHandle('actions')}
+                      </th>
+                    );
+                  }
 
-                <th
-                  onClick={() => handleSort('item')}
-                  className="px-3 py-2 cursor-pointer hover:bg-neutral-200/40 dark:hover:bg-neutral-800/40 border-r border-neutral-200/60 dark:border-neutral-800 group whitespace-nowrap relative select-none"
-                  title="Click to sort by order name"
-                >
-                  <div className="flex items-center gap-1.5 overflow-hidden">
-                    <span>📦</span>
-                    <span className="truncate">Order</span>
-                    {renderSortIcon('item')}
-                  </div>
-                  {renderResizeHandle('item')}
-                </th>
+                  const isClickable = Boolean(col.sortField || col.isFormula);
+                  const isRight = col.align === 'right';
 
-                <th
-                  onClick={() => handleSort('category')}
-                  className="px-3 py-2 cursor-pointer hover:bg-neutral-200/40 dark:hover:bg-neutral-800/40 border-r border-neutral-200/60 dark:border-neutral-800 group whitespace-nowrap relative select-none"
-                  title="Click to sort by category"
-                >
-                  <div className="flex items-center gap-1.5 overflow-hidden">
-                    <span>🗄️</span>
-                    <span className="truncate">Category</span>
-                    {renderSortIcon('category')}
-                  </div>
-                  {renderResizeHandle('category')}
-                </th>
-
-                <th
-                  onClick={() => handleSort('marketplace')}
-                  className="px-3 py-2 cursor-pointer hover:bg-neutral-200/40 dark:hover:bg-neutral-800/40 border-r border-neutral-200/60 dark:border-neutral-800 group whitespace-nowrap relative select-none"
-                  title="Click to sort by store"
-                >
-                  <div className="flex items-center gap-1.5 overflow-hidden">
-                    <span>🏪</span>
-                    <span className="truncate">Store</span>
-                    {renderSortIcon('marketplace')}
-                  </div>
-                  {renderResizeHandle('marketplace')}
-                </th>
-
-                <th className="px-3 py-2 border-r border-neutral-200/60 dark:border-neutral-800 whitespace-nowrap relative select-none">
-                  <div className="flex items-center gap-1.5 overflow-hidden">
-                    <span>💳</span>
-                    <span className="truncate">Payment Method</span>
-                  </div>
-                  {renderResizeHandle('payment_method')}
-                </th>
-
-                <th
-                  onClick={() => handleSort('customer')}
-                  className="px-3 py-2 cursor-pointer hover:bg-neutral-200/40 dark:hover:bg-neutral-800/40 border-r border-neutral-200/60 dark:border-neutral-800 group whitespace-nowrap relative select-none"
-                  title="Click to sort by customer"
-                >
-                  <div className="flex items-center gap-1.5 overflow-hidden">
-                    <span>👤</span>
-                    <span className="truncate">Customer</span>
-                    {renderSortIcon('customer')}
-                  </div>
-                  {renderResizeHandle('customer')}
-                </th>
-
-                <th
-                  onClick={() => handleSort('date')}
-                  className="px-3 py-2 cursor-pointer hover:bg-neutral-200/40 dark:hover:bg-neutral-800/40 border-r border-neutral-200/60 dark:border-neutral-800 group whitespace-nowrap relative select-none"
-                  title="Click to sort by date"
-                >
-                  <div className="flex items-center gap-1.5 overflow-hidden">
-                    <span>📅</span>
-                    <span className="truncate">Date</span>
-                    {renderSortIcon('date')}
-                  </div>
-                  {renderResizeHandle('date')}
-                </th>
-
-                <th
-                  onClick={() => handleSort('subtotal')}
-                  className="px-3 py-2 cursor-pointer hover:bg-neutral-200/40 dark:hover:bg-neutral-800/40 border-r border-neutral-200/60 dark:border-neutral-800 group whitespace-nowrap text-right relative select-none"
-                  title="Click to sort by subtotal"
-                >
-                  <div className="flex items-center justify-end gap-1 overflow-hidden">
-                    <span className="truncate">🏷️ Subtotal (in MYR)</span>
-                    {renderSortIcon('subtotal')}
-                  </div>
-                  {renderResizeHandle('subtotal')}
-                </th>
-
-                <th
-                  onClick={() => handleSort('cost')}
-                  className="px-3 py-2 cursor-pointer hover:bg-neutral-200/40 dark:hover:bg-neutral-800/40 border-r border-neutral-200/60 dark:border-neutral-800 group whitespace-nowrap text-right relative select-none"
-                  title="Click to sort by cost"
-                >
-                  <div className="flex items-center justify-end gap-1 overflow-hidden">
-                    <span className="truncate">🏷️ Cost(s)</span>
-                    {renderSortIcon('cost')}
-                  </div>
-                  {renderResizeHandle('cost')}
-                </th>
-
-                <th
-                  onClick={() => {
-                    if (dragOccurredRef.current) return;
-                    setIsFormulaModalOpen(true);
-                  }}
-                  className="px-3 py-2 cursor-pointer hover:bg-neutral-200/40 dark:hover:bg-neutral-800/40 border-r border-neutral-200/60 dark:border-neutral-800 group whitespace-nowrap text-right relative select-none"
-                  title="Click to edit formula for Sales (in MYR)"
-                >
-                  <div className="flex items-center justify-end gap-1 overflow-hidden">
-                    <span className="truncate">
-                      💰 Sales (in MYR) <span className="text-blue-600 dark:text-blue-400">𝑓</span>
-                    </span>
-                  </div>
-                  {renderResizeHandle('sales')}
-                </th>
-
-                <th className="px-3 py-2 border-r border-neutral-200/60 dark:border-neutral-800 whitespace-nowrap relative select-none">
-                  <div className="flex items-center gap-1.5 overflow-hidden">
-                    <span>🚚</span>
-                    <span className="truncate">Order Status</span>
-                  </div>
-                  {renderResizeHandle('order_status')}
-                </th>
-
-                <th className="px-3 py-2 border-r border-neutral-200/60 dark:border-neutral-800 whitespace-nowrap relative select-none">
-                  <div className="flex items-center gap-1.5 overflow-hidden">
-                    <span>💳</span>
-                    <span className="truncate">Payment Status</span>
-                  </div>
-                  {renderResizeHandle('payment_status')}
-                </th>
-
-                <th className="px-3 py-2 border-r border-neutral-200/60 dark:border-neutral-800 whitespace-nowrap relative select-none">
-                  <div className="flex items-center gap-1.5 overflow-hidden">
-                    <span>🧾</span>
-                    <span className="truncate">Invoice</span>
-                  </div>
-                  {renderResizeHandle('invoice')}
-                </th>
-
-                <th className="px-3 py-2 border-r border-neutral-200/60 dark:border-neutral-800 whitespace-nowrap relative select-none">
-                  <div className="flex items-center gap-1.5 overflow-hidden">
-                    <span>📍</span>
-                    <span className="truncate">Location</span>
-                  </div>
-                  {renderResizeHandle('location')}
-                </th>
-
-                <th className="px-2 py-2 text-center whitespace-nowrap relative select-none">
-                  {renderResizeHandle('actions')}
-                </th>
+                  return (
+                    <th
+                      key={col.id}
+                      onClick={() => {
+                        if (dragOccurredRef.current) return;
+                        if (col.isFormula) {
+                          setIsFormulaModalOpen(true);
+                        } else if (col.sortField) {
+                          handleSort(col.sortField);
+                        }
+                      }}
+                      className={`px-3 py-2 border-r border-neutral-200/60 dark:border-neutral-800 whitespace-nowrap relative select-none ${
+                        isClickable ? 'cursor-pointer hover:bg-neutral-200/40 dark:hover:bg-neutral-800/40 group' : ''
+                      } ${isRight ? 'text-right' : ''}`}
+                      title={
+                        col.isFormula
+                          ? 'Click to edit formula for Sales (in MYR)'
+                          : col.sortField
+                          ? `Click to sort by ${col.label?.toLowerCase()}`
+                          : undefined
+                      }
+                    >
+                      <div className={`flex items-center gap-1.5 overflow-hidden ${isRight ? 'justify-end gap-1' : ''}`}>
+                        {col.icon && (
+                          <span className={col.icon === '123' ? 'font-mono text-neutral-400' : ''}>
+                            {col.icon}
+                          </span>
+                        )}
+                        <span className="truncate">
+                          {col.label}
+                          {col.isFormula && <span className="text-blue-600 dark:text-blue-400"> 𝑓</span>}
+                        </span>
+                        {col.sortField && renderSortIcon(col.sortField)}
+                      </div>
+                      {renderResizeHandle(col.id)}
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
 
@@ -949,95 +839,10 @@ export const TableView: FC<TableViewProps> = ({
                         )}
                       </td>
 
-                      {/* Category (Notion Option Picker) */}
-                      <td
-                        onClick={() =>
-                          setActiveOptionPicker(
-                            activeOptionPicker?.saleId === sale.id && activeOptionPicker?.field === 'category'
-                              ? null
-                              : { saleId: sale.id, field: 'category' }
-                          )
-                        }
-                        className={`px-3 py-2 border-r border-neutral-200/60 dark:border-neutral-800 relative cursor-pointer hover:bg-neutral-100/60 dark:hover:bg-neutral-800/40 transition-colors select-none ${activeOptionPicker?.saleId === sale.id && activeOptionPicker?.field === 'category' ? 'z-30' : ''
-                          }`}
-                      >
-                        <div className="flex items-center min-h-[22px] w-full min-w-0">
-                          {sale.category ? (
-                            <TagPill text={sale.category} type="category" />
-                          ) : null}
-                        </div>
-                        {activeOptionPicker?.saleId === sale.id && activeOptionPicker?.field === 'category' && (
-                          <TableOptionPicker
-                            type="category"
-                            currentValue={sale.category}
-                            onSelect={(val) => {
-                              if (onUpdateSale) onUpdateSale(sale.id, { category: val });
-                              setActiveOptionPicker(null);
-                            }}
-                            onClose={() => setActiveOptionPicker(null)}
-                          />
-                        )}
-                      </td>
-
-                      {/* Marketplace / Store (Notion Option Picker) */}
-                      <td
-                        onClick={() =>
-                          setActiveOptionPicker(
-                            activeOptionPicker?.saleId === sale.id && activeOptionPicker?.field === 'marketplace'
-                              ? null
-                              : { saleId: sale.id, field: 'marketplace' }
-                          )
-                        }
-                        className={`px-3 py-2 border-r border-neutral-200/60 dark:border-neutral-800 relative cursor-pointer hover:bg-neutral-100/60 dark:hover:bg-neutral-800/40 transition-colors select-none ${activeOptionPicker?.saleId === sale.id && activeOptionPicker?.field === 'marketplace' ? 'z-30' : ''
-                          }`}
-                      >
-                        <div className="flex items-center min-h-[22px] w-full min-w-0">
-                          {sale.marketplace ? (
-                            <TagPill text={sale.marketplace} type="marketplace" />
-                          ) : null}
-                        </div>
-                        {activeOptionPicker?.saleId === sale.id && activeOptionPicker?.field === 'marketplace' && (
-                          <TableOptionPicker
-                            type="marketplace"
-                            currentValue={sale.marketplace}
-                            onSelect={(val) => {
-                              if (onUpdateSale) onUpdateSale(sale.id, { marketplace: val });
-                              setActiveOptionPicker(null);
-                            }}
-                            onClose={() => setActiveOptionPicker(null)}
-                          />
-                        )}
-                      </td>
-
-                      {/* Payment Method (Notion Option Picker) */}
-                      <td
-                        onClick={() =>
-                          setActiveOptionPicker(
-                            activeOptionPicker?.saleId === sale.id && activeOptionPicker?.field === 'payment_method'
-                              ? null
-                              : { saleId: sale.id, field: 'payment_method' }
-                          )
-                        }
-                        className={`px-3 py-2 border-r border-neutral-200/60 dark:border-neutral-800 relative cursor-pointer hover:bg-neutral-100/60 dark:hover:bg-neutral-800/40 transition-colors select-none ${activeOptionPicker?.saleId === sale.id && activeOptionPicker?.field === 'payment_method' ? 'z-30' : ''
-                          }`}
-                      >
-                        <div className="flex items-center min-h-[22px] w-full min-w-0">
-                          {sale.payment_method ? (
-                            <TagPill text={sale.payment_method} type="payment_method" />
-                          ) : null}
-                        </div>
-                        {activeOptionPicker?.saleId === sale.id && activeOptionPicker?.field === 'payment_method' && (
-                          <TableOptionPicker
-                            type="payment_method"
-                            currentValue={sale.payment_method}
-                            onSelect={(val) => {
-                              if (onUpdateSale) onUpdateSale(sale.id, { payment_method: val });
-                              setActiveOptionPicker(null);
-                            }}
-                            onClose={() => setActiveOptionPicker(null)}
-                          />
-                        )}
-                      </td>
+                      {/* Category, Store & Payment Method (Notion Option Pickers) */}
+                      {renderOptionPickerCell(sale, 'category')}
+                      {renderOptionPickerCell(sale, 'marketplace')}
+                      {renderOptionPickerCell(sale, 'payment_method')}
 
                       {/* Customer (Excel-like inline text edit) */}
                       <td
@@ -1159,65 +964,9 @@ export const TableView: FC<TableViewProps> = ({
                         </div>
                       </td>
 
-                      {/* Order Status (Notion Option Picker) */}
-                      <td
-                        onClick={() =>
-                          setActiveOptionPicker(
-                            activeOptionPicker?.saleId === sale.id && activeOptionPicker?.field === 'order_status'
-                              ? null
-                              : { saleId: sale.id, field: 'order_status' }
-                          )
-                        }
-                        className={`px-3 py-2 border-r border-neutral-200/60 dark:border-neutral-800 relative cursor-pointer hover:bg-neutral-100/60 dark:hover:bg-neutral-800/40 transition-colors select-none ${activeOptionPicker?.saleId === sale.id && activeOptionPicker?.field === 'order_status' ? 'z-30' : ''
-                          }`}
-                      >
-                        <div className="flex items-center min-h-[22px] w-full min-w-0">
-                          {sale.order_status ? (
-                            <TagPill text={sale.order_status} type="order_status" />
-                          ) : null}
-                        </div>
-                        {activeOptionPicker?.saleId === sale.id && activeOptionPicker?.field === 'order_status' && (
-                          <TableOptionPicker
-                            type="order_status"
-                            currentValue={sale.order_status}
-                            onSelect={(val) => {
-                              if (onUpdateSale) onUpdateSale(sale.id, { order_status: val });
-                              setActiveOptionPicker(null);
-                            }}
-                            onClose={() => setActiveOptionPicker(null)}
-                          />
-                        )}
-                      </td>
-
-                      {/* Payment Status (Notion Option Picker) */}
-                      <td
-                        onClick={() =>
-                          setActiveOptionPicker(
-                            activeOptionPicker?.saleId === sale.id && activeOptionPicker?.field === 'payment_status'
-                              ? null
-                              : { saleId: sale.id, field: 'payment_status' }
-                          )
-                        }
-                        className={`px-3 py-2 border-r border-neutral-200/60 dark:border-neutral-800 relative cursor-pointer hover:bg-neutral-100/60 dark:hover:bg-neutral-800/40 transition-colors select-none ${activeOptionPicker?.saleId === sale.id && activeOptionPicker?.field === 'payment_status' ? 'z-30' : ''
-                          }`}
-                      >
-                        <div className="flex items-center min-h-[22px] w-full min-w-0">
-                          {sale.payment_status ? (
-                            <TagPill text={sale.payment_status} type="payment_status" />
-                          ) : null}
-                        </div>
-                        {activeOptionPicker?.saleId === sale.id && activeOptionPicker?.field === 'payment_status' && (
-                          <TableOptionPicker
-                            type="payment_status"
-                            currentValue={sale.payment_status}
-                            onSelect={(val) => {
-                              if (onUpdateSale) onUpdateSale(sale.id, { payment_status: val });
-                              setActiveOptionPicker(null);
-                            }}
-                            onClose={() => setActiveOptionPicker(null)}
-                          />
-                        )}
-                      </td>
+                      {/* Order Status & Payment Status (Notion Option Pickers) */}
+                      {renderOptionPickerCell(sale, 'order_status')}
+                      {renderOptionPickerCell(sale, 'payment_status')}
 
                       {/* Invoice (In-Place File Upload & Remove) */}
                       <td className="px-3 py-2 border-r border-neutral-200/60 dark:border-neutral-800">

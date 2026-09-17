@@ -31,7 +31,7 @@ function formatValue(key: string, value: unknown): string {
   return num.toLocaleString('en-US');
 }
 
-function formatDimensionValue(dimKey: string, val: unknown): string {
+function formatDimensionValue(_dimKey: string, val: unknown): string {
   if (val === null || val === undefined) return '-';
   const str = String(val).trim();
 
