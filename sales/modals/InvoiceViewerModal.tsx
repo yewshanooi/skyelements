@@ -571,7 +571,6 @@ const InvoiceViewerModalContent: FC<{ sale: SaleItem; onClose: () => void }> = (
                     src={pdfViewerUrl}
                     className="w-full h-[460px] rounded border-0 bg-white"
                     title="PDF Invoice Preview"
-                    sandbox="allow-scripts allow-same-origin allow-popups"
                   />
                 ) : (
                   <div className="text-xs text-neutral-500 py-12">Invalid or unsafe PDF URL</div>
