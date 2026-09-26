@@ -354,15 +354,6 @@ export const AiAssistantDrawer: FC<AiAssistantDrawerProps> = ({
   const [isMobileDragging, setIsMobileDragging] = useState(false);
   const mobileTouchStartRef = useRef<{ y: number; time: number }>({ y: 0, time: 0 });
 
-  // Gentle auto-focus when drawer opens or restores from minimized
-  useEffect(() => {
-    if (isOpen && !isMinimized && !isClosing) {
-      const timer = setTimeout(() => {
-        inputRef.current?.focus();
-      }, 50);
-      return () => clearTimeout(timer);
-    }
-  }, [isOpen, isMinimized, isClosing]);
 
 
   const [position, setPosition] = useState<{ x: number; y: number } | null>(() => {

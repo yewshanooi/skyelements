@@ -30,7 +30,7 @@ import {
   loadFiltersFromStorage,
   type FilterState,
 } from '@/sales/lib/filterUtils';
-import { formatDateDisplay } from '@/sales/lib/dateUtils';
+import { generateSalesPdfReport } from '@/sales/services/exportPdfService';
 import { useSalesModals } from '@/sales/hooks/useSalesModals';
 
 const ViewLoading = () => (
@@ -81,6 +81,7 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
   const [sales, setSales] = useState<SaleItem[]>(initialSales || []);
   const [isLoading, setIsLoading] = useState<boolean>(!initialSales && Boolean(user?.id));
   const [isClientReady, setIsClientReady] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
   const hasInitializedInitialSalesRef = useRef(Boolean(initialSales !== undefined));
 
   useEffect(() => {
@@ -384,64 +385,34 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
     window.history.pushState(null, '', newUrl);
   }, [filters, sortField, sortOrder]);
 
-  const handleExportCsv = useCallback(() => {
-    if (sales.length === 0) return;
-
-    const headers = [
-      'ID',
-      'Quantity',
-      'Order',
-      'Category',
-      'Marketplace',
-      'Payment Method',
-      'Customer',
-      'Date',
-      'Subtotal (MYR)',
-      'Cost (MYR)',
-      'Sales (MYR)',
-      'Order Status',
-      'Payment Status',
-      'Invoice',
-      'Location',
-      'Latitude',
-      'Longitude',
-    ];
-
-    const rows = sales.map((s) => [
-      s.id,
-      s.quantity,
-      `"${s.item.replace(/"/g, '""')}"`,
-      `"${s.category}"`,
-      `"${s.marketplace}"`,
-      `"${s.payment_method}"`,
-      `"${s.customer}"`,
-      formatDateDisplay(s.date),
-      s.subtotal,
-      s.cost,
-      s.sales,
-      s.order_status,
-      s.payment_status,
-      `"${s.invoice_name || ''}"`,
-      `"${(s.location || '').replace(/"/g, '""')}"`,
-      s.latitude || '',
-      s.longitude || '',
-    ]);
-
-    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `sales_dashboard_export_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  }, [sales]);
-
   // Filter sales based on active URL filters (uses optimized Set & fast-path engine)
   const filteredSales = useMemo(() => {
     return filterSales(sales, filters);
   }, [sales, filters]);
+
+  // Export Sales Dashboard as high-resolution PDF (Section 1: Line Items, Section 2: Analytics)
+  const handleExportPdf = useCallback(async () => {
+    if (sales.length === 0) {
+      alert('No sales data available to export.');
+      return;
+    }
+
+    const itemsToExport = filteredSales.length > 0 ? filteredSales : (hasActiveFilters(filters) ? [] : sales);
+    if (itemsToExport.length === 0) {
+      alert('No sales match the current active filters to export.');
+      return;
+    }
+
+    setIsExportingPdf(true);
+    try {
+      await generateSalesPdfReport(itemsToExport, filters);
+    } catch (err) {
+      console.error('Failed to generate sales PDF report:', err);
+      alert('An error occurred while generating the PDF report. Please try again.');
+    } finally {
+      setIsExportingPdf(false);
+    }
+  }, [sales, filteredSales, filters]);
 
   const handleUpdateSaleInline = useCallback(async (saleId: string, updates: Partial<SaleItem>) => {
     try {
@@ -491,7 +462,8 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
         activeView={currentView}
         onSelectView={handleSelectView}
         onOpenAuth={() => handleOpenAuth('login')}
-        onExportCsv={handleExportCsv}
+        onExportPdf={handleExportPdf}
+        isExportingPdf={isExportingPdf}
         onOpenNewSale={handleOpenNew}
         searchQuery={filters.search}
         onSearchChange={handleSearchChange}

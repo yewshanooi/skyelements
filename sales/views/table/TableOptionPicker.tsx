@@ -362,7 +362,7 @@ export const TableOptionPicker: FC<TableOptionPickerProps> = ({
             <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-400" />
             <input
               type="text"
-              placeholder="Search or select an option..."
+              placeholder="Search..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={(e) => {
@@ -377,7 +377,7 @@ export const TableOptionPicker: FC<TableOptionPickerProps> = ({
           </div>
 
           <div className="px-1 text-[11px] text-neutral-400 dark:text-neutral-500 font-medium">
-            Select an option or create one
+            Select or create an option
           </div>
 
           <div className="max-h-56 overflow-y-auto overflow-x-hidden space-y-1 pr-0.5 scrollbar-thin">

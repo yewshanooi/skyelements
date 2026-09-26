@@ -518,15 +518,15 @@ export const TableView: FC<TableViewProps> = ({
     }
   };
 
-  // Optimized single-pass summary metrics calculation
+  // Optimized single-pass summary metrics calculation based on filtered results
   const { totalSubtotal, totalCost, totalSales, totalQuantity } = useMemo(() => {
     let subtotal = 0;
     let cost = 0;
     let netSales = 0;
     let qty = 0;
 
-    for (let i = 0; i < sales.length; i++) {
-      const s = sales[i];
+    for (let i = 0; i < filteredAndSortedSales.length; i++) {
+      const s = filteredAndSortedSales[i];
       subtotal += s.subtotal || 0;
       cost += s.cost || 0;
       netSales += evaluateSalesFormula(customFormula, s);
@@ -539,7 +539,7 @@ export const TableView: FC<TableViewProps> = ({
       totalSales: netSales,
       totalQuantity: qty,
     };
-  }, [sales, customFormula]);
+  }, [filteredAndSortedSales, customFormula]);
 
   const renderSortIcon = (field: SortField) => {
     if (sortField !== field) {
@@ -1100,8 +1100,11 @@ export const TableView: FC<TableViewProps> = ({
                 <td className="px-3 py-2 text-right border-r border-neutral-200/60 dark:border-neutral-800 font-mono truncate" title={String(totalQuantity)}>
                   {totalQuantity}
                 </td>
-                <td className="px-3 py-2 border-r border-neutral-200/60 dark:border-neutral-800 text-neutral-500 truncate" title={`Total: ${sales.length} orders`}>
-                  Total: {sales.length} orders
+                <td
+                  className="px-3 py-2 border-r border-neutral-200/60 dark:border-neutral-800 text-neutral-500 truncate"
+                  title={`Total: ${filteredAndSortedSales.length} ${filteredAndSortedSales.length === 1 ? 'order' : 'orders'}`}
+                >
+                  Total: {filteredAndSortedSales.length} {filteredAndSortedSales.length === 1 ? 'order' : 'orders'}
                 </td>
                 <td className="border-r border-neutral-200/60 dark:border-neutral-800"></td>
                 <td className="border-r border-neutral-200/60 dark:border-neutral-800"></td>
