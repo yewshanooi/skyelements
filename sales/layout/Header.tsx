@@ -63,7 +63,7 @@ const VIEWS: ViewTabConfig[] = [
    - Isolated state machine: opening/closing search won't re-render parent Header
    - Outside click / key listeners registered ONLY when search is open
    - Synchronous input.blur() on dismiss for instant iOS/Android keyboard collapse
-   - onMouseDown / onTouchStart preventDefault on Clear (X) keeps keyboard focused
+   - User taps search input to open keyboard (no auto open keyboard on mobile)
    - Pixel-perfect h-12 (48px) circle and pill alignment with safe-area spacing
    ========================================================================= */
 interface MobileFloatingNavProps {
@@ -83,14 +83,9 @@ const MobileFloatingNav: FC<MobileFloatingNavProps> = ({
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Focus search input smoothly after expansion animation finishes, or blur when closed
+  // Blur search input when closed (does not auto-focus to prevent auto-opening keyboard on mobile)
   useEffect(() => {
-    if (isSearchOpen) {
-      const timer = setTimeout(() => {
-        searchInputRef.current?.focus();
-      }, 280);
-      return () => clearTimeout(timer);
-    } else {
+    if (!isSearchOpen) {
       searchInputRef.current?.blur();
     }
   }, [isSearchOpen]);
@@ -236,7 +231,6 @@ const MobileFloatingNav: FC<MobileFloatingNavProps> = ({
                   onTouchStart={(e) => e.preventDefault()}
                   onClick={() => {
                     onSearchChange?.('');
-                    searchInputRef.current?.focus();
                   }}
                   className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 p-0.5 cursor-pointer"
                   title="Clear search"
