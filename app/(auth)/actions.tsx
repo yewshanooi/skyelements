@@ -21,7 +21,7 @@ export async function login(prevState: ActionState | null, formData: FormData): 
     const email = String(formData.get('email') || '')
     const password = String(formData.get('password') || '')
     const captchaToken = String(formData.get('captchaToken') || '')
-    const redirectTo = String(formData.get('redirectTo') || '/lithium')
+    const redirectTo = String(formData.get('redirectTo') || '/apps')
     
     const {error} = await supabase.auth.signInWithPassword({email, password, options: { captchaToken }});
 
@@ -39,7 +39,7 @@ export async function signup(prevState: ActionState | null, formData: FormData):
     const password = String(formData.get('password') || '')
     const captchaToken = String(formData.get('captchaToken') || '')
     const displayName = String(formData.get('displayName') || '').trim()
-    const redirectTo = String(formData.get('redirectTo') || '/lithium')
+    const redirectTo = String(formData.get('redirectTo') || '/apps')
 
     if (!displayName) {
         return { error: 'Name is required.' };
@@ -120,7 +120,7 @@ export async function signout() {
     redirect('/')
 }
 
-async function signInWithOAuthProvider(provider: 'google' | 'notion', redirectTo: string = '/lithium') {
+async function signInWithOAuthProvider(provider: 'google' | 'notion', redirectTo: string = '/apps') {
     const supabase = await createActionClient();
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || '';
 
@@ -142,11 +142,11 @@ async function signInWithOAuthProvider(provider: 'google' | 'notion', redirectTo
 }
 
 export async function signInWithGoogle(formData?: FormData) {
-    const redirectTo = formData?.get('redirectTo')?.toString() || '/lithium';
+    const redirectTo = formData?.get('redirectTo')?.toString() || '/apps';
     return signInWithOAuthProvider('google', redirectTo);
 }
 
 export async function signInWithNotion(formData?: FormData) {
-    const redirectTo = formData?.get('redirectTo')?.toString() || '/lithium';
+    const redirectTo = formData?.get('redirectTo')?.toString() || '/apps';
     return signInWithOAuthProvider('notion', redirectTo);
 }

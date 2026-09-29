@@ -4,7 +4,7 @@ import "./globals.css";
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { ThemeProvider } from "@/components/theme-provider";
-import { NavigationBar } from "@/components/navigation-bar";
+import { AppLayoutShell } from "@/components/app-layout-shell";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -41,8 +41,9 @@ export default async function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            <NavigationBar />
-            {children}
+            <AppLayoutShell>
+              {children}
+            </AppLayoutShell>
         </ThemeProvider>
         <SpeedInsights />
         <Analytics />

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
-import { UnauthenticatedLanding } from "@/sales/layout/UnauthenticatedLanding";
 
 export const metadata: Metadata = {
   title: "Sales Dashboard",
@@ -19,7 +18,7 @@ export default async function SalesIndexPage({
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return <UnauthenticatedLanding />;
+    redirect("/login?redirectTo=/sales");
   }
 
   const sp = await searchParams;
@@ -36,5 +35,5 @@ export default async function SalesIndexPage({
   }
 
   const queryString = new URLSearchParams(entries).toString();
-  redirect(`/sales/table${queryString ? `?${queryString}` : ''}`);
+  redirect(`/sales/table${queryString ? `?${queryString}` : ""}`);
 }

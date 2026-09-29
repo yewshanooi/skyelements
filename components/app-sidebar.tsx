@@ -2,23 +2,16 @@
 
 import * as React from "react"
 import { useMemo } from "react"
-import Image from "next/image"
 
 import { NavChats } from "@/components/nav-chats"
 import { NavNotes } from "@/components/nav-notes"
-import { NavUser } from "@/components/nav-user"
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import type { Chat } from "@/app/lithium/chat-actions"
-import type { Note } from "@/app/lithium/note-actions"
-import type { UserProfile } from "@/app/lithium/profile"
+import type { Chat } from "@/app/notes/chat-actions"
+import type { Note } from "@/app/notes/note-actions"
+import type { UserProfile } from "@/app/notes/profile"
 
 export function AppSidebar({ user, signout, onNewChat, chats, activeChatId, onSelectChat, onDeleteChat, onTogglePinChat, onDeleteAllChats, onDeleteAllNotes, notes, activeNoteId, onSelectNote, onDeleteNote, onNewNote, onTogglePinNote, onProfileUpdated, ...props }: React.ComponentProps<typeof Sidebar> & {
   user: UserProfile
@@ -54,23 +47,7 @@ export function AppSidebar({ user, signout, onNewChat, chats, activeChatId, onSe
   })), [notes]);
 
   return (
-    <Sidebar variant="inset" {...props}>
-      <SidebarHeader>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton size="lg" onClick={onNewChat}>
-              <Image 
-                src="/logo/lithium.png" 
-                alt="Lithium Logo" 
-                width={165} 
-                height={55}
-                className="h-9 w-auto"
-                priority
-              />
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarHeader>
+    <Sidebar variant="sidebar" {...props}>
       <SidebarContent>
         <NavNotes
           notes={noteItems}
@@ -86,11 +63,9 @@ export function AppSidebar({ user, signout, onNewChat, chats, activeChatId, onSe
           onSelectChat={onSelectChat}
           onDeleteChat={onDeleteChat}
           onTogglePinChat={onTogglePinChat}
+          onNewChat={onNewChat}
         />
       </SidebarContent>
-      <SidebarFooter>
-        <NavUser user={user} signout={signout} onDeleteAllChats={onDeleteAllChats} onDeleteAllNotes={onDeleteAllNotes} onProfileUpdated={onProfileUpdated} />
-      </SidebarFooter>
     </Sidebar>
   )
 }

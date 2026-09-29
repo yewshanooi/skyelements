@@ -77,6 +77,18 @@ export function PageClient({ user, signout, initialThinkingEffort }: PageClientP
     listNotes().then(setNotes).catch(console.error);
   }, []);
 
+  // Sync profile when updated from mini app header settings
+  useEffect(() => {
+    const handleProfileSync = (e: Event) => {
+      const customEvent = e as CustomEvent<UserProfile>;
+      if (customEvent.detail) {
+        setProfile(customEvent.detail);
+      }
+    };
+    window.addEventListener("skyelements:profile-updated", handleProfileSync);
+    return () => window.removeEventListener("skyelements:profile-updated", handleProfileSync);
+  }, []);
+
   // --- Chat handlers ---
 
   const handleNewChat = useCallback(() => {
@@ -240,63 +252,63 @@ export function PageClient({ user, signout, initialThinkingEffort }: PageClientP
   const breadcrumbTitle = activeView.type === 'chat' ? chatTitle : noteTitle;
 
   return (
-    <SidebarProvider className="h-svh overflow-hidden">
-      <AppSidebar
-        user={profile}
-        onProfileUpdated={setProfile}
-        signout={signout}
-        onNewChat={handleNewChat}
-        chats={chats}
-        activeChatId={activeView.type === 'chat' ? activeView.id : null}
-        onSelectChat={handleSelectChat}
-        onDeleteChat={handleDeleteChat}
-        onTogglePinChat={handleTogglePinChat}
-        onDeleteAllChats={handleDeleteAllChats}
-        onDeleteAllNotes={handleDeleteAllNotes}
-        notes={notes}
-        activeNoteId={activeView.type === 'note' ? activeView.id : null}
-        onSelectNote={handleSelectNote}
-        onDeleteNote={handleDeleteNote}
-        onNewNote={handleNewNote}
-        onTogglePinNote={handleTogglePinNote}
-      />
-      <SidebarInset className="overflow-hidden">
-        <header className="flex h-16 shrink-0 items-center gap-2 bg-background">
-          <div className="flex h-5 items-center gap-2 px-4">
-            <SidebarTrigger className="-ml-1" />
-            <Separator
-              orientation="vertical"
-              className="mr-2"
-            />
-            <Breadcrumb>
-              <BreadcrumbList>
-                <BreadcrumbItem>
-                  {breadcrumbTitle}
-                </BreadcrumbItem> 
-              </BreadcrumbList>
-            </Breadcrumb>
-          </div>
-        </header>
+    <div className="h-full w-full overflow-hidden flex flex-col flex-1 min-h-0">
+      <SidebarProvider className="h-full w-full overflow-hidden">
+          <AppSidebar
+            user={profile}
+            onProfileUpdated={setProfile}
+            signout={signout}
+            onNewChat={handleNewChat}
+            chats={chats}
+            activeChatId={activeView.type === 'chat' ? activeView.id : null}
+            onSelectChat={handleSelectChat}
+            onDeleteChat={handleDeleteChat}
+            onTogglePinChat={handleTogglePinChat}
+            notes={notes}
+            activeNoteId={activeView.type === 'note' ? activeView.id : null}
+            onSelectNote={handleSelectNote}
+            onDeleteNote={handleDeleteNote}
+            onNewNote={handleNewNote}
+            onTogglePinNote={handleTogglePinNote}
+          />
+          <SidebarInset className="overflow-hidden">
+            <header className="flex h-12 shrink-0 items-center gap-2 bg-background">
+              <div className="flex h-5 items-center gap-2 px-4">
+                <SidebarTrigger className="-ml-1" />
+                <Separator
+                  orientation="vertical"
+                  className="mr-2"
+                />
+                <Breadcrumb>
+                  <BreadcrumbList>
+                    <BreadcrumbItem>
+                      {breadcrumbTitle}
+                    </BreadcrumbItem> 
+                  </BreadcrumbList>
+                </Breadcrumb>
+              </div>
+            </header>
 
-        <div className="flex-1 overflow-hidden">
-          {activeView.type === 'chat' ? (
-            <ChatClient
-              key={chatKey}
-              chatId={activeView.id}
-              onChatCreated={handleChatCreated}
-              onChatActivity={handleChatActivity}
-              thinkingEffort={thinkingEffort}
-              onThinkingEffortChange={setThinkingEffort}
-            />
-          ) : (
-            <NoteClient
-              noteId={activeView.id}
-              onNoteActivity={handleNoteActivity}
-            />
-          )}
-        </div>
+            <div className="flex-1 overflow-hidden">
+              {activeView.type === 'chat' ? (
+                <ChatClient
+                  key={chatKey}
+                  chatId={activeView.id}
+                  onChatCreated={handleChatCreated}
+                  onChatActivity={handleChatActivity}
+                  thinkingEffort={thinkingEffort}
+                  onThinkingEffortChange={setThinkingEffort}
+                />
+              ) : (
+                <NoteClient
+                  noteId={activeView.id}
+                  onNoteActivity={handleNoteActivity}
+                />
+              )}
+            </div>
 
-      </SidebarInset>
-    </SidebarProvider>
+          </SidebarInset>
+        </SidebarProvider>
+    </div>
   );
 }

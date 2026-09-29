@@ -25,7 +25,7 @@ interface AuthCardProps {
 
 export function AuthCard({
   defaultMode = 'login',
-  redirectTo = '/lithium',
+  redirectTo = '/apps',
   className = '',
   onModeChange,
   inDialog = false,

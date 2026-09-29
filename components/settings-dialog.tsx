@@ -58,8 +58,11 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { createClient } from "@/utils/supabase/client"
-import { deleteAccount, updateProfile } from "@/app/lithium/profile-actions"
-import type { UserProfile } from "@/app/lithium/profile"
+import { deleteAccount, updateProfile } from "@/app/notes/profile-actions"
+import type { UserProfile } from "@/app/notes/profile"
+import { signout as authSignout } from "@/app/(auth)/actions"
+import { deleteAllChats as apiDeleteAllChats } from "@/app/notes/chat-actions"
+import { deleteAllNotes as apiDeleteAllNotes } from "@/app/notes/note-actions"
 
 interface SettingsDialogProps {
   open: boolean
@@ -70,7 +73,6 @@ interface SettingsDialogProps {
   onDeleteAllNotes?: () => Promise<void>
   onProfileUpdated?: (profile: UserProfile) => void
   onDeleteAccount?: () => Promise<void>
-  showCustomInstructions?: boolean
 }
 
 type ConfirmDialogType = "notes" | "chats" | "signout" | "account"
@@ -148,7 +150,6 @@ export function SettingsDialog({
   onDeleteAllNotes,
   onProfileUpdated,
   onDeleteAccount,
-  showCustomInstructions = Boolean(onDeleteAllChats || onDeleteAllNotes),
 }: SettingsDialogProps) {
   const { theme, setTheme } = useTheme()
   const isMobile = useIsMobile()
@@ -318,21 +319,39 @@ export function SettingsDialog({
   > = {
     notes: {
       title: "Clear your note history?",
-      description: "This will clear all your Lithium notes. This action cannot be undone.",
+      description: "This will clear all your notes. This action cannot be undone.",
       icon: Trash2,
-      onConfirm: () => onDeleteAllNotes?.(),
+      onConfirm: async () => {
+        if (onDeleteAllNotes) {
+          await onDeleteAllNotes()
+        } else {
+          await apiDeleteAllNotes()
+        }
+      },
     },
     chats: {
       title: "Clear your chat history?",
-      description: "This will clear all your Lithium chats. This action cannot be undone.",
+      description: "This will clear all your chats. This action cannot be undone.",
       icon: Trash2,
-      onConfirm: () => onDeleteAllChats?.(),
+      onConfirm: async () => {
+        if (onDeleteAllChats) {
+          await onDeleteAllChats()
+        } else {
+          await apiDeleteAllChats()
+        }
+      },
     },
     signout: {
       title: "Sign out of your account?",
       description: "You will be signed out on this device. You can sign back in at any time.",
       icon: LogOut,
-      onConfirm: () => signout?.(),
+      onConfirm: async () => {
+        if (signout) {
+          await signout()
+        } else {
+          await authSignout()
+        }
+      },
     },
     account: {
       title: "Delete your account?",
@@ -492,37 +511,33 @@ export function SettingsDialog({
       icon: Palette,
       content: (
         <>
-          {showCustomInstructions && (
-            <>
-              <SettingsSection
-                title="Custom instructions"
-                description="Additional behavior, style, and tone preferences."
-              >
-                <div className="flex w-full items-start gap-2">
-                  <Textarea
-                    aria-label="Custom instructions"
-                    className="min-w-0 flex-1 field-sizing-fixed resize-none overflow-y-auto scrollbar-thin text-sm"
-                    value={form.systemInstruction}
-                    maxLength={1000}
-                    rows={4}
-                    onChange={(e) => {
-                      setForm((prev) => ({ ...prev, systemInstruction: e.target.value }))
-                      setProfileError(null)
-                    }}
-                  />
-                  {form.systemInstruction !== saved.systemInstruction && (
-                    <SaveButton
-                      onClick={handleSaveProfile}
-                      loading={savingProfile}
-                      label="Save custom instructions"
-                    />
-                  )}
-                </div>
-              </SettingsSection>
+          <SettingsSection
+            title="Custom instructions"
+            description="Additional behavior, style, and tone preferences."
+          >
+            <div className="flex w-full items-start gap-2">
+              <Textarea
+                aria-label="Custom instructions"
+                className="min-w-0 flex-1 field-sizing-fixed resize-none overflow-y-auto scrollbar-thin text-sm"
+                value={form.systemInstruction}
+                maxLength={1000}
+                rows={4}
+                onChange={(e) => {
+                  setForm((prev) => ({ ...prev, systemInstruction: e.target.value }))
+                  setProfileError(null)
+                }}
+              />
+              {form.systemInstruction !== saved.systemInstruction && (
+                <SaveButton
+                  onClick={handleSaveProfile}
+                  loading={savingProfile}
+                  label="Save custom instructions"
+                />
+              )}
+            </div>
+          </SettingsSection>
 
-              <Separator />
-            </>
-          )}
+          <Separator />
 
           <SettingsSection title="Theme" description="Choose your preferred color.">
             <div className="grid grid-cols-3 gap-2 sm:gap-3">
@@ -552,37 +567,29 @@ export function SettingsDialog({
       icon: Database,
       content: (
         <>
-          {(onDeleteAllNotes || onDeleteAllChats) && (
-            <>
-              <SettingsSection title="Your data" description="Manage your Lithium data.">
-                {onDeleteAllNotes && (
-                  <SettingsRow
-                    label="Clear notes"
-                    action={
-                      <ActionButton
-                        label="Clear"
-                        icon={Trash2}
-                        onClick={() => setConfirmDialog("notes")}
-                      />
-                    }
-                  />
-                )}
-                {onDeleteAllChats && (
-                  <SettingsRow
-                    label="Clear chats"
-                    action={
-                      <ActionButton
-                        label="Clear"
-                        icon={Trash2}
-                        onClick={() => setConfirmDialog("chats")}
-                      />
-                    }
-                  />
-                )}
-              </SettingsSection>
-              <Separator />
-            </>
-          )}
+          <SettingsSection title="Your data" description="Manage your Notes data.">
+            <SettingsRow
+              label="Clear notes"
+              action={
+                <ActionButton
+                  label="Clear"
+                  icon={Trash2}
+                  onClick={() => setConfirmDialog("notes")}
+                />
+              }
+            />
+            <SettingsRow
+              label="Clear chats"
+              action={
+                <ActionButton
+                  label="Clear"
+                  icon={Trash2}
+                  onClick={() => setConfirmDialog("chats")}
+                />
+              }
+            />
+          </SettingsSection>
+          <Separator />
 
           <SettingsSection
             title="Policy"

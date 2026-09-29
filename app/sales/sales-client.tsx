@@ -457,7 +457,7 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
   }
 
   return (
-    <div className="flex flex-col min-h-screen max-w-full overflow-x-hidden bg-background text-foreground transition-colors">
+    <div className="flex-1 min-h-0 flex flex-col h-full w-full">
       <Header
         activeView={currentView}
         onSelectView={handleSelectView}

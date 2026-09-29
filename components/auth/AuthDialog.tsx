@@ -16,7 +16,7 @@ export function AuthDialog({
   isOpen,
   onClose,
   defaultMode = 'login',
-  redirectTo = '/lithium',
+  redirectTo = '/apps',
 }: AuthDialogProps) {
   useBodyScrollLock(isOpen);
 

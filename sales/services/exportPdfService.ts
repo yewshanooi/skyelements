@@ -786,7 +786,7 @@ export async function generateSalesPdfReport(
       10: { cellWidth: 23, halign: 'center' },
       11: { cellWidth: 23, halign: 'center' },
     },
-    didParseCell: (data) => {
+    didParseCell: (data: any) => {
       // Ensure numeric cells in the total footer line are right aligned
       if (data.section === 'foot' && data.column.index >= 6 && data.column.index <= 9) {
         data.cell.styles.halign = 'right';
@@ -964,7 +964,7 @@ export async function generateSalesPdfReport(
       5: { cellWidth: 42, halign: 'right' },
       6: { cellWidth: 38, halign: 'right' },
     },
-    didParseCell: (data) => {
+    didParseCell: (data: any) => {
       if (data.section === 'body' && data.column.index === 5) {
         data.cell.styles.textColor = [5, 150, 105];
         data.cell.styles.fontStyle = 'bold';
@@ -1047,7 +1047,7 @@ export async function generateSalesPdfReport(
       4: { cellWidth: 26, halign: 'right' },
       5: { cellWidth: 14, halign: 'right' },
     },
-    didParseCell: (data) => {
+    didParseCell: (data: any) => {
       if (data.section === 'body' && data.column.index === 4) {
         data.cell.styles.textColor = [5, 150, 105];
         data.cell.styles.fontStyle = 'bold';
@@ -1101,7 +1101,7 @@ export async function generateSalesPdfReport(
       4: { cellWidth: 26, halign: 'right' },
       5: { cellWidth: 14, halign: 'right' },
     },
-    didParseCell: (data) => {
+    didParseCell: (data: any) => {
       if (data.section === 'body' && data.column.index === 4) {
         data.cell.styles.textColor = [5, 150, 105];
         data.cell.styles.fontStyle = 'bold';

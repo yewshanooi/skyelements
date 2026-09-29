@@ -7,6 +7,7 @@ import {
   Trash2,
   Pin,
   PinOff,
+  Plus,
 } from "lucide-react"
 
 import {
@@ -20,6 +21,7 @@ import {
 import {
   SidebarGroup,
   SidebarGroupLabel,
+  SidebarGroupAction,
   SidebarMenu,
   SidebarMenuAction,
   SidebarMenuButton,
@@ -44,6 +46,7 @@ export function NavChats({
   onSelectChat,
   onDeleteChat,
   onTogglePinChat,
+  onNewChat,
 }: {
   chats: {
     id: string
@@ -55,6 +58,7 @@ export function NavChats({
   onSelectChat?: (chatId: string) => void
   onDeleteChat?: (chatId: string) => void
   onTogglePinChat?: (chatId: string, currentPinStatus: boolean) => void | Promise<void>
+  onNewChat?: () => void
 }) {
   const { isMobile } = useSidebar()
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
@@ -63,6 +67,11 @@ export function NavChats({
     return (
       <SidebarGroup className="group-data-[collapsible=icon]:hidden">
         <SidebarGroupLabel>Chats</SidebarGroupLabel>
+        {onNewChat && (
+          <SidebarGroupAction title="New chat" onClick={onNewChat}>
+            <Plus /> <span className="sr-only">New chat</span>
+          </SidebarGroupAction>
+        )}
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton disabled>
@@ -78,6 +87,11 @@ export function NavChats({
     <>
     <SidebarGroup className="group-data-[collapsible=icon]:hidden">
       <SidebarGroupLabel>Chats</SidebarGroupLabel>
+      {onNewChat && (
+        <SidebarGroupAction title="New chat" onClick={onNewChat}>
+          <Plus /> <span className="sr-only">New chat</span>
+        </SidebarGroupAction>
+      )}
       <SidebarMenu>
         {chats.map((item) => (
           <SidebarMenuItem key={item.id}>
@@ -123,7 +137,7 @@ export function NavChats({
                   <span>Delete</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">Lithium is AI and can make mistakes.</DropdownMenuLabel>
+                <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">Notes AI can make mistakes.</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">{new Date(item.updatedAt).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}</DropdownMenuLabel>
               </DropdownMenuContent>

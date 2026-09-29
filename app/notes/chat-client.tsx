@@ -243,7 +243,7 @@ const MessageItem = memo(function MessageItem({ msg }: { msg: DisplayMessage }) 
     return (
         <div className="flex flex-col">
             <p className={`text-xs font-medium text-muted-foreground mb-1.5 ${isUser ? 'self-end' : ''}`}>
-                {isUser ? 'You' : 'Lithium'}
+                {isUser ? 'You' : 'Notes'}
             </p>
             {msg.attachments.length > 0 && (
                 <div className={`mb-2 max-w-full w-fit ${isUser ? 'self-end' : 'self-start'}`}>
