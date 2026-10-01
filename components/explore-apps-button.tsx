@@ -17,7 +17,7 @@ export function ExploreAppsButton() {
         }}
       >
         <LayoutGrid className="h-4 w-4" />
-        Explore Mini Apps <ChevronRight className="h-4 w-4 ml-1" />
+        Get started <ChevronRight />
       </Link>
     </Button>
   );

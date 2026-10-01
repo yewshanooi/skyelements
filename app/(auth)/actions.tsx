@@ -8,6 +8,10 @@ type ActionState = {
     success?: boolean;
 }
 
+function sanitizeRedirectTo(value: string, fallback = '/apps'): string {
+    return value.startsWith('/') && !value.startsWith('//') ? value : fallback;
+}
+
 function validatePassword(password: string): string | null {
     if (password.length < 8 || !/[a-zA-Z]/.test(password) || !/[0-9]/.test(password)) {
         return 'Password should be at least 8 characters and contain both letters and numbers.';
@@ -21,7 +25,7 @@ export async function login(prevState: ActionState | null, formData: FormData): 
     const email = String(formData.get('email') || '')
     const password = String(formData.get('password') || '')
     const captchaToken = String(formData.get('captchaToken') || '')
-    const redirectTo = String(formData.get('redirectTo') || '/apps')
+    const redirectTo = sanitizeRedirectTo(String(formData.get('redirectTo') || '/apps'))
     
     const {error} = await supabase.auth.signInWithPassword({email, password, options: { captchaToken }});
 
@@ -39,7 +43,7 @@ export async function signup(prevState: ActionState | null, formData: FormData):
     const password = String(formData.get('password') || '')
     const captchaToken = String(formData.get('captchaToken') || '')
     const displayName = String(formData.get('displayName') || '').trim()
-    const redirectTo = String(formData.get('redirectTo') || '/apps')
+    const redirectTo = sanitizeRedirectTo(String(formData.get('redirectTo') || '/apps'))
 
     if (!displayName) {
         return { error: 'Name is required.' };

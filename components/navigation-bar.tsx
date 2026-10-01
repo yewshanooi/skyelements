@@ -55,19 +55,6 @@ export function NavigationBar({ forceShow = false, user: initialUser }: Navigati
     setCurrentUser(contextUser)
   }, [initialUser, contextUser])
 
-  React.useEffect(() => {
-    const handleProfileSync = (e: Event) => {
-      const customEvent = e as CustomEvent<UserProfile>
-      if (customEvent.detail) {
-        setCurrentUser(customEvent.detail)
-      }
-    }
-    window.addEventListener("skyelements:profile-updated", handleProfileSync)
-    return () => {
-      window.removeEventListener("skyelements:profile-updated", handleProfileSync)
-    }
-  }, [])
-
   useBodyScrollLock(mobileMenuOpen)
 
 

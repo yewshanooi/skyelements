@@ -13,17 +13,15 @@ export type ThinkingOption = {
   label: string;
 };
 
-type ThinkingLevel = ThinkingEffort;
-
 export type ModelDefinition = {
   id: string;
   label: string;
   icon: string;
   shortcut: string;
-  thinking?: readonly ThinkingLevel[];
+  thinking?: readonly ThinkingEffort[];
 };
 
-const GEMINI_THINKING_LEVELS: readonly ThinkingLevel[] = ['low', 'medium', 'high'];
+const GEMINI_THINKING_LEVELS: readonly ThinkingEffort[] = ['low', 'medium', 'high'];
 
 export const MODELS: ModelDefinition[] = [
   { id: 'gemini-3.5-flash-lite', label: 'Gemini 3.5 Flash', icon: '/lithium/google.svg', shortcut: 'Lite', thinking: GEMINI_THINKING_LEVELS },

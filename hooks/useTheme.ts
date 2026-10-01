@@ -13,17 +13,12 @@ export function useTheme() {
   }, []);
 
   const isDarkMode = mounted ? resolvedTheme === 'dark' : false;
-  const toggleTheme = () => {
-    const current = resolvedTheme || theme;
-    setTheme(current === 'dark' ? 'light' : 'dark');
-  };
 
   return {
     theme: (theme as Theme) || 'system',
     isDarkMode,
     mounted,
     setTheme: (t: Theme) => setTheme(t),
-    toggleTheme,
   };
 }
 

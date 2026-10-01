@@ -14,7 +14,7 @@ export default async function Page() {
           Home of everything elements
         </h1>
         <p className="text-muted-foreground text-center text-l max-w-2xl">
-          Run open source projects with just a few commands.
+          Explore mini apps to improve your productivity.
         </p>
 
         <div className="flex justify-center mt-4">

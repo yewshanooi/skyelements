@@ -350,13 +350,6 @@ export function SettingsDialog({
       onConfirm: async () => {
         setSigningOut(true)
         try {
-          const supabase = createClient()
-          await supabase.auth.signOut()
-        } catch (e) {
-          console.error("Client sign out error:", e)
-        }
-
-        try {
           if (signout) {
             await signout()
           } else {

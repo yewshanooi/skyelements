@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { SettingsDialog } from "@/components/settings-dialog";
 import { useAuthModal } from "@/components/auth/AuthModalContext";
 import type { UserProfile } from "@/app/notes/profile";
-import { signout as authSignout } from "@/app/(auth)/actions";
 import { cn } from "@/lib/utils";
 
 export interface UserNavProps {
@@ -50,19 +49,6 @@ export function UserNav({
     }
     setCurrentUser(contextUser);
   }, [initialUser, contextUser]);
-
-  React.useEffect(() => {
-    const handleProfileSync = (e: Event) => {
-      const customEvent = e as CustomEvent<UserProfile>;
-      if (customEvent.detail) {
-        setCurrentUser(customEvent.detail);
-      }
-    };
-    window.addEventListener("skyelements:profile-updated", handleProfileSync);
-    return () => {
-      window.removeEventListener("skyelements:profile-updated", handleProfileSync);
-    };
-  }, []);
 
   const handleSignout = async () => {
     if (customSignout) {
