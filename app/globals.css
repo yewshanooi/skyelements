@@ -128,8 +128,6 @@
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-geist-sans);
-    overflow-x: hidden;
-    max-width: 100%;
   }
   code, pre {
     font-family: var(--font-geist-mono);
@@ -146,8 +144,6 @@
   }
   html {
     @apply font-sans;
-    overflow-x: hidden;
-    max-width: 100%;
     scrollbar-gutter: stable;
   }
   button:not(:disabled), [role="button"]:not(:disabled) {
@@ -223,7 +219,6 @@
 html body[data-scroll-locked],
 body[data-scroll-locked] {
   overflow: visible !important;
-  overflow-x: hidden !important;
   margin-right: 0px !important;
   padding-right: 0px !important;
   position: static !important;
@@ -232,7 +227,6 @@ body[data-scroll-locked] {
 
 .with-scroll-bars-hidden {
   overflow: visible !important;
-  overflow-x: hidden !important;
   padding-right: 0px !important;
 }
 

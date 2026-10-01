@@ -15,10 +15,14 @@ export async function createActionClient(): Promise<SupabaseClient> {
                     return cookieStore.getAll().map(({name, value}) => ({name, value}));
                 },
 
-                setAll(cookies) {
-                    cookies.forEach(({name, value, options}) => {
-                        cookieStore.set(name, value, options);
-                    });
+                setAll(cookiesToSet) {
+                    try {
+                        cookiesToSet.forEach(({ name, value, options }) => {
+                            cookieStore.set(name, value, options);
+                        });
+                    } catch {
+                        // The `setAll` method was called from a Server Component or restricted context.
+                    }
                 }
             }
         }

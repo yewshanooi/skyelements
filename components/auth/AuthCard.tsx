@@ -2,17 +2,17 @@
 
 import Link from "next/link";
 import { Turnstile } from '@marsidev/react-turnstile';
-import { useActionState, useState } from "react";
+import { useActionState, useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { login, signup, forgotPassword, signInWithGoogle, signInWithNotion } from "@/app/(auth)/actions";
+import { login, signup, forgotPassword, resetPassword, signInWithGoogle, signInWithNotion } from "@/app/(auth)/actions";
 import AuthButton from "@/app/_components/AuthButton";
 import { Button } from "@/components/ui/button";
 import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type AuthMode = 'login' | 'signup' | 'forgot-password';
+export type AuthMode = 'login' | 'signup' | 'forgot-password' | 'reset-password';
 
 interface AuthCardProps {
   defaultMode?: AuthMode;
@@ -35,7 +35,12 @@ export function AuthCard({
   const [loginState, loginAction] = useActionState(login, null);
   const [signupState, signupAction] = useActionState(signup, null);
   const [forgotState, forgotAction] = useActionState(forgotPassword, null);
+  const [resetState, resetAction] = useActionState(resetPassword, null);
   const [captchaToken, setCaptchaToken] = useState<string | undefined>();
+
+  useEffect(() => {
+    setModeState(defaultMode);
+  }, [defaultMode]);
 
   const setMode = (newMode: AuthMode) => {
     setModeState(newMode);
@@ -98,6 +103,7 @@ export function AuthCard({
                       <div className="scale-[0.80] origin-center">
                         <Turnstile
                           siteKey={turnstileSiteKey}
+                          injectScript={false}
                           onSuccess={(token) => setCaptchaToken(token)}
                         />
                         <input type="hidden" name="captchaToken" value={captchaToken || ""} />
@@ -201,6 +207,7 @@ export function AuthCard({
                         <div className="scale-[0.80] origin-center">
                           <Turnstile
                             siteKey={turnstileSiteKey}
+                            injectScript={false}
                             onSuccess={(token) => setCaptchaToken(token)}
                           />
                           <input type="hidden" name="captchaToken" value={captchaToken || ""} />
@@ -276,6 +283,7 @@ export function AuthCard({
                       <div className="scale-[0.80] origin-center">
                         <Turnstile
                           siteKey={turnstileSiteKey}
+                          injectScript={false}
                           onSuccess={(token) => setCaptchaToken(token)}
                         />
                         <input type="hidden" name="captchaToken" value={captchaToken || ""} />
@@ -338,6 +346,68 @@ export function AuthCard({
                   </div>
                 </div>
               </form>
+            </div>
+          )}
+
+          {mode === 'reset-password' && (
+            <div className="flex flex-col gap-6">
+              <div className="flex flex-col items-center text-center gap-2">
+                <h1 className="text-2xl font-semibold">Reset password</h1>
+                <p className="text-balance text-muted-foreground text-sm">
+                  {resetState?.success
+                    ? "Your password has been updated successfully."
+                    : "Use a password at least 8 characters long with both letters and numbers."}
+                </p>
+              </div>
+
+              {resetState?.success ? (
+                <div className="flex justify-center">
+                  <Button variant="secondary" onClick={() => setMode('login')} className="w-full cursor-pointer">
+                    Back to login <ChevronRight className="ml-1 h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <form action={resetAction}>
+                  <div className="flex flex-col gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="reset-password">New password</Label>
+                      <Input
+                        id="reset-password"
+                        name="password"
+                        type="password"
+                        autoComplete="new-password"
+                        required
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="reset-confirmPassword">Confirm password</Label>
+                      <Input
+                        id="reset-confirmPassword"
+                        name="confirmPassword"
+                        type="password"
+                        autoComplete="new-password"
+                        required
+                      />
+                      {resetState?.error && (
+                        <p className="text-red-600 dark:text-red-400 text-xs">{resetState.error}</p>
+                      )}
+                    </div>
+
+                    <AuthButton className="w-full">Submit</AuthButton>
+
+                    <div className="text-center text-sm">
+                      Remember your password?{" "}
+                      <button
+                        type="button"
+                        onClick={() => setMode('login')}
+                        className="underline underline-offset-4 hover:text-primary cursor-pointer font-medium"
+                      >
+                        Login
+                      </button>
+                    </div>
+                  </div>
+                </form>
+              )}
             </div>
           )}
         </CardContent>

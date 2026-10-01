@@ -4,11 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import {
-  LogIn,
-  ChevronsUpDown,
-  LayoutGrid,
-} from "lucide-react";
+import { LayoutGrid } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,11 +13,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { createClient } from "@/utils/supabase/client";
-import { signout } from "@/app/(auth)/actions";
-import { SettingsDialog } from "@/components/settings-dialog";
-import { getUserProfile, type UserProfile } from "@/app/notes/profile";
+import { ChevronsUpDown } from "lucide-react";
+import type { UserProfile } from "@/app/notes/profile";
+import { UserNav } from "@/components/user-nav";
 
 interface MiniAppHeaderProps {
   user?: UserProfile | null;
@@ -33,7 +27,7 @@ interface MiniAppHeaderProps {
 
 const APPS = [
   { id: "notes", name: "Notes", emoji: "📝", href: "/notes" },
-  { id: "sales", name: "Sales Dashboard", emoji: "📊", href: "/sales/table" },
+  { id: "sales", name: "Sales Dashboard", emoji: "📊", href: "/sales" },
   { id: "skye", name: "Skye", emoji: "🤖", href: "/skye" },
 ];
 
@@ -45,54 +39,6 @@ export function MiniAppHeader({
   onDeleteAllNotes,
 }: MiniAppHeaderProps) {
   const pathname = usePathname();
-  const [currentUser, setCurrentUser] = React.useState<UserProfile | null>(initialUser ?? null);
-  const [settingsOpen, setSettingsOpen] = React.useState(false);
-
-  React.useEffect(() => {
-    if (initialUser !== undefined) {
-      setCurrentUser(initialUser);
-      return;
-    }
-
-    const supabase = createClient();
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) {
-        setCurrentUser(getUserProfile(user));
-      } else {
-        setCurrentUser(null);
-      }
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        setCurrentUser(getUserProfile(session.user));
-      } else {
-        setCurrentUser(null);
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [initialUser]);
-
-
-
-  const handleSignout = async () => {
-    if (customSignout) {
-      await customSignout();
-    } else {
-      await signout();
-    }
-  };
-
-  const handleProfileUpdate = (updated: UserProfile) => {
-    setCurrentUser(updated);
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent("skyelements:profile-updated", { detail: updated }));
-    }
-    onProfileUpdated?.(updated);
-  };
 
   // Determine current active app based on URL path
   const activeApp = React.useMemo(() => {
@@ -160,7 +106,7 @@ export function MiniAppHeader({
                   <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground shrink-0 opacity-70" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-56 mt-1">
+              <DropdownMenuContent align="start" collisionPadding={8} className="w-56 max-w-[calc(100vw-16px)] mt-1">
                 <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">
                   Switch App
                 </DropdownMenuLabel>
@@ -168,9 +114,8 @@ export function MiniAppHeader({
                   <DropdownMenuItem key={app.id} asChild className="cursor-pointer">
                     <Link
                       href={app.href}
-                      className={`flex items-center gap-2.5 w-full ${
-                        activeApp?.id === app.id ? "font-semibold bg-accent text-accent-foreground" : ""
-                      }`}
+                      className={`flex items-center gap-2.5 w-full ${activeApp?.id === app.id ? "font-semibold bg-accent text-accent-foreground" : ""
+                        }`}
                     >
                       <span className="text-base select-none leading-none">{app.emoji}</span>
                       <span className="flex-1">{app.name}</span>
@@ -190,53 +135,17 @@ export function MiniAppHeader({
 
           {/* Right: User Profile Settings */}
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-
-            {/* Settings Trigger from Notes app */}
-            {currentUser ? (
-              <button
-                type="button"
-                onClick={() => setSettingsOpen(true)}
-                className="flex items-center gap-2 px-2 sm:px-2.5 py-1.5 rounded-lg text-foreground hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer border border-transparent hover:border-neutral-200/80 dark:hover:border-neutral-800 select-none max-w-[180px] sm:max-w-[220px]"
-                title="Settings"
-                aria-label="Settings"
-              >
-                <Avatar className="h-7 w-7 rounded-lg shrink-0">
-                  {currentUser.avatarUrl && (
-                    <AvatarImage src={currentUser.avatarUrl} alt={currentUser.displayName || "Avatar"} />
-                  )}
-                  <AvatarFallback className="rounded-lg text-xs font-semibold bg-neutral-200 dark:bg-neutral-800 text-foreground">
-                    {(currentUser.displayName || currentUser.email || "U").slice(0, 1).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <span className="hidden sm:inline truncate text-xs sm:text-sm font-medium text-foreground">
-                  {currentUser.displayName || currentUser.email || "User"}
-                </span>
-                <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground shrink-0 opacity-70" />
-              </button>
-            ) : (
-              <Link
-                href="/login"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg text-foreground hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
-              >
-                <LogIn className="h-4 w-4" />
-                <span>Sign in</span>
-              </Link>
-            )}
+            <UserNav
+              user={initialUser}
+              signout={customSignout}
+              onProfileUpdated={onProfileUpdated}
+              onDeleteAllChats={onDeleteAllChats}
+              onDeleteAllNotes={onDeleteAllNotes}
+              redirectTo={pathname || "/apps"}
+            />
           </div>
         </div>
       </header>
-
-      {currentUser && (
-        <SettingsDialog
-          open={settingsOpen}
-          onOpenChange={setSettingsOpen}
-          user={currentUser}
-          signout={handleSignout}
-          onDeleteAllChats={onDeleteAllChats}
-          onDeleteAllNotes={onDeleteAllNotes}
-          onProfileUpdated={handleProfileUpdate}
-        />
-      )}
     </>
   );
 }

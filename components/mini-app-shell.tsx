@@ -31,7 +31,8 @@ export function MiniAppShell({
 }: MiniAppShellProps) {
   const pathname = usePathname();
   const isNotes = pathname === "/notes" || pathname?.startsWith("/notes/");
-  const isScrollable = scrollable !== undefined ? scrollable : !isNotes;
+  const isSales = pathname === "/sales" || pathname?.startsWith("/sales/");
+  const isScrollable = scrollable !== undefined ? scrollable : (!isNotes && !isSales);
 
   return (
     <div

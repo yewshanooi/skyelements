@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { redirectIfAuthenticated } from "@/utils/redirectIfAuthenticated";
-import ForgotPasswordForm from "./forgot-password-form";
 
 export const metadata: Metadata = {
   title: "Forgot Password",
@@ -8,7 +8,6 @@ export const metadata: Metadata = {
 };
 
 export default async function ForgotPasswordPage() {
-    await redirectIfAuthenticated();
-
-    return <ForgotPasswordForm />;
+  await redirectIfAuthenticated();
+  redirect("/?auth=forgot-password");
 }

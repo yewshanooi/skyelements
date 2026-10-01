@@ -213,7 +213,8 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
         month: isTimeline ? timelineMonth : undefined,
       });
       const qs = sp.toString();
-      const newUrl = `/sales/${view}${qs ? `?${qs}` : ''}`;
+      const basePath = `/sales/${view}`;
+      const newUrl = `${basePath}${qs ? `?${qs}` : ''}`;
       window.history.pushState(null, '', newUrl);
     },
     [filters, sortField, sortOrder, timelineYear, timelineMonth]
@@ -223,7 +224,7 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
   useEffect(() => {
     const handlePopState = () => {
       const pathParts = window.location.pathname.split('/');
-      const viewCandidate = pathParts[2] as ViewMode;
+      const viewCandidate = (pathParts[2] as ViewMode) || 'table';
       const validViews: ViewMode[] = ['table', 'board', 'chart', 'timeline', 'map'];
       if (validViews.includes(viewCandidate)) {
         setCurrentView(viewCandidate);
@@ -457,7 +458,7 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
   }
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col h-full w-full">
+    <div className="flex-1 min-h-0 flex flex-col h-full w-full overflow-hidden">
       <Header
         activeView={currentView}
         onSelectView={handleSelectView}
@@ -476,7 +477,7 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
         isAiOpen={isAiOpen}
       />
 
-      <main className="flex-1 px-2.5 sm:px-4 md:px-6 py-3 sm:py-4 pb-28 sm:pb-32 md:pb-6 w-full max-w-full min-w-0">
+      <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-2.5 sm:px-4 md:px-6 py-3 sm:py-4 pb-28 sm:pb-32 md:pb-6 w-full max-w-full">
         {isLoading || !isClientReady ? (
           <div className="flex flex-col items-center justify-center py-24 space-y-3">
             <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />

@@ -38,7 +38,7 @@ const MINI_APPS: MiniAppItem[] = [
     version: "v0.1.0",
     description: "Manage sales, track revenue analytics, and organize orders across multiple channels.",
     tags: ["Analytics", "Multi-view", "PDF Export"],
-    href: "/sales/table",
+    href: "/sales",
   },
   {
     id: "skye",
@@ -58,7 +58,7 @@ export default async function AppsPage() {
   } = await supabase.auth.getUser();
 
   if (!authUser) {
-    redirect("/login?redirectTo=/apps");
+    redirect("/?auth=login&redirectTo=/apps");
   }
 
   return (

@@ -10,6 +10,7 @@ interface AuthDialogProps {
   onClose: () => void;
   defaultMode?: AuthMode;
   redirectTo?: string;
+  onModeChange?: (mode: AuthMode) => void;
 }
 
 export function AuthDialog({
@@ -17,6 +18,7 @@ export function AuthDialog({
   onClose,
   defaultMode = 'login',
   redirectTo = '/apps',
+  onModeChange,
 }: AuthDialogProps) {
   useBodyScrollLock(isOpen);
 
@@ -38,7 +40,7 @@ export function AuthDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200 overscroll-none"
+      className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200 overscroll-none"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -65,6 +67,7 @@ export function AuthDialog({
           defaultMode={defaultMode}
           redirectTo={redirectTo}
           inDialog
+          onModeChange={onModeChange}
         />
       </div>
     </div>

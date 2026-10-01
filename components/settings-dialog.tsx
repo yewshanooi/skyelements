@@ -175,6 +175,7 @@ export function SettingsDialog({
   // Confirm dialog state
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogType | null>(null)
   const [deletingAccount, setDeletingAccount] = useState(false)
+  const [signingOut, setSigningOut] = useState(false)
   const [accountError, setAccountError] = useState<string | null>(null)
 
   const syncProfile = (updated: UserProfile, notify = false) => {
@@ -345,11 +346,26 @@ export function SettingsDialog({
       title: "Sign out of your account?",
       description: "You will be signed out on this device. You can sign back in at any time.",
       icon: LogOut,
+      loading: signingOut,
       onConfirm: async () => {
-        if (signout) {
-          await signout()
-        } else {
-          await authSignout()
+        setSigningOut(true)
+        try {
+          const supabase = createClient()
+          await supabase.auth.signOut()
+        } catch (e) {
+          console.error("Client sign out error:", e)
+        }
+
+        try {
+          if (signout) {
+            await signout()
+          } else {
+            await authSignout()
+          }
+        } catch {
+          // Ignore redirect error
+        } finally {
+          window.location.href = "/"
         }
       },
     },
@@ -683,11 +699,9 @@ export function SettingsDialog({
               <AlertDialogCancel disabled={activeConfirm.loading}>Cancel</AlertDialogCancel>
               <AlertDialogAction
                 variant="destructive"
-                disabled={activeConfirm.loading}
+                disabled={Boolean(activeConfirm.loading)}
                 onClick={(e) => {
-                  if (activeConfirm.loading !== undefined) {
-                    e.preventDefault()
-                  }
+                  e.preventDefault()
                   void activeConfirm.onConfirm()
                 }}
               >

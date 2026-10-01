@@ -14,7 +14,7 @@ export default async function SkyePage() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/login?redirectTo=/skye");
+    redirect("/?auth=login&redirectTo=/skye");
   }
 
   return <main className="flex-1 w-full h-full" />;

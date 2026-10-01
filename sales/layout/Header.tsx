@@ -307,7 +307,7 @@ export const Header: FC<HeaderProps> = ({
       {/* =========================================================================
           1. MOBILE TOP HEADER (Apple Music UI: Title on Left, (...) Menu on Right)
          ========================================================================= */}
-      <div className="block md:hidden border-b border-neutral-200/80 dark:border-neutral-800/80 bg-white/95 dark:bg-[#191919]/95 backdrop-blur-md sticky top-0 z-40 transition-colors">
+      <div className="block md:hidden shrink-0 border-b border-neutral-200/80 dark:border-neutral-800/80 bg-white/95 dark:bg-[#191919]/95 backdrop-blur-md sticky top-0 z-40 transition-colors">
         <div className="px-4 py-3 flex items-center justify-between gap-3">
           {/* Top Left: Large Apple-style Page Title (e.g. Table, Board, Chart, Map) */}
           <div className="flex items-center min-w-0">
@@ -448,7 +448,7 @@ export const Header: FC<HeaderProps> = ({
       {/* =========================================================================
           2. DESKTOP HEADER (Preserved for md+ desktop screens)
          ========================================================================= */}
-      <div className="hidden md:block border-b border-neutral-200/80 dark:border-neutral-800/80 bg-white/80 dark:bg-[#191919]/80 backdrop-blur-md sticky top-0 z-40 transition-colors">
+      <div className="hidden md:block shrink-0 border-b border-neutral-200/80 dark:border-neutral-800/80 bg-white/95 dark:bg-[#191919]/95 backdrop-blur-md sticky top-0 z-40 transition-colors">
         {/* Notion-style View Tabs, Centered Actions (Ask AI, Export, Search), and Action Controls */}
         <div className="px-6 py-2.5 flex items-center justify-between gap-4">
           {/* Left: View Tabs */}
@@ -540,9 +540,9 @@ export const Header: FC<HeaderProps> = ({
             {/* Order Count */}
             {salesCount > 0 && selectedIdsCount === 0 && (
               <span className="text-xs text-neutral-500 dark:text-neutral-400 font-medium px-1 truncate">
-                {activeView !== 'timeline' && filteredCount !== undefined && filteredCount !== salesCount
-                  ? `${filteredCount}/${salesCount}`
-                  : `${salesCount} orders`}
+                {activeView !== 'timeline' && filteredCount !== undefined
+                  ? `${filteredCount} ${filteredCount === 1 ? 'order' : 'orders'}`
+                  : `${salesCount} ${salesCount === 1 ? 'order' : 'orders'}`}
               </span>
             )}
 

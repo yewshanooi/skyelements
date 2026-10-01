@@ -42,16 +42,9 @@ export function lockBodyScroll() {
       paddingRight: document.body.style.paddingRight,
       overscrollBehavior: document.body.style.overscrollBehavior,
     };
-    originalHtmlStyles = {
-      overflow: document.documentElement.style.overflow,
-      overscrollBehavior: document.documentElement.style.overscrollBehavior,
-    };
 
-    // 2. Apply lock styles to HTML root and document body
+    // 2. Apply lock styles to document body
     // Do NOT inject scrollbarWidth into paddingRight because scrollbar-gutter: stable already preserves the gutter.
-    document.documentElement.style.overflow = 'hidden';
-    document.documentElement.style.overscrollBehavior = 'none';
-
     document.body.style.overflow = 'hidden';
     document.body.style.overscrollBehavior = 'none';
   }
@@ -65,11 +58,7 @@ export function unlockBodyScroll() {
   lockCount = Math.max(0, lockCount - 1);
 
   if (lockCount === 0) {
-    // 1. Restore HTML root inline styles
-    document.documentElement.style.overflow = originalHtmlStyles.overflow;
-    document.documentElement.style.overscrollBehavior = originalHtmlStyles.overscrollBehavior;
-
-    // 2. Restore document body inline styles
+    // 1. Restore document body inline styles
     document.body.style.overflow = originalBodyStyles.overflow;
     document.body.style.position = originalBodyStyles.position;
     document.body.style.top = originalBodyStyles.top;

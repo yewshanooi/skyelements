@@ -17,7 +17,7 @@ export default async function NotesPage() {
   const { data: { user: authUser } } = await supabase.auth.getUser();
 
   if (!authUser) {
-    redirect("/login?redirectTo=/notes");
+    redirect("/?auth=login&redirectTo=/notes");
   }
 
   const user = getUserProfile(authUser);
