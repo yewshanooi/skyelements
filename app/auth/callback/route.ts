@@ -5,7 +5,10 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const code = searchParams.get("code");
     const nextParam = searchParams.get("next") ?? "";
-    const next = nextParam.startsWith("/") && !nextParam.startsWith("//") ? nextParam : "/apps";
+    const next =
+        nextParam.startsWith("/") && !nextParam.startsWith("//") && !nextParam.startsWith("/\\")
+            ? nextParam
+            : "/apps";
 
     if (code) {
         const response = NextResponse.redirect(new URL(next, request.url));

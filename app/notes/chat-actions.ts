@@ -108,6 +108,10 @@ export async function generateContent(
   if (attachments.length > 0) {
     const downloads = await Promise.all(
       attachments.map(async (att) => {
+        if (!att.storagePath || !att.storagePath.startsWith(`${user.id}/`) || att.storagePath.includes('..')) {
+          console.warn('[chat-actions] Blocked invalid or unauthorized attachment path:', att.storagePath);
+          return null;
+        }
         const { data, error } = await supabase.storage.from(BUCKET).download(att.storagePath);
         if (error || !data) {
           console.error('Failed to download file from storage:', att.storagePath, error);

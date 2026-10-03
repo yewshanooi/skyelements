@@ -28,7 +28,7 @@ export default async function SalesViewPage({
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect('/?auth=login&redirectTo=/sales');
+    redirect(`/?auth=login&redirectTo=/sales/${encodeURIComponent(view)}`);
   }
 
   const initialSales = await fetchSalesAction();

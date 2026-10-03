@@ -9,7 +9,11 @@ type ActionState = {
 }
 
 function sanitizeRedirectTo(value: string, fallback = '/apps'): string {
-    return value.startsWith('/') && !value.startsWith('//') ? value : fallback;
+    if (!value || typeof value !== 'string') return fallback;
+    const trimmed = value.trim();
+    return trimmed.startsWith('/') && !trimmed.startsWith('//') && !trimmed.startsWith('/\\')
+        ? trimmed
+        : fallback;
 }
 
 function validatePassword(password: string): string | null {
