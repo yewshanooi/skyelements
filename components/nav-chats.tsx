@@ -85,96 +85,96 @@ export function NavChats({
 
   return (
     <>
-    <SidebarGroup className="group-data-[collapsible=icon]:hidden">
-      <SidebarGroupLabel>Chats</SidebarGroupLabel>
-      {onNewChat && (
-        <SidebarGroupAction title="New chat" onClick={onNewChat}>
-          <Plus /> <span className="sr-only">New chat</span>
-        </SidebarGroupAction>
-      )}
-      <SidebarMenu>
-        {chats.map((item) => (
-          <SidebarMenuItem key={item.id}>
-            <SidebarMenuButton
-              isActive={activeChatId === item.id}
-              onClick={() => onSelectChat?.(item.id)}
-            >
-              <Bot />
-              <span>{item.name}</span>
-            </SidebarMenuButton>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <SidebarMenuAction showOnHover={!item.isPinned} className="group/action">
-                  {item.isPinned ? (
-                    <>
-                      <Pin className="h-4 w-4 text-muted-foreground group-hover/menu-item:hidden group-data-[state=open]/action:hidden" />
-                      <MoreHorizontal className="h-4 w-4 hidden group-hover/menu-item:block group-data-[state=open]/action:block" />
-                    </>
-                  ) : (
-                    <MoreHorizontal />
-                  )}
-                  <span className="sr-only">More</span>
-                </SidebarMenuAction>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                className="w-48"
-                side={isMobile ? "bottom" : "right"}
-                align={isMobile ? "end" : "start"}
+      <SidebarGroup className="group-data-[collapsible=icon]:hidden">
+        <SidebarGroupLabel>Chats</SidebarGroupLabel>
+        {onNewChat && (
+          <SidebarGroupAction title="New chat" onClick={onNewChat}>
+            <Plus /> <span className="sr-only">New chat</span>
+          </SidebarGroupAction>
+        )}
+        <SidebarMenu>
+          {chats.map((item) => (
+            <SidebarMenuItem key={item.id}>
+              <SidebarMenuButton
+                isActive={activeChatId === item.id}
+                onClick={() => onSelectChat?.(item.id)}
               >
-                <DropdownMenuItem
-                  className="cursor-pointer"
-                  onClick={() => onTogglePinChat?.(item.id, item.isPinned || false)}
+                <Bot />
+                <span>{item.name}</span>
+              </SidebarMenuButton>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <SidebarMenuAction showOnHover={!item.isPinned} className="group/action">
+                    {item.isPinned ? (
+                      <>
+                        <Pin className="h-4 w-4 text-muted-foreground group-hover/menu-item:hidden group-data-[state=open]/action:hidden" />
+                        <MoreHorizontal className="h-4 w-4 hidden group-hover/menu-item:block group-data-[state=open]/action:block" />
+                      </>
+                    ) : (
+                      <MoreHorizontal />
+                    )}
+                    <span className="sr-only">More</span>
+                  </SidebarMenuAction>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  className="w-48"
+                  side={isMobile ? "bottom" : "right"}
+                  align={isMobile ? "end" : "start"}
                 >
-                  {item.isPinned ? <PinOff /> : <Pin />}
-                  <span>{item.isPinned ? 'Unpin' : 'Pin'}</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="cursor-pointer"
-                  variant="destructive"
-                  onClick={() => setPendingDeleteId(item.id)}
-                >
-                  <Trash2 className="text-muted-foreground" />
-                  <span>Delete</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">Notes AI can make mistakes.</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">{new Date(item.updatedAt).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}</DropdownMenuLabel>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </SidebarMenuItem>
-        ))}
-      </SidebarMenu>
-    </SidebarGroup>
+                  <DropdownMenuItem
+                    className="cursor-pointer"
+                    onClick={() => onTogglePinChat?.(item.id, item.isPinned || false)}
+                  >
+                    {item.isPinned ? <PinOff /> : <Pin />}
+                    <span>{item.isPinned ? 'Unpin' : 'Pin'}</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="cursor-pointer"
+                    variant="destructive"
+                    onClick={() => setPendingDeleteId(item.id)}
+                  >
+                    <Trash2 className="text-muted-foreground" />
+                    <span>Delete</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">Chats is AI and can make mistakes.</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">{new Date(item.updatedAt).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}</DropdownMenuLabel>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </SidebarMenuItem>
+          ))}
+        </SidebarMenu>
+      </SidebarGroup>
 
-    <AlertDialog
-      open={pendingDeleteId !== null}
-      onOpenChange={(open) => { if (!open) setPendingDeleteId(null) }}
-    >
-      <AlertDialogContent size="sm">
-        <AlertDialogHeader>
-          <AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive">
-            <Trash2 />
-          </AlertDialogMedia>
-          <AlertDialogTitle>Delete chat?</AlertDialogTitle>
-          <AlertDialogDescription>
-            Once you delete a chat, it&apos;s gone forever.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            variant="destructive"
-            onClick={() => {
-              onDeleteChat?.(pendingDeleteId!)
-              setPendingDeleteId(null)
-            }}
-          >
-            Delete
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  </>
+      <AlertDialog
+        open={pendingDeleteId !== null}
+        onOpenChange={(open) => { if (!open) setPendingDeleteId(null) }}
+      >
+        <AlertDialogContent size="sm">
+          <AlertDialogHeader>
+            <AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive">
+              <Trash2 />
+            </AlertDialogMedia>
+            <AlertDialogTitle>Delete chat?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Once you delete a chat, it&apos;s gone forever.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={() => {
+                onDeleteChat?.(pendingDeleteId!)
+                setPendingDeleteId(null)
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }

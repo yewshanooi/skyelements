@@ -97,23 +97,23 @@ const TABLE_COLUMNS: {
   align?: 'right' | 'center';
   isFormula?: boolean;
 }[] = [
-  { id: 'select' },
-  { id: 'quantity', label: 'Quantity', icon: '123', sortField: 'quantity', align: 'right' },
-  { id: 'item', label: 'Order', icon: '📦', sortField: 'item' },
-  { id: 'category', label: 'Category', icon: '🗄️', sortField: 'category' },
-  { id: 'marketplace', label: 'Store', icon: '🏪', sortField: 'marketplace' },
-  { id: 'payment_method', label: 'Payment Method', icon: '💳' },
-  { id: 'customer', label: 'Customer', icon: '👤', sortField: 'customer' },
-  { id: 'date', label: 'Date', icon: '📅', sortField: 'date' },
-  { id: 'subtotal', label: 'Subtotal (in MYR)', icon: '🏷️', sortField: 'subtotal', align: 'right' },
-  { id: 'cost', label: 'Cost(s)', icon: '🏷️', sortField: 'cost', align: 'right' },
-  { id: 'sales', label: 'Sales (in MYR)', icon: '💰', align: 'right', isFormula: true },
-  { id: 'order_status', label: 'Order Status', icon: '🚚' },
-  { id: 'payment_status', label: 'Payment Status', icon: '💳' },
-  { id: 'invoice', label: 'Invoice', icon: '🧾' },
-  { id: 'location', label: 'Location', icon: '📍' },
-  { id: 'actions' },
-];
+    { id: 'select' },
+    { id: 'quantity', label: 'Quantity', icon: '123', sortField: 'quantity', align: 'right' },
+    { id: 'item', label: 'Order', icon: '📦', sortField: 'item' },
+    { id: 'category', label: 'Category', icon: '🗄️', sortField: 'category' },
+    { id: 'marketplace', label: 'Store', icon: '🏪', sortField: 'marketplace' },
+    { id: 'payment_method', label: 'Payment Method', icon: '💳' },
+    { id: 'customer', label: 'Customer', icon: '👤', sortField: 'customer' },
+    { id: 'date', label: 'Date', icon: '📅', sortField: 'date' },
+    { id: 'subtotal', label: 'Subtotal (in MYR)', icon: '🏷️', sortField: 'subtotal', align: 'right' },
+    { id: 'cost', label: 'Cost(s)', icon: '🏷️', sortField: 'cost', align: 'right' },
+    { id: 'sales', label: 'Sales (in MYR)', icon: '💰', align: 'right', isFormula: true },
+    { id: 'order_status', label: 'Order Status', icon: '🚚' },
+    { id: 'payment_status', label: 'Payment Status', icon: '💳' },
+    { id: 'invoice', label: 'Invoice', icon: '🧾' },
+    { id: 'location', label: 'Location', icon: '📍' },
+    { id: 'actions' },
+  ];
 
 interface TableViewProps {
   sales: SaleItem[];
@@ -562,9 +562,8 @@ export const TableView: FC<TableViewProps> = ({
       <td
         key={field}
         onClick={() => setActiveOptionPicker(isActive ? null : { saleId: sale.id, field })}
-        className={`px-3 py-2 border-r border-neutral-200/60 dark:border-neutral-800 relative cursor-pointer hover:bg-neutral-100/60 dark:hover:bg-neutral-800/40 transition-colors select-none ${
-          isActive ? 'z-30' : ''
-        }`}
+        className={`px-3 py-2 border-r border-neutral-200/60 dark:border-neutral-800 relative cursor-pointer hover:bg-neutral-100/60 dark:hover:bg-neutral-800/40 transition-colors select-none ${isActive ? 'z-30' : ''
+          }`}
       >
         <div className="flex items-center min-h-[22px] w-full min-w-0">
           {value ? <TagPill text={value} type={field} /> : null}
@@ -672,15 +671,14 @@ export const TableView: FC<TableViewProps> = ({
                           handleSort(col.sortField);
                         }
                       }}
-                      className={`px-3 py-2 border-r border-neutral-200/60 dark:border-neutral-800 whitespace-nowrap relative select-none ${
-                        isClickable ? 'cursor-pointer hover:bg-neutral-200/40 dark:hover:bg-neutral-800/40 group' : ''
-                      } ${isRight ? 'text-right' : ''}`}
+                      className={`px-3 py-2 border-r border-neutral-200/60 dark:border-neutral-800 whitespace-nowrap relative select-none ${isClickable ? 'cursor-pointer hover:bg-neutral-200/40 dark:hover:bg-neutral-800/40 group' : ''
+                        } ${isRight ? 'text-right' : ''}`}
                       title={
                         col.isFormula
                           ? 'Click to edit formula for Sales (in MYR)'
                           : col.sortField
-                          ? `Click to sort by ${col.label?.toLowerCase()}`
-                          : undefined
+                            ? `Click to sort by ${col.label?.toLowerCase()}`
+                            : undefined
                       }
                     >
                       <div className={`flex items-center gap-1.5 overflow-hidden ${isRight ? 'justify-end gap-1' : ''}`}>
@@ -821,7 +819,6 @@ export const TableView: FC<TableViewProps> = ({
                                 onEditSale(sale);
                               }}
                               className="shrink-0 opacity-100 sm:opacity-0 sm:group-hover/itemcell:opacity-100 sm:group-hover:opacity-100 transition-opacity flex items-center gap-1 px-1.5 py-0.5 bg-white dark:bg-[#252525] hover:bg-neutral-100 dark:hover:bg-[#303030] border border-neutral-200/80 dark:border-neutral-700 rounded-md shadow-2xs text-[10px] font-semibold tracking-wider text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100 cursor-pointer select-none"
-                              title="Open edit order dialog"
                             >
                               <svg
                                 className="w-3.5 h-3.5 text-neutral-500 dark:text-neutral-400"

@@ -107,9 +107,9 @@ export function NoteClient({ noteId, onNoteActivity }: NoteClientProps) {
     return (
       <div className="flex flex-col h-full relative">
         {showLoadingBar && <LoadingBar />}
-        <div className="flex-1 overflow-y-auto scrollbar-thin pt-12 pb-0 flex flex-col scrollbar-gutter-stable">
-          <div className="px-8 pb-12 flex-1">
-            <div className="w-full max-w-3xl mx-auto">
+        <div className="flex-1 overflow-y-auto scrollbar-thin pt-4 sm:pt-8 md:pt-12 pb-0 flex flex-col scrollbar-gutter-stable">
+          <div className="px-5 sm:px-6 md:px-8 pb-12 flex-1">
+            <div className="w-full max-w-3xl mx-auto sm:px-4">
             </div>
           </div>
         </div>
@@ -119,9 +119,9 @@ export function NoteClient({ noteId, onNoteActivity }: NoteClientProps) {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-y-auto scrollbar-thin pt-12 pb-0 flex flex-col scrollbar-gutter-stable">
-        <div className="px-8 pb-12 flex-1">
-          <div className="w-full max-w-3xl mx-auto space-y-4">
+      <div className="flex-1 overflow-y-auto scrollbar-thin pt-4 sm:pt-8 md:pt-12 pb-0 flex flex-col scrollbar-gutter-stable">
+        <div className="px-5 sm:px-6 md:px-8 pb-12 flex-1">
+          <div className="w-full max-w-3xl mx-auto space-y-4 sm:px-4">
             <input
               ref={titleRef}
               type="text"
@@ -129,7 +129,7 @@ export function NoteClient({ noteId, onNoteActivity }: NoteClientProps) {
               placeholder="New note"
               value={title}
               onChange={handleTitleChange}
-              className="ml-4 w-full bg-transparent text-3xl font-semibold outline-none placeholder:text-muted-foreground/50"
+              className="ml-2 sm:ml-4 w-full bg-transparent text-2xl sm:text-3xl font-semibold outline-none placeholder:text-muted-foreground/50"
             />
             <Editor
               key={editorKey}

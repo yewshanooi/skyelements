@@ -303,7 +303,7 @@ const MessageItem = memo(function MessageItem({ msg }: { msg: DisplayMessage }) 
                 <Bubble
                     variant={isUser ? 'tinted' : 'ghost'}
                     align={isUser ? 'end' : 'start'}
-                    className="pb-3"
+                    className={isUser ? 'pb-3 max-w-[90%] sm:max-w-[80%]' : 'pb-3'}
                 >
                     <BubbleContent className={`text-base rounded-2xl${isLong ? ' whitespace-pre-line' : ''}`}>
                         {isUser ? (
@@ -439,7 +439,7 @@ const InputArea = memo(function InputArea({
             />
 
             {hasPendingAttachments && (
-                <div className="mb-2 ml-4 flex items-center gap-3 w-full max-w-[calc(100%-2rem)]">
+                <div className="mb-2 ml-1 sm:ml-4 flex items-center gap-3 w-full max-w-[calc(100%-0.5rem)] sm:max-w-[calc(100%-2rem)]">
                     <div className="flex-1 min-w-0">
                         <AttachmentGroup className="w-full">
                             {pendingAttachments.map((att) => {
@@ -501,7 +501,7 @@ const InputArea = memo(function InputArea({
             )}
 
             {attachmentError && (
-                <p className="mb-4 ml-4 text-sm text-destructive">{attachmentError}</p>
+                <p className="mb-4 ml-1 sm:ml-4 text-sm text-destructive">{attachmentError}</p>
             )}
 
             <InputGroup
@@ -1277,10 +1277,10 @@ export function ChatClient({
     // Empty state.
     if (isEmptyState) {
         return (
-            <div className="h-full overflow-y-auto scrollbar-thin flex items-center justify-center p-8 pb-[10%] scrollbar-gutter-stable">
-                <div className="w-full max-w-3xl mx-auto">
-                    <div className="flex flex-row gap-4 w-full max-w-3xl mb-6">
-                        <h1 className="ml-4 scroll-m-20 text-3xl font-semibold text-balance flex">
+            <div className="h-full overflow-y-auto scrollbar-thin flex items-center justify-center px-5 sm:px-6 md:px-8 py-6 sm:py-8 pb-[10%] scrollbar-gutter-stable">
+                <div className="w-full max-w-3xl mx-auto sm:px-4">
+                    <div className="flex flex-row gap-4 w-full max-w-3xl mb-4 sm:mb-6">
+                        <h1 className="ml-1 sm:ml-4 scroll-m-20 text-2xl sm:text-3xl font-semibold text-balance flex">
                             {greeting}
                         </h1>
                     </div>
@@ -1295,8 +1295,8 @@ export function ChatClient({
     return (
         <div className="flex flex-col h-full relative">
             {showLoadingBar && <LoadingBar />}
-            <div className="flex-1 overflow-y-auto scrollbar-thin p-8 pt-12 pb-20 scrollbar-gutter-stable">
-                <div className="w-full max-w-3xl mx-auto space-y-6 px-4">
+            <div className="flex-1 overflow-y-auto scrollbar-thin px-5 sm:px-6 md:px-8 pt-4 sm:pt-8 md:pt-12 pb-14 sm:pb-20 scrollbar-gutter-stable">
+                <div className="w-full max-w-3xl mx-auto space-y-6 sm:px-4">
                     {loadingHistory ? null : (
                         <>
                             {messages.map((msg) => (
@@ -1328,8 +1328,8 @@ export function ChatClient({
                 </div>
             </div>
 
-            <div className="shrink-0 px-8 pb-6 pt-2 bg-background overflow-y-hidden scrollbar-gutter-stable">
-                <div className="w-full max-w-3xl mx-auto">
+            <div className="shrink-0 px-5 sm:px-6 md:px-8 pb-3 sm:pb-6 pt-2 bg-background overflow-y-hidden scrollbar-gutter-stable">
+                <div className="w-full max-w-3xl mx-auto sm:px-4">
                     {inputArea}
                 </div>
             </div>
