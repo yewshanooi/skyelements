@@ -1,76 +1,409 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { useMemo } from "react"
-import Image from "next/image"
-
-import { NavChats } from "@/components/nav-chats"
-import { NavNotes } from "@/components/nav-notes"
-import { NavUser } from "@/components/nav-user"
+import * as React from "react";
+import { useState, useMemo } from "react";
+import {
+  Bot,
+  MoreHorizontal,
+  Trash2,
+  StickyNote,
+  Plus,
+  Pin,
+  PinOff,
+} from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
+  SidebarGroup,
+  SidebarGroupLabel,
+  SidebarGroupAction,
   SidebarMenu,
+  SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@/components/ui/sidebar"
-import type { Chat } from "@/app/lithium/chat-actions"
-import type { Note } from "@/app/lithium/note-actions"
-import type { UserProfile } from "@/app/lithium/profile"
+  useSidebar,
+} from "@/components/ui/sidebar";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogMedia,
+} from "@/components/ui/alert-dialog";
+import type { Chat } from "@/app/notes/chat-actions";
+import type { Note } from "@/app/notes/note-actions";
+import type { UserProfile } from "@/lib/profile";
 
-export function AppSidebar({ user, signout, onNewChat, chats, activeChatId, onSelectChat, onDeleteChat, onTogglePinChat, onDeleteAllChats, onDeleteAllNotes, notes, activeNoteId, onSelectNote, onDeleteNote, onNewNote, onTogglePinNote, onProfileUpdated, ...props }: React.ComponentProps<typeof Sidebar> & {
-  user: UserProfile
-  signout?: () => Promise<void>
-  onNewChat?: () => void
-  chats?: Chat[]
-  activeChatId?: string | null
-  onSelectChat?: (chatId: string) => void
-  onDeleteChat?: (chatId: string) => void
-  onTogglePinChat?: (chatId: string, currentPinStatus: boolean) => void | Promise<void>
-  onDeleteAllChats?: () => Promise<void>
-  onDeleteAllNotes?: () => Promise<void>
-  notes?: Note[]
-  activeNoteId?: string | null
-  onSelectNote?: (noteId: string) => void
-  onDeleteNote?: (noteId: string) => void
-  onNewNote?: () => void
-  onTogglePinNote?: (noteId: string, currentPinStatus: boolean) => void | Promise<void>
-  onProfileUpdated?: (profile: UserProfile) => void
+// ---------------------------------------------------------------------------
+// NavNotes Section
+// ---------------------------------------------------------------------------
+
+export function NavNotes({
+  notes,
+  activeNoteId,
+  onSelectNote,
+  onDeleteNote,
+  onNewNote,
+  onTogglePinNote,
+}: {
+  notes: {
+    id: string;
+    name: string;
+    isPinned?: boolean;
+    updatedAt: string;
+  }[];
+  activeNoteId?: string | null;
+  onSelectNote?: (noteId: string) => void;
+  onDeleteNote?: (noteId: string) => void;
+  onNewNote?: () => void;
+  onTogglePinNote?: (noteId: string, currentPinStatus: boolean) => void | Promise<void>;
 }) {
-  const chatItems = useMemo(() => (chats ?? []).map(chat => ({
-    id: chat.id,
-    name: chat.title,
-    isPinned: chat.is_pinned,
-    updatedAt: chat.updated_at,
-  })), [chats]);
-
-  const noteItems = useMemo(() => (notes ?? []).map(note => ({
-    id: note.id,
-    name: note.title || 'New note',
-    isPinned: note.is_pinned,
-    updatedAt: note.updated_at,
-  })), [notes]);
+  const { isMobile } = useSidebar();
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   return (
-    <Sidebar variant="inset" {...props}>
-      <SidebarHeader>
+    <>
+      <SidebarGroup className="group-data-[collapsible=icon]:hidden">
+        <SidebarGroupLabel>Notes</SidebarGroupLabel>
+        <SidebarGroupAction title="Add a note" onClick={onNewNote}>
+          <Plus /> <span className="sr-only">Add a note</span>
+        </SidebarGroupAction>
+        <SidebarMenu>
+          {notes.length === 0 ? (
+            <SidebarMenuItem>
+              <SidebarMenuButton disabled>
+                <span className="text-muted-foreground text-xs">Your notes will show up here.</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          ) : (
+            notes.map((item) => (
+              <SidebarMenuItem key={item.id}>
+                <SidebarMenuButton
+                  isActive={activeNoteId === item.id}
+                  onClick={() => onSelectNote?.(item.id)}
+                >
+                  <StickyNote className="h-4 w-4" />
+                  <span>{item.name}</span>
+                </SidebarMenuButton>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <SidebarMenuAction showOnHover={!item.isPinned} className="group/action">
+                      {item.isPinned ? (
+                        <>
+                          <Pin className="h-4 w-4 text-muted-foreground group-hover/menu-item:hidden group-data-[state=open]/action:hidden" />
+                          <MoreHorizontal className="h-4 w-4 hidden group-hover/menu-item:block group-data-[state=open]/action:block" />
+                        </>
+                      ) : (
+                        <MoreHorizontal />
+                      )}
+                      <span className="sr-only">More</span>
+                    </SidebarMenuAction>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    className="w-48"
+                    side={isMobile ? "bottom" : "right"}
+                    align={isMobile ? "end" : "start"}
+                  >
+                    <DropdownMenuItem
+                      className="cursor-pointer"
+                      onClick={() => onTogglePinNote?.(item.id, item.isPinned || false)}
+                    >
+                      {item.isPinned ? <PinOff /> : <Pin />}
+                      <span>{item.isPinned ? "Unpin" : "Pin"}</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="cursor-pointer"
+                      variant="destructive"
+                      onClick={() => setPendingDeleteId(item.id)}
+                    >
+                      <Trash2 className="text-muted-foreground" />
+                      <span>Delete</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">
+                      {new Date(item.updatedAt).toLocaleString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                        hour: "numeric",
+                        minute: "2-digit",
+                      })}
+                    </DropdownMenuLabel>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </SidebarMenuItem>
+            ))
+          )}
+        </SidebarMenu>
+      </SidebarGroup>
+
+      <AlertDialog
+        open={pendingDeleteId !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingDeleteId(null);
+        }}
+      >
+        <AlertDialogContent size="sm">
+          <AlertDialogHeader>
+            <AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive">
+              <Trash2 />
+            </AlertDialogMedia>
+            <AlertDialogTitle>Delete note?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Once you delete a note, it&apos;s gone forever.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={() => {
+                onDeleteNote?.(pendingDeleteId!);
+                setPendingDeleteId(null);
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// NavChats Section
+// ---------------------------------------------------------------------------
+
+export function NavChats({
+  chats,
+  activeChatId,
+  onSelectChat,
+  onDeleteChat,
+  onTogglePinChat,
+  onNewChat,
+}: {
+  chats: {
+    id: string;
+    name: string;
+    isPinned?: boolean;
+    updatedAt: string;
+  }[];
+  activeChatId?: string | null;
+  onSelectChat?: (chatId: string) => void;
+  onDeleteChat?: (chatId: string) => void;
+  onTogglePinChat?: (chatId: string, currentPinStatus: boolean) => void | Promise<void>;
+  onNewChat?: () => void;
+}) {
+  const { isMobile } = useSidebar();
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+
+  if (chats.length === 0) {
+    return (
+      <SidebarGroup className="group-data-[collapsible=icon]:hidden">
+        <SidebarGroupLabel>Chats</SidebarGroupLabel>
+        {onNewChat && (
+          <SidebarGroupAction title="New chat" onClick={onNewChat}>
+            <Plus /> <span className="sr-only">New chat</span>
+          </SidebarGroupAction>
+        )}
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" onClick={onNewChat}>
-              <Image 
-                src="/logo/lithium.png" 
-                alt="Lithium Logo" 
-                width={165} 
-                height={55}
-                className="h-9 w-auto"
-                priority
-              />
+            <SidebarMenuButton disabled>
+              <span className="text-muted-foreground text-xs">Your chats will show up here.</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
-      </SidebarHeader>
+      </SidebarGroup>
+    );
+  }
+
+  return (
+    <>
+      <SidebarGroup className="group-data-[collapsible=icon]:hidden">
+        <SidebarGroupLabel>Chats</SidebarGroupLabel>
+        {onNewChat && (
+          <SidebarGroupAction title="New chat" onClick={onNewChat}>
+            <Plus /> <span className="sr-only">New chat</span>
+          </SidebarGroupAction>
+        )}
+        <SidebarMenu>
+          {chats.map((item) => (
+            <SidebarMenuItem key={item.id}>
+              <SidebarMenuButton
+                isActive={activeChatId === item.id}
+                onClick={() => onSelectChat?.(item.id)}
+              >
+                <Bot />
+                <span>{item.name}</span>
+              </SidebarMenuButton>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <SidebarMenuAction showOnHover={!item.isPinned} className="group/action">
+                    {item.isPinned ? (
+                      <>
+                        <Pin className="h-4 w-4 text-muted-foreground group-hover/menu-item:hidden group-data-[state=open]/action:hidden" />
+                        <MoreHorizontal className="h-4 w-4 hidden group-hover/menu-item:block group-data-[state=open]/action:block" />
+                      </>
+                    ) : (
+                      <MoreHorizontal />
+                    )}
+                    <span className="sr-only">More</span>
+                  </SidebarMenuAction>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  className="w-48"
+                  side={isMobile ? "bottom" : "right"}
+                  align={isMobile ? "end" : "start"}
+                >
+                  <DropdownMenuItem
+                    className="cursor-pointer"
+                    onClick={() => onTogglePinChat?.(item.id, item.isPinned || false)}
+                  >
+                    {item.isPinned ? <PinOff /> : <Pin />}
+                    <span>{item.isPinned ? "Unpin" : "Pin"}</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="cursor-pointer"
+                    variant="destructive"
+                    onClick={() => setPendingDeleteId(item.id)}
+                  >
+                    <Trash2 className="text-muted-foreground" />
+                    <span>Delete</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">
+                    Chats is AI and can make mistakes.
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">
+                    {new Date(item.updatedAt).toLocaleString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })}
+                  </DropdownMenuLabel>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </SidebarMenuItem>
+          ))}
+        </SidebarMenu>
+      </SidebarGroup>
+
+      <AlertDialog
+        open={pendingDeleteId !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingDeleteId(null);
+        }}
+      >
+        <AlertDialogContent size="sm">
+          <AlertDialogHeader>
+            <AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive">
+              <Trash2 />
+            </AlertDialogMedia>
+            <AlertDialogTitle>Delete chat?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Once you delete a chat, it&apos;s gone forever.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={() => {
+                onDeleteChat?.(pendingDeleteId!);
+                setPendingDeleteId(null);
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Main AppSidebar Component
+// ---------------------------------------------------------------------------
+
+export function AppSidebar({
+  user,
+  signout,
+  onNewChat,
+  chats,
+  activeChatId,
+  onSelectChat,
+  onDeleteChat,
+  onTogglePinChat,
+  onDeleteAllChats,
+  onDeleteAllNotes,
+  notes,
+  activeNoteId,
+  onSelectNote,
+  onDeleteNote,
+  onNewNote,
+  onTogglePinNote,
+  onProfileUpdated,
+  ...props
+}: React.ComponentProps<typeof Sidebar> & {
+  user: UserProfile;
+  signout?: () => Promise<void>;
+  onNewChat?: () => void;
+  chats?: Chat[];
+  activeChatId?: string | null;
+  onSelectChat?: (chatId: string) => void;
+  onDeleteChat?: (chatId: string) => void;
+  onTogglePinChat?: (chatId: string, currentPinStatus: boolean) => void | Promise<void>;
+  onDeleteAllChats?: () => Promise<void>;
+  onDeleteAllNotes?: () => Promise<void>;
+  notes?: Note[];
+  activeNoteId?: string | null;
+  onSelectNote?: (noteId: string) => void;
+  onDeleteNote?: (noteId: string) => void;
+  onNewNote?: () => void;
+  onTogglePinNote?: (noteId: string, currentPinStatus: boolean) => void | Promise<void>;
+  onProfileUpdated?: (profile: UserProfile) => void;
+}) {
+  const chatItems = useMemo(
+    () =>
+      (chats ?? []).map((chat) => ({
+        id: chat.id,
+        name: chat.title,
+        isPinned: chat.is_pinned,
+        updatedAt: chat.updated_at,
+      })),
+    [chats]
+  );
+
+  const noteItems = useMemo(
+    () =>
+      (notes ?? []).map((note) => ({
+        id: note.id,
+        name: note.title || "New note",
+        isPinned: note.is_pinned,
+        updatedAt: note.updated_at,
+      })),
+    [notes]
+  );
+
+  return (
+    <Sidebar variant="sidebar" {...props}>
       <SidebarContent>
         <NavNotes
           notes={noteItems}
@@ -86,11 +419,9 @@ export function AppSidebar({ user, signout, onNewChat, chats, activeChatId, onSe
           onSelectChat={onSelectChat}
           onDeleteChat={onDeleteChat}
           onTogglePinChat={onTogglePinChat}
+          onNewChat={onNewChat}
         />
       </SidebarContent>
-      <SidebarFooter>
-        <NavUser user={user} signout={signout} onDeleteAllChats={onDeleteAllChats} onDeleteAllNotes={onDeleteAllNotes} onProfileUpdated={onProfileUpdated} />
-      </SidebarFooter>
     </Sidebar>
-  )
+  );
 }

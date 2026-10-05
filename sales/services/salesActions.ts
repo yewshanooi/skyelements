@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { createClient } from '@/utils/supabase/server';
+import { createClient } from '@/lib/supabase/server';
 import type { SaleItem } from '@/sales/types';
 import { geocodeAddress } from '@/sales/services/geocodeService';
 import { normalizeCoordinates } from '@/sales/lib/locationParser';
@@ -121,8 +121,7 @@ const ALLOWED_UPDATE_COLUMNS = new Set([
 ]);
 
 function revalidateSalesPaths(): void {
-  revalidatePath('/sales');
-  revalidatePath('/sales/[view]', 'page');
+  revalidatePath('/sales', 'layout');
 }
 
 async function getAuthUser(supabase: Awaited<ReturnType<typeof createClient>>, errorMessage = 'You must be signed in.') {

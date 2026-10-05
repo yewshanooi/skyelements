@@ -4,7 +4,12 @@ import "./globals.css";
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { ThemeProvider } from "@/components/theme-provider";
-import { NavigationBar } from "@/components/navigation-bar";
+import { AppLayoutShell } from "@/components/app-layout-shell";
+import Script from "next/script";
+import { DEFAULT_SCRIPT_ID, SCRIPT_URL } from "@marsidev/react-turnstile";
+
+import { createClient } from "@/lib/supabase/server";
+import { getUserProfile, type UserProfile } from "@/lib/profile";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -28,6 +33,18 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  let initialUser: UserProfile | null = null;
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user: authUser },
+    } = await supabase.auth.getUser();
+    if (authUser) {
+      initialUser = getUserProfile(authUser);
+    }
+  } catch {
+    // If supabase fails to read cookies or during static generation, gracefully default to null
+  }
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -41,9 +58,15 @@ export default async function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            <NavigationBar />
-            {children}
+            <AppLayoutShell initialUser={initialUser}>
+              {children}
+            </AppLayoutShell>
         </ThemeProvider>
+        <Script
+          id={DEFAULT_SCRIPT_ID}
+          src={SCRIPT_URL}
+          strategy="afterInteractive"
+        />
         <SpeedInsights />
         <Analytics />
       </body>

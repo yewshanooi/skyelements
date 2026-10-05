@@ -1,4 +1,4 @@
-import { createClient } from '@/utils/supabase/server';
+import { createClient } from '@/lib/supabase/server';
 import type { SaleItem } from '@/sales/types';
 import { CATEGORIES, STORE_TYPES } from '@/sales/types';
 import type {

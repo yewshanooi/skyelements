@@ -4,7 +4,7 @@ import { ChevronRight } from 'lucide-react';
  
 export default function NotFound() {
   return (
-    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-240px)] px-4">
+    <div className="flex flex-1 flex-col items-center justify-center px-4">
       <div className="text-center space-y-6">
         <h2 className="text-2xl font-semibold text-balance text-red-700">404</h2>
         <h1 className="scroll-m-20 text-3xl text-center font-semibold text-balance">

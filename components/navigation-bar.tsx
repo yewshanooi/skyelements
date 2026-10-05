@@ -27,29 +27,36 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion"
-import { ThemeToggle } from "./theme-client";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
+import { UserNav } from "@/components/user-nav";
+import { SettingsDialog } from "@/components/settings-dialog";
+import { useAuthModal } from "@/components/auth/AuthModalContext";
+import type { UserProfile } from "@/lib/profile";
 
 interface NavigationBarProps {
-  forceShow?: boolean
+  forceShow?: boolean;
+  user?: UserProfile | null;
 }
 
-export function NavigationBar({ forceShow = false }: NavigationBarProps = {}) {
+export function NavigationBar({ forceShow = false, user: initialUser }: NavigationBarProps = {}) {
+  const { requireAuth, user: contextUser, signOut } = useAuthModal()
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false)
-  const [elevatedZ, setElevatedZ] = React.useState(false)
+  const [settingsOpen, setSettingsOpen] = React.useState(false)
+  const [currentUser, setCurrentUser] = React.useState<UserProfile | null>(
+    initialUser !== undefined ? initialUser : (contextUser ?? null)
+  )
   const pathname = usePathname()
+
+  React.useEffect(() => {
+    if (initialUser !== undefined) {
+      setCurrentUser(initialUser)
+      return
+    }
+    setCurrentUser(contextUser)
+  }, [initialUser, contextUser])
 
   useBodyScrollLock(mobileMenuOpen)
 
-  React.useEffect(() => {
-    if (mobileMenuOpen) {
-      setElevatedZ(true)
-    } else {
-      // Keep elevated z-index until Sheet close animation finishes
-      const timer = setTimeout(() => setElevatedZ(false), 350)
-      return () => clearTimeout(timer)
-    }
-  }, [mobileMenuOpen])
 
   React.useEffect(() => {
     const handleResize = () => {
@@ -62,14 +69,21 @@ export function NavigationBar({ forceShow = false }: NavigationBarProps = {}) {
     return () => window.removeEventListener("resize", handleResize)
   }, [])
 
-  // Hide navigation bar on /lithium and /sales (unless forceShow is explicitly true)
-  if (!forceShow && (pathname === "/lithium" || pathname === "/sales" || pathname?.startsWith("/sales/"))) {
+  // Hide navigation bar on mini-apps routes (unless forceShow is explicitly true)
+  if (
+    !forceShow &&
+    (pathname === "/apps" ||
+      pathname === "/notes" ||
+      pathname?.startsWith("/notes/") ||
+      pathname === "/sales" ||
+      pathname?.startsWith("/sales/"))
+  ) {
     return null
   }
 
   return (
-    <div className={`sticky top-4 flex justify-center px-4 ${elevatedZ ? 'z-[60]' : 'z-40'}`}>
-      <div className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-gray-200/20 rounded-xl shadow-xs px-6 py-3 w-full max-w-7xl">
+    <div className="sticky top-4 z-40 flex justify-center px-4 w-full">
+      <div className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-gray-200/20 rounded-xl shadow-xs px-6 py-3 w-full max-w-7xl pointer-events-auto">
         {/* Desktop Navigation */}
         <div className="hidden lg:grid grid-cols-3 items-center gap-8">
           <div className="flex justify-start">
@@ -123,16 +137,13 @@ export function NavigationBar({ forceShow = false }: NavigationBarProps = {}) {
 
                 <NavigationMenuItem>
                   <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
-                    <Link href="/lithium">
-                      Lithium
-                    </Link>
-                  </NavigationMenuLink>
-                </NavigationMenuItem>
-
-                <NavigationMenuItem>
-                  <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
-                    <Link href="/sales">
-                      Sales Dashboard
+                    <Link
+                      href="/apps"
+                      onClick={(e) => {
+                        if (!requireAuth(e, "/apps")) return;
+                      }}
+                    >
+                      Mini Apps
                     </Link>
                   </NavigationMenuLink>
                 </NavigationMenuItem>
@@ -179,15 +190,15 @@ export function NavigationBar({ forceShow = false }: NavigationBarProps = {}) {
             </NavigationMenu>
           </div>
 
-          <div className="flex justify-end">
-            <ThemeToggle />
+          <div className="flex justify-end items-center gap-2">
+            <UserNav user={currentUser} onOpenSettingsClick={() => setSettingsOpen(true)} />
           </div>
         </div>
 
 
       {/* Mobile Navigation */}
       <div className="flex lg:hidden w-full items-center gap-2">
-        <Link href="/" className="flex-shrink-0">
+        <Link href="/" className="flex-shrink-0" onClick={() => setMobileMenuOpen(false)}>
           <Image 
             src="/logo/skyelements.png" 
             alt="SkyElements Logo" 
@@ -198,19 +209,25 @@ export function NavigationBar({ forceShow = false }: NavigationBarProps = {}) {
         </Link>
         
         <div className="ml-auto flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+          >
             {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
           <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen} modal={false}>
             <SheetContent 
               side="top" 
               showCloseButton={false}
-              className="h-screen w-screen max-w-none flex flex-col border-none rounded-none m-0 p-0 pt-[130px] pb-8 px-4 bg-background [&~[data-slot=sheet-overlay]]:bg-transparent [&~[data-slot=sheet-overlay]]:backdrop-blur-none fixed inset-0"
+              hideOverlay
+              className="h-dvh w-screen max-w-none flex flex-col border-none rounded-none m-0 p-0 pb-8 bg-background fixed inset-0 z-30 pt-24 duration-200 ease-in-out data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0"
             >
               <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
               <SheetDescription className="sr-only">Access all sections of the site.</SheetDescription>
-              
-              <div className="w-full max-w-[280px] mx-auto flex-1 flex flex-col gap-6 overflow-y-auto overflow-x-hidden scrollbar-thin text-left">
+
+              <div className="w-full max-w-[280px] mx-auto flex-1 min-h-0 flex flex-col gap-6 overflow-y-auto overflow-x-hidden scrollbar-thin text-left px-4">
                 <Link href="/" className="text-2xl font-medium transition-colors" onClick={() => setMobileMenuOpen(false)}>
                   Home
                 </Link>
@@ -248,13 +265,19 @@ export function NavigationBar({ forceShow = false }: NavigationBarProps = {}) {
                     </AccordionContent>
                   </AccordionItem>
                 </Accordion>
-                
-                <Link href="/lithium" className="text-2xl font-medium transition-colors" onClick={() => setMobileMenuOpen(false)}>
-                  Lithium
-                </Link>
-                
-                <Link href="/sales" className="text-2xl font-medium transition-colors" onClick={() => setMobileMenuOpen(false)}>
-                  Sales Dashboard
+
+                <Link
+                  href="/apps"
+                  className="text-2xl font-medium transition-colors"
+                  onClick={(e) => {
+                    if (!requireAuth(e, "/apps")) {
+                      setMobileMenuOpen(false);
+                      return;
+                    }
+                    setMobileMenuOpen(false);
+                  }}
+                >
+                  Mini Apps
                 </Link>
                 
                 <Link href="/branding" className="text-2xl font-medium transition-colors" onClick={() => setMobileMenuOpen(false)}>
@@ -298,14 +321,38 @@ export function NavigationBar({ forceShow = false }: NavigationBarProps = {}) {
                 </Accordion>
               </div>
 
-              <div className="w-full max-w-[280px] mx-auto pt-4 mt-auto flex justify-start">
-                <ThemeToggle align="start" />
+              {/* Mobile Drawer Auth Footer */}
+              <div className="w-full max-w-[280px] mx-auto pt-4 mt-auto border-t border-border/40">
+                <UserNav
+                  variant="mobile"
+                  user={currentUser}
+                  onAction={() => setMobileMenuOpen(false)}
+                  onOpenSettingsClick={() => {
+                    setMobileMenuOpen(false);
+                    setSettingsOpen(true);
+                  }}
+                />
               </div>
             </SheetContent>
           </Sheet>
         </div>
       </div>
       </div>
+
+      {currentUser && (
+        <SettingsDialog
+          open={settingsOpen}
+          onOpenChange={setSettingsOpen}
+          user={currentUser}
+          signout={signOut}
+          onProfileUpdated={(updated) => {
+            setCurrentUser(updated);
+            if (typeof window !== "undefined") {
+              window.dispatchEvent(new CustomEvent("skyelements:profile-updated", { detail: updated }));
+            }
+          }}
+        />
+      )}
     </div>
   )
 }

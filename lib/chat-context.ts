@@ -1,4 +1,4 @@
-import type { ChatMessage } from "@/app/lithium/chat-actions";
+import type { ChatMessage } from "@/app/notes/chat-actions";
 
 // ---------------------------------------------------------------------------
 // File type support (for chat attachments)

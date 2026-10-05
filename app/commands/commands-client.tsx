@@ -70,7 +70,7 @@ export function CommandsClient() {
     fetchFact('general', 'https://nekos.life/api/v2/fact', setGeneralFactResult, 'Error: Failed to fetch general fact');
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-start p-8 pt-16 lg:pt-24">
+    <main className="flex flex-1 flex-col items-center justify-start p-8 pt-16 lg:pt-24">
 
       <div className="flex flex-col gap-4">
         <h1 className="scroll-m-20 text-3xl text-center font-semibold text-balance">

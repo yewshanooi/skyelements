@@ -1,6 +1,17 @@
 'use server';
 
 import { normalizeCoordinates, extractEmbeddedCoordinates as parseEmbeddedCoords } from '@/sales/lib/locationParser';
+import { createClient } from '@/lib/supabase/server';
+
+async function isAuthenticated(): Promise<boolean> {
+  try {
+    const supabase = await createClient();
+    const { data: { user }, error } = await supabase.auth.getUser();
+    return Boolean(!error && user);
+  } catch {
+    return false;
+  }
+}
 
 // ============================================================================
 // Geographic Knowledge Base for Malaysian Postcodes, Towns, States & Regions
@@ -477,6 +488,7 @@ function extractEmbeddedCoordinatesInternal(text: string): LocationCoordinates |
  * Extract direct latitude/longitude if coordinates or map URLs are embedded
  */
 export async function extractEmbeddedCoordinates(text: string): Promise<LocationCoordinates | null> {
+  if (!(await isAuthenticated())) return null;
   return extractEmbeddedCoordinatesInternal(text);
 }
 
@@ -556,6 +568,7 @@ function resolveLocationLocallyInternal(address: string): LocationCoordinates | 
  * Resolve location text locally via Malaysian postcode, landmark, city, or state
  */
 export async function resolveLocationLocally(address: string): Promise<LocationCoordinates | null> {
+  if (!(await isAuthenticated())) return null;
   return resolveLocationLocallyInternal(address);
 }
 
@@ -654,6 +667,7 @@ async function fetchOpenMeteoGeocode(query: string): Promise<LocationCoordinates
  * Uses local Malaysian postcode & geographic engine first (0ms), then Photon API ladder, then Open-Meteo fallback.
  */
 export async function geocodeAddress(address: string): Promise<LocationCoordinates | null> {
+  if (!(await isAuthenticated())) return null;
   if (!address || !address.trim()) return null;
 
   // 1. Fast local resolution (handles all Malaysian postcodes, cities, states, landmarks, coordinates)
@@ -728,6 +742,7 @@ export async function geocodeAddress(address: string): Promise<LocationCoordinat
  * Autocomplete / search location suggestions for manual search UI
  */
 export async function searchLocations(query: string): Promise<LocationSuggestion[]> {
+  if (!(await isAuthenticated())) return [];
   if (!query || !query.trim() || query.trim().length < 2) return [];
 
   const normalized = query.toLowerCase().trim();

@@ -1,0 +1,160 @@
+'use server';
+
+import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+
+type ActionState = {
+    error?: string;
+    success?: boolean;
+}
+
+function sanitizeRedirectTo(value: string, fallback = '/apps'): string {
+    if (!value || typeof value !== 'string') return fallback;
+    const trimmed = value.trim();
+    return trimmed.startsWith('/') && !trimmed.startsWith('//') && !trimmed.startsWith('/\\')
+        ? trimmed
+        : fallback;
+}
+
+function validatePassword(password: string): string | null {
+    if (password.length < 8 || !/[a-zA-Z]/.test(password) || !/[0-9]/.test(password)) {
+        return 'Password should be at least 8 characters and contain both letters and numbers.';
+    }
+    return null;
+}
+
+export async function login(prevState: ActionState | null, formData: FormData): Promise<ActionState> {
+    const supabase = await createClient();
+
+    const email = String(formData.get('email') || '');
+    const password = String(formData.get('password') || '');
+    const captchaToken = String(formData.get('captchaToken') || '');
+    const redirectTo = sanitizeRedirectTo(String(formData.get('redirectTo') || '/apps'));
+    
+    const { error } = await supabase.auth.signInWithPassword({ email, password, options: { captchaToken } });
+
+    if (error) {
+        return { error: error.message };
+    }
+
+    redirect(redirectTo);
+}
+
+export async function signup(prevState: ActionState | null, formData: FormData): Promise<ActionState> {
+    const supabase = await createClient();
+
+    const email = String(formData.get('email') || '');
+    const password = String(formData.get('password') || '');
+    const captchaToken = String(formData.get('captchaToken') || '');
+    const displayName = String(formData.get('displayName') || '').trim();
+    const redirectTo = sanitizeRedirectTo(String(formData.get('redirectTo') || '/apps'));
+
+    if (!displayName) {
+        return { error: 'Name is required.' };
+    }
+
+    if (displayName.length > 80) {
+        return { error: 'Name must be 80 characters or fewer.' };
+    }
+
+    const passwordError = validatePassword(password);
+    if (passwordError) {
+        return { error: passwordError };
+    }
+
+    const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+            captchaToken,
+            data: { display_name: displayName },
+        },
+    });
+
+    if (error) {
+        return { error: error.message };
+    }
+
+    redirect(redirectTo);
+}
+
+export async function forgotPassword(prevState: ActionState | null, formData: FormData): Promise<ActionState> {
+    const supabase = await createClient();
+
+    const email = String(formData.get('email') || '');
+    const captchaToken = String(formData.get('captchaToken') || '');
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || ''}/auth/callback?next=/reset-password`,
+        captchaToken,
+    });
+
+    if (error) {
+        return { error: error.message };
+    }
+
+    return { success: true };
+}
+
+export async function resetPassword(prevState: ActionState | null, formData: FormData): Promise<ActionState> {
+    const supabase = await createClient();
+
+    const password = String(formData.get('password') || '');
+    const confirmPassword = String(formData.get('confirmPassword') || '');
+
+    if (password !== confirmPassword) {
+        return { error: 'Passwords do not match.' };
+    }
+
+    const passwordError = validatePassword(password);
+    if (passwordError) {
+        return { error: passwordError };
+    }
+
+    const { error } = await supabase.auth.updateUser({ password });
+
+    if (error) {
+        return { error: error.message };
+    }
+
+    return { success: true };
+}
+
+export async function signout() {
+    const supabase = await createClient();
+
+    await supabase.auth.signOut();
+
+    redirect('/');
+}
+
+async function signInWithOAuthProvider(provider: 'google' | 'notion', redirectTo: string = '/apps') {
+    const supabase = await createClient();
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || '';
+
+    const { data, error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+            redirectTo: `${siteUrl}/auth/callback?next=${encodeURIComponent(redirectTo)}`,
+        },
+    });
+
+    if (error) {
+        console.error(error.message);
+        return;
+    }
+
+    if (data.url) {
+        redirect(data.url);
+    }
+}
+
+export async function signInWithGoogle(formData?: FormData) {
+    const redirectTo = formData?.get('redirectTo')?.toString() || '/apps';
+    return signInWithOAuthProvider('google', redirectTo);
+}
+
+export async function signInWithNotion(formData?: FormData) {
+    const redirectTo = formData?.get('redirectTo')?.toString() || '/apps';
+    return signInWithOAuthProvider('notion', redirectTo);
+}

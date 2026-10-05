@@ -2,7 +2,7 @@ export type ThinkingEffort = 'low' | 'medium' | 'high';
 
 export const DEFAULT_THINKING_EFFORT: ThinkingEffort = 'medium';
 
-export const THINKING_EFFORT_PREFERENCE_KEY = 'lithium-thinking-effort';
+export const THINKING_EFFORT_PREFERENCE_KEY = 'notes-thinking-effort';
 
 export function isThinkingEffort(value: unknown): value is ThinkingEffort {
   return value === 'low' || value === 'medium' || value === 'high';
@@ -13,22 +13,20 @@ export type ThinkingOption = {
   label: string;
 };
 
-type ThinkingLevel = ThinkingEffort;
-
 export type ModelDefinition = {
   id: string;
   label: string;
   icon: string;
   shortcut: string;
-  thinking?: readonly ThinkingLevel[];
+  thinking?: readonly ThinkingEffort[];
 };
 
-const GEMINI_THINKING_LEVELS: readonly ThinkingLevel[] = ['low', 'medium', 'high'];
+const GEMINI_THINKING_LEVELS: readonly ThinkingEffort[] = ['low', 'medium', 'high'];
 
 export const MODELS: ModelDefinition[] = [
-  { id: 'gemini-3.5-flash-lite', label: 'Gemini 3.5 Flash', icon: '/lithium/google.svg', shortcut: 'Lite', thinking: GEMINI_THINKING_LEVELS },
-  { id: 'gemini-3.6-flash', label: 'Gemini 3.6 Flash', icon: '/lithium/google.svg', shortcut: '', thinking: GEMINI_THINKING_LEVELS },
-  { id: 'gemini-3.7-flash', label: 'Gemini 3.7 Flash', icon: '/lithium/google.svg', shortcut: '', thinking: GEMINI_THINKING_LEVELS },
+  { id: 'gemini-3.5-flash-lite', label: 'Gemini 3.5 Flash', icon: '/notes/google.svg', shortcut: 'Lite', thinking: GEMINI_THINKING_LEVELS },
+  { id: 'gemini-3.6-flash', label: 'Gemini 3.6 Flash', icon: '/notes/google.svg', shortcut: '', thinking: GEMINI_THINKING_LEVELS },
+  { id: 'gemini-3.7-flash', label: 'Gemini 3.7 Flash', icon: '/notes/google.svg', shortcut: '', thinking: GEMINI_THINKING_LEVELS },
 ];
 
 export const ALLOWED_MODEL_IDS = new Set(MODELS.map(m => m.id));

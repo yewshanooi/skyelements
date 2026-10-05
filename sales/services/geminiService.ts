@@ -9,7 +9,7 @@ import {
   PAYMENT_METHODS,
 } from '@/sales/types';
 import { executeSalesMetricsQuery } from './salesAnalyticsEngine';
-import { createClient } from '@/utils/supabase/server';
+import { createClient } from '@/lib/supabase/server';
 import type {
   ChartSpec,
   QuerySalesMetricsArgs,
@@ -427,9 +427,9 @@ export async function sendSalesAiMessage(
     // Limit input message length to prevent resource exhaustion / DoS
     const sanitizedMessage = newMessage.trim().slice(0, 4000);
 
-    // Sanitize user sales to ensure tenancy
+    // Sanitize user sales to ensure strict tenancy
     const userSales = Array.isArray(sales)
-      ? sales.filter((s) => !s.user_id || s.user_id === user.id)
+      ? sales.filter((s) => Boolean(s && s.user_id === user.id))
       : [];
 
     const apiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
