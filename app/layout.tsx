@@ -8,8 +8,8 @@ import { AppLayoutShell } from "@/components/app-layout-shell";
 import Script from "next/script";
 import { DEFAULT_SCRIPT_ID, SCRIPT_URL } from "@marsidev/react-turnstile";
 
-import { createClient } from "@/utils/supabase/server";
-import { getUserProfile, type UserProfile } from "@/app/notes/profile";
+import { createClient } from "@/lib/supabase/server";
+import { getUserProfile, type UserProfile } from "@/lib/profile";
 
 export const viewport: Viewport = {
   width: "device-width",

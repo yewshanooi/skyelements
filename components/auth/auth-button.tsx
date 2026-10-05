@@ -1,11 +1,12 @@
 'use client';
 
+import * as React from "react";
 import { useFormStatus } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 
-export default function AuthButton({
+export function AuthButton({
     children,
     pendingText = <Spinner />,
     className,
@@ -27,3 +28,5 @@ export default function AuthButton({
         </Button>
     );
 }
+
+export default AuthButton;

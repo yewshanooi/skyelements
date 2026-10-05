@@ -462,7 +462,6 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
       <Header
         activeView={currentView}
         onSelectView={handleSelectView}
-        onOpenAuth={() => handleOpenAuth('login')}
         onExportPdf={handleExportPdf}
         isExportingPdf={isExportingPdf}
         onOpenNewSale={handleOpenNew}

@@ -11,9 +11,9 @@ import React, {
 import { useSearchParams, useRouter } from 'next/navigation';
 import { AuthDialog } from './AuthDialog';
 import type { AuthMode } from './AuthCard';
-import { createClient } from '@/utils/supabase/client';
-import { getUserProfile, type UserProfile } from '@/app/notes/profile';
-import { signout as authSignout } from '@/app/(auth)/actions';
+import { createClient } from '@/lib/supabase/client';
+import { getUserProfile, type UserProfile } from '@/lib/profile';
+import { signout as authSignout } from '@/lib/actions/auth';
 
 interface AuthModalContextType {
   isOpen: boolean;

@@ -40,11 +40,6 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       {
-        source: "/lithium",
-        destination: "/notes",
-        permanent: true,
-      },
-      {
         source: "/mini-apps",
         destination: "/apps",
         permanent: true,

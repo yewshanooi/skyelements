@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { createClient } from "@/utils/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { PageClient } from "./page-client";
-import { signout } from "../(auth)/actions";
-import { getUserProfile } from "./profile";
+import { signout } from "@/lib/actions/auth";
+import { getUserProfile } from "@/lib/profile";
 import { isThinkingEffort, THINKING_EFFORT_PREFERENCE_KEY } from "@/lib/models";
 
 export const metadata: Metadata = {

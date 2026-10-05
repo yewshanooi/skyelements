@@ -1,8 +1,8 @@
 'use server';
 
 import { redirect } from 'next/navigation';
-import { getAuthenticatedClient } from './auth-server';
-import { getUserProfile, LITHIUM_AVATAR_METADATA_KEY, type UserProfile } from './profile';
+import { getAuthenticatedClient } from '@/lib/supabase/server';
+import { getUserProfile, CUSTOM_AVATAR_METADATA_KEY, type UserProfile } from '@/lib/profile';
 
 const MAX_DISPLAY_NAME_LENGTH = 80;
 const MAX_SYSTEM_INSTRUCTION_LENGTH = 4000;
@@ -82,7 +82,7 @@ export async function updateProfile(input: {
     data: {
       ...user.user_metadata,
       display_name: displayName,
-      [LITHIUM_AVATAR_METADATA_KEY]: avatarUrl,
+      [CUSTOM_AVATAR_METADATA_KEY]: avatarUrl,
       system_instruction: systemInstruction,
     },
   });

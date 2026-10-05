@@ -1,6 +1,6 @@
 'use server';
 
-import { getAuthenticatedClient } from "./auth-server";
+import { getAuthenticatedClient } from "@/lib/supabase/server";
 
 // ---------------------------------------------------------------------------
 // Types

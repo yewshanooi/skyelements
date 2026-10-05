@@ -1,7 +1,7 @@
 'use server';
 
 import { normalizeCoordinates, extractEmbeddedCoordinates as parseEmbeddedCoords } from '@/sales/lib/locationParser';
-import { createClient } from '@/utils/supabase/server';
+import { createClient } from '@/lib/supabase/server';
 
 async function isAuthenticated(): Promise<boolean> {
   try {

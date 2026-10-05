@@ -47,7 +47,7 @@ import {
     type AttachmentRef,
 } from "./chat-actions";
 import { SUPPORTED_MIME_TYPES, isImageMimeType, MAX_INPUT_CHARS } from "@/lib/chat-context";
-import { createClient } from "@/utils/supabase/client";
+import { createClient } from "@/lib/supabase/client";
 import {
     DEFAULT_THINKING_EFFORT,
     getThinkingOptions,

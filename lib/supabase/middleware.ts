@@ -38,9 +38,7 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
         pathname === "/notes" ||
         pathname.startsWith("/notes/") ||
         pathname === "/sales" ||
-        pathname.startsWith("/sales/") ||
-        pathname === "/skye" ||
-        pathname.startsWith("/skye/");
+        pathname.startsWith("/sales/");
 
     if (isProtectedMiniApp && !user) {
         const redirectUrl = new URL("/", request.url);

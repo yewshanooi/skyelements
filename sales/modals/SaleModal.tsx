@@ -478,7 +478,7 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
                 {isUploadingInvoice ? (
                   <div className="inline-flex items-center gap-1.5 px-2 py-0.5 text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 rounded">
                     <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-                    <span>Uploading to Supabase Storage...</span>
+                    <span>Uploading...</span>
                   </div>
                 ) : formData.invoice_name || formData.invoice_url ? (
                   <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium bg-neutral-100 dark:bg-neutral-800/90 border border-neutral-200/70 dark:border-neutral-700/70 text-neutral-800 dark:text-neutral-200 group/inv max-w-sm select-none">
@@ -521,16 +521,14 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
                     setIsDatePickerOpen(false);
                     setIsLocationPickerOpen(!isLocationPickerOpen);
                   }}
-                  className={`cursor-pointer inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium transition-colors max-w-full select-none ${
-                    formData.location
+                  className={`cursor-pointer inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium transition-colors max-w-full select-none ${formData.location
                       ? 'bg-neutral-100 dark:bg-neutral-800/80 border border-neutral-200/70 dark:border-neutral-700/70 text-neutral-800 dark:text-neutral-200 hover:bg-neutral-200/70 dark:hover:bg-neutral-700/70'
                       : 'text-neutral-400 dark:text-neutral-500 italic hover:bg-neutral-100 dark:hover:bg-neutral-800/80 border border-transparent'
-                  }`}
+                    }`}
                 >
                   <MapPin
-                    className={`w-3.5 h-3.5 shrink-0 ${
-                      formData.location ? 'text-red-500' : 'text-neutral-400'
-                    }`}
+                    className={`w-3.5 h-3.5 shrink-0 ${formData.location ? 'text-red-500' : 'text-neutral-400'
+                      }`}
                   />
                   <span className="truncate pr-1" title={formData.location || 'Empty'}>
                     {formData.location || 'Empty'}
@@ -552,20 +550,20 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
                     onOpenFullMap={
                       onOpenFullMap
                         ? () => {
-                            const norm = normalizeCoordinates(formData.latitude, formData.longitude);
-                            onOpenFullMap(
-                              toSaleItem(
-                                {
-                                  ...formData,
-                                  latitude: norm?.lat ?? formData.latitude,
-                                  longitude: norm?.lng ?? formData.longitude,
-                                },
-                                calculatedSales,
-                                initialData?.id || 'temp'
-                              )
-                            );
-                            onClose();
-                          }
+                          const norm = normalizeCoordinates(formData.latitude, formData.longitude);
+                          onOpenFullMap(
+                            toSaleItem(
+                              {
+                                ...formData,
+                                latitude: norm?.lat ?? formData.latitude,
+                                longitude: norm?.lng ?? formData.longitude,
+                              },
+                              calculatedSales,
+                              initialData?.id || 'temp'
+                            )
+                          );
+                          onClose();
+                        }
                         : undefined
                     }
                     onClose={() => setIsLocationPickerOpen(false)}
@@ -608,8 +606,8 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
                         newStore === 'Shopee' && currentPay && !currentPay.startsWith('Shopee')
                           ? 'Shopee - ShopeePay Balance'
                           : newStore === 'Carousell' && currentPay && currentPay.startsWith('Shopee')
-                          ? 'Online Banking'
-                          : formData.payment_method;
+                            ? 'Online Banking'
+                            : formData.payment_method;
                       setFormData((prev) => ({
                         ...prev,
                         marketplace: newStore as StoreType,

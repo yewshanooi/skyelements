@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createClient } from "@/utils/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowUpRight } from "lucide-react";
@@ -40,15 +40,6 @@ const MINI_APPS: MiniAppItem[] = [
     tags: ["Analytics", "Multi-view", "PDF Export"],
     href: "/sales",
   },
-  {
-    id: "skye",
-    name: "Skye",
-    emoji: "🤖",
-    version: "N/A",
-    description: "Coming soon...",
-    tags: ["AI Agent", "Assistant", "MCP"],
-    href: "/skye",
-  },
 ];
 
 export default async function AppsPage() {
@@ -62,9 +53,9 @@ export default async function AppsPage() {
   }
 
   return (
-    <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 flex flex-col justify-start">
+    <main className="flex-1 w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 flex flex-col justify-start">
       {/* Apps Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
         {MINI_APPS.map((app) => (
           <Link
             key={app.id}

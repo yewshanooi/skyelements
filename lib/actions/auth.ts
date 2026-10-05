@@ -1,6 +1,6 @@
 'use server';
 
-import { createActionClient } from "@/utils/supabase/actions";
+import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 
 type ActionState = {
@@ -24,30 +24,30 @@ function validatePassword(password: string): string | null {
 }
 
 export async function login(prevState: ActionState | null, formData: FormData): Promise<ActionState> {
-    const supabase = await createActionClient();
+    const supabase = await createClient();
 
-    const email = String(formData.get('email') || '')
-    const password = String(formData.get('password') || '')
-    const captchaToken = String(formData.get('captchaToken') || '')
-    const redirectTo = sanitizeRedirectTo(String(formData.get('redirectTo') || '/apps'))
+    const email = String(formData.get('email') || '');
+    const password = String(formData.get('password') || '');
+    const captchaToken = String(formData.get('captchaToken') || '');
+    const redirectTo = sanitizeRedirectTo(String(formData.get('redirectTo') || '/apps'));
     
-    const {error} = await supabase.auth.signInWithPassword({email, password, options: { captchaToken }});
+    const { error } = await supabase.auth.signInWithPassword({ email, password, options: { captchaToken } });
 
     if (error) {
         return { error: error.message };
     }
 
-    redirect(redirectTo)
+    redirect(redirectTo);
 }
 
 export async function signup(prevState: ActionState | null, formData: FormData): Promise<ActionState> {
-    const supabase = await createActionClient();
+    const supabase = await createClient();
 
-    const email = String(formData.get('email') || '')
-    const password = String(formData.get('password') || '')
-    const captchaToken = String(formData.get('captchaToken') || '')
-    const displayName = String(formData.get('displayName') || '').trim()
-    const redirectTo = sanitizeRedirectTo(String(formData.get('redirectTo') || '/apps'))
+    const email = String(formData.get('email') || '');
+    const password = String(formData.get('password') || '');
+    const captchaToken = String(formData.get('captchaToken') || '');
+    const displayName = String(formData.get('displayName') || '').trim();
+    const redirectTo = sanitizeRedirectTo(String(formData.get('redirectTo') || '/apps'));
 
     if (!displayName) {
         return { error: 'Name is required.' };
@@ -62,7 +62,7 @@ export async function signup(prevState: ActionState | null, formData: FormData):
         return { error: passwordError };
     }
 
-    const {error} = await supabase.auth.signUp({
+    const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -75,11 +75,11 @@ export async function signup(prevState: ActionState | null, formData: FormData):
         return { error: error.message };
     }
 
-    redirect(redirectTo)
+    redirect(redirectTo);
 }
 
 export async function forgotPassword(prevState: ActionState | null, formData: FormData): Promise<ActionState> {
-    const supabase = await createActionClient();
+    const supabase = await createClient();
 
     const email = String(formData.get('email') || '');
     const captchaToken = String(formData.get('captchaToken') || '');
@@ -97,7 +97,7 @@ export async function forgotPassword(prevState: ActionState | null, formData: Fo
 }
 
 export async function resetPassword(prevState: ActionState | null, formData: FormData): Promise<ActionState> {
-    const supabase = await createActionClient();
+    const supabase = await createClient();
 
     const password = String(formData.get('password') || '');
     const confirmPassword = String(formData.get('confirmPassword') || '');
@@ -121,15 +121,15 @@ export async function resetPassword(prevState: ActionState | null, formData: For
 }
 
 export async function signout() {
-    const supabase = await createActionClient();
+    const supabase = await createClient();
 
     await supabase.auth.signOut();
 
-    redirect('/')
+    redirect('/');
 }
 
 async function signInWithOAuthProvider(provider: 'google' | 'notion', redirectTo: string = '/apps') {
-    const supabase = await createActionClient();
+    const supabase = await createClient();
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || '';
 
     const { data, error } = await supabase.auth.signInWithOAuth({

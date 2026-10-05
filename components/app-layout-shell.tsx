@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { NavigationBar } from "@/components/navigation-bar";
 import { MiniAppShell } from "@/components/mini-app-shell";
 import { AuthModalProvider, useAuthModal } from "@/components/auth/AuthModalContext";
-import type { UserProfile } from "@/app/notes/profile";
+import type { UserProfile } from "@/lib/profile";
 
 function InnerAppLayoutShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -16,9 +16,7 @@ function InnerAppLayoutShell({ children }: { children: React.ReactNode }) {
     pathname === "/notes" ||
     pathname?.startsWith("/notes/") ||
     pathname === "/sales" ||
-    pathname?.startsWith("/sales/") ||
-    pathname === "/skye" ||
-    pathname?.startsWith("/skye/");
+    pathname?.startsWith("/sales/");
 
   // If on a mini-app route but the user is definitely not logged in, keep NavigationBar mounted
   // to avoid any split-second flash of MiniAppShell during unauthenticated redirects.

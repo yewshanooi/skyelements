@@ -24,7 +24,7 @@ import { ChatClient } from "./chat-client";
 import { NoteClient } from "./note-client";
 import { listChats, deleteChat, deleteAllChats, togglePinChat, type Chat } from "./chat-actions";
 import { listNotes, deleteNote, deleteAllNotes, createNote, togglePinNote, type Note } from "./note-actions";
-import type { UserProfile } from "./profile";
+import type { UserProfile } from "@/lib/profile";
 import {
   Breadcrumb,
   BreadcrumbItem,

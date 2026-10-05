@@ -57,10 +57,10 @@ import {
   AlertDialogMedia,
 } from "@/components/ui/alert-dialog"
 import { useIsMobile } from "@/hooks/use-mobile"
-import { createClient } from "@/utils/supabase/client"
-import { deleteAccount, updateProfile } from "@/app/notes/profile-actions"
-import type { UserProfile } from "@/app/notes/profile"
-import { signout as authSignout } from "@/app/(auth)/actions"
+import { createClient } from "@/lib/supabase/client"
+import { deleteAccount, updateProfile } from "@/lib/actions/profile"
+import type { UserProfile } from "@/lib/profile"
+import { signout as authSignout } from "@/lib/actions/auth"
 import { deleteAllChats as apiDeleteAllChats } from "@/app/notes/chat-actions"
 import { deleteAllNotes as apiDeleteAllNotes } from "@/app/notes/note-actions"
 
@@ -522,7 +522,7 @@ export function SettingsDialog({
         <>
           <SettingsSection
             title="Custom instructions"
-            description="Additional behavior, style, and tone preferences."
+            description="Additional behavior, style, and tone preferences for Chats."
           >
             <div className="flex w-full items-start gap-2">
               <Textarea
@@ -576,7 +576,7 @@ export function SettingsDialog({
       icon: Database,
       content: (
         <>
-          <SettingsSection title="Your data" description="Manage your Notes data.">
+          <SettingsSection title="Data" description="Manage your mini apps data.">
             <SettingsRow
               label="Clear notes"
               action={

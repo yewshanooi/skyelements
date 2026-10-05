@@ -9,7 +9,7 @@ import {
   PAYMENT_METHODS,
 } from '@/sales/types';
 import { executeSalesMetricsQuery } from './salesAnalyticsEngine';
-import { createClient } from '@/utils/supabase/server';
+import { createClient } from '@/lib/supabase/server';
 import type {
   ChartSpec,
   QuerySalesMetricsArgs,

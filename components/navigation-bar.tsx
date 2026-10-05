@@ -31,7 +31,7 @@ import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { UserNav } from "@/components/user-nav";
 import { SettingsDialog } from "@/components/settings-dialog";
 import { useAuthModal } from "@/components/auth/AuthModalContext";
-import type { UserProfile } from "@/app/notes/profile";
+import type { UserProfile } from "@/lib/profile";
 
 interface NavigationBarProps {
   forceShow?: boolean;
@@ -76,9 +76,7 @@ export function NavigationBar({ forceShow = false, user: initialUser }: Navigati
       pathname === "/notes" ||
       pathname?.startsWith("/notes/") ||
       pathname === "/sales" ||
-      pathname?.startsWith("/sales/") ||
-      pathname === "/skye" ||
-      pathname?.startsWith("/skye/"))
+      pathname?.startsWith("/sales/"))
   ) {
     return null
   }

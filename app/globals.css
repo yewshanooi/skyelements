@@ -238,7 +238,7 @@ body[data-scroll-locked] {
   margin-right: 0px !important;
 }
 
-/* Markdown prose for Lithium chat */
+/* Markdown prose for Notes chat */
 .prose {
   --tw-prose-body: var(--foreground);
   --tw-prose-headings: var(--foreground);

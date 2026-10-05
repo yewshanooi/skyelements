@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { SettingsDialog } from "@/components/settings-dialog";
 import { useAuthModal } from "@/components/auth/AuthModalContext";
-import type { UserProfile } from "@/app/notes/profile";
+import type { UserProfile } from "@/lib/profile";
 import { cn } from "@/lib/utils";
 
 export interface UserNavProps {

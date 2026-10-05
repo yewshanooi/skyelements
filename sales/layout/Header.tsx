@@ -9,7 +9,6 @@ import {
   MapPin,
   LayoutGrid,
   Plus,
-  LogIn,
   Download,
   Loader2,
   Search,
@@ -19,12 +18,10 @@ import {
   MoreHorizontal,
 } from 'lucide-react';
 import type { ViewMode, StoreType } from '@/sales/types';
-import { useAuth } from '@/sales/context/AuthContext';
 
 interface HeaderProps {
   activeView: ViewMode;
   onSelectView: (view: ViewMode) => void;
-  onOpenAuth: () => void;
   onExportPdf: () => void;
   isExportingPdf?: boolean;
   onOpenNewSale?: (defaultStore?: StoreType | string) => void;
@@ -71,7 +68,6 @@ interface MobileFloatingNavProps {
   isAiOpen?: boolean;
   onExportPdf: () => void;
   isExportingPdf?: boolean;
-  onOpenAuth: () => void;
   selectedIdsCount?: number;
   onBatchDelete?: () => void;
   onDeselectAll?: () => void;
@@ -87,12 +83,10 @@ const MobileFloatingNav: FC<MobileFloatingNavProps> = ({
   isAiOpen = false,
   onExportPdf,
   isExportingPdf = false,
-  onOpenAuth,
   selectedIdsCount = 0,
   onBatchDelete,
   onDeselectAll,
 }) => {
-  const { user } = useAuth();
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -186,7 +180,7 @@ const MobileFloatingNav: FC<MobileFloatingNavProps> = ({
             {/* More (...) Options Popover Menu - Positioned cleanly above the (...) button */}
             {isMoreMenuOpen && (
               <div
-                className="absolute right-0 bottom-14 w-64 max-w-[calc(100vw-20px)] bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-2xl rounded-2xl shadow-[0_16px_48px_rgba(0,0,0,0.22)] dark:shadow-[0_16px_48px_rgba(0,0,0,0.65)] border border-neutral-200/90 dark:border-neutral-800/90 p-1.5 z-50 animate-in fade-in zoom-in-95 slide-in-from-bottom-2 duration-150 origin-bottom-right"
+                className="absolute right-0 bottom-14 w-52 max-w-[calc(100vw-24px)] bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-2xl rounded-2xl shadow-[0_16px_48px_rgba(0,0,0,0.2)] dark:shadow-[0_16px_48px_rgba(0,0,0,0.65)] border border-neutral-200/90 dark:border-neutral-800/90 p-1.5 z-50 animate-in fade-in zoom-in-95 slide-in-from-bottom-2 duration-150 origin-bottom-right"
                 role="menu"
                 aria-label="Dashboard Options"
               >
@@ -197,10 +191,10 @@ const MobileFloatingNav: FC<MobileFloatingNavProps> = ({
                     e.preventDefault();
                     setIsMoreMenuOpen(false);
                   }}
-                  className="p-1 mb-1 border-b border-neutral-200/80 dark:border-neutral-800/80"
+                  className="p-1 mb-1"
                 >
                   <div className="relative flex items-center w-full">
-                    <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none shrink-0" />
+                    <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none shrink-0" />
                     <input
                       ref={searchInputRef}
                       type="text"
@@ -217,7 +211,7 @@ const MobileFloatingNav: FC<MobileFloatingNavProps> = ({
                       autoCorrect="off"
                       spellCheck={false}
                       aria-label="Search"
-                      className="w-full pl-8 pr-7 py-2 text-xs bg-neutral-100 dark:bg-[#252525] border border-neutral-200 dark:border-neutral-700 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-[#2383e2]/20 focus:border-[#2383e2] text-neutral-900 dark:text-neutral-100 placeholder-neutral-400"
+                      className="w-full pl-7.5 pr-7 py-1.5 text-xs bg-neutral-100 dark:bg-[#252528] border border-neutral-200 dark:border-neutral-700/80 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-[#2383e2]/20 focus:border-[#2383e2] text-neutral-900 dark:text-neutral-100 placeholder-neutral-400"
                     />
                     {searchQuery && (
                       <button
@@ -225,7 +219,7 @@ const MobileFloatingNav: FC<MobileFloatingNavProps> = ({
                         onMouseDown={(e) => e.preventDefault()}
                         onTouchStart={(e) => e.preventDefault()}
                         onClick={() => onSearchChange?.('')}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 p-0.5 cursor-pointer touch-manipulation"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 p-0.5 cursor-pointer touch-manipulation"
                         title="Clear search"
                         aria-label="Clear search"
                       >
@@ -234,42 +228,6 @@ const MobileFloatingNav: FC<MobileFloatingNavProps> = ({
                     )}
                   </div>
                 </form>
-
-                {/* Batch Selection Actions (if any items selected) */}
-                {selectedIdsCount > 0 && (
-                  <div className="pb-1 mb-1 border-b border-neutral-200/80 dark:border-neutral-800/80">
-                    {onBatchDelete && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onBatchDelete();
-                          setIsMoreMenuOpen(false);
-                        }}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-xl text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 active:bg-red-100 dark:active:bg-red-950/60 transition-colors text-left cursor-pointer touch-manipulation"
-                      >
-                        <div className="w-6 h-6 rounded-lg bg-red-100 dark:bg-red-950/80 flex items-center justify-center text-red-600 dark:text-red-400 shrink-0">
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </div>
-                        <span className="flex-1">Delete Selected ({selectedIdsCount})</span>
-                      </button>
-                    )}
-                    {onDeselectAll && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onDeselectAll();
-                          setIsMoreMenuOpen(false);
-                        }}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium rounded-xl text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 active:bg-neutral-200 dark:active:bg-neutral-700 transition-colors text-left cursor-pointer touch-manipulation"
-                      >
-                        <div className="w-6 h-6 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-500 shrink-0">
-                          <X className="w-3.5 h-3.5" />
-                        </div>
-                        <span className="flex-1">Deselect All</span>
-                      </button>
-                    )}
-                  </div>
-                )}
 
                 {/* 1. New Order Button */}
                 {onOpenNewSale && selectedIdsCount === 0 && (
@@ -280,14 +238,14 @@ const MobileFloatingNav: FC<MobileFloatingNavProps> = ({
                         onOpenNewSale();
                         setIsMoreMenuOpen(false);
                       }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-semibold rounded-xl text-[#2383e2] dark:text-[#388bfd] hover:bg-blue-50 dark:hover:bg-blue-950/40 active:bg-blue-100 dark:active:bg-blue-950/60 transition-colors text-left cursor-pointer touch-manipulation"
+                      className="w-full flex items-center gap-2.5 px-2.5 py-2 text-xs font-semibold rounded-xl text-[#2383e2] dark:text-[#388bfd] hover:bg-blue-50 dark:hover:bg-blue-950/40 active:bg-blue-100 dark:active:bg-blue-950/60 transition-colors text-left cursor-pointer touch-manipulation"
                     >
                       <div className="w-6 h-6 rounded-lg bg-blue-100 dark:bg-blue-950/80 flex items-center justify-center text-[#2383e2] dark:text-[#388bfd] shrink-0">
-                        <Plus className="w-4 h-4" />
+                        <Plus className="w-3.5 h-3.5" />
                       </div>
-                      <span className="flex-1">New Order</span>
+                      <span className="flex-1 truncate">New Order</span>
                     </button>
-                    <div className="h-px bg-neutral-200/80 dark:bg-neutral-800/80 my-1" />
+                    <div className="h-px bg-neutral-200/80 dark:bg-neutral-800/80 my-1 mx-1" />
                   </>
                 )}
 
@@ -299,7 +257,7 @@ const MobileFloatingNav: FC<MobileFloatingNavProps> = ({
                       onToggleAi();
                       setIsMoreMenuOpen(false);
                     }}
-                    className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-medium rounded-xl transition-colors text-left cursor-pointer touch-manipulation ${isAiOpen
+                    className={`w-full flex items-center gap-2.5 px-2.5 py-2 text-xs font-medium rounded-xl transition-colors text-left cursor-pointer touch-manipulation ${isAiOpen
                       ? 'bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 font-semibold'
                       : 'hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-800 dark:text-neutral-200'
                       }`}
@@ -312,16 +270,16 @@ const MobileFloatingNav: FC<MobileFloatingNavProps> = ({
                     >
                       <Sparkles className="w-3.5 h-3.5" />
                     </div>
-                    <span className="flex-1">Ask AI</span>
+                    <span className="flex-1 truncate">Ask AI</span>
                     {isAiOpen && (
-                      <span className="text-[10px] bg-purple-100 dark:bg-purple-900/60 text-purple-700 dark:text-purple-300 px-1.5 py-0.5 rounded-full font-semibold">
+                      <span className="text-[10px] bg-purple-100 dark:bg-purple-900/60 text-purple-700 dark:text-purple-300 px-1.5 py-0.5 rounded-full font-semibold shrink-0">
                         Active
                       </span>
                     )}
                   </button>
                 )}
 
-                {/* 3. Export PDF */}
+                {/* 3. Export as PDF */}
                 <button
                   type="button"
                   onClick={() => {
@@ -329,7 +287,7 @@ const MobileFloatingNav: FC<MobileFloatingNavProps> = ({
                     setIsMoreMenuOpen(false);
                   }}
                   disabled={isExportingPdf}
-                  className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-medium rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800 active:bg-neutral-200 dark:active:bg-neutral-700 text-neutral-800 dark:text-neutral-200 transition-colors text-left cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed touch-manipulation"
+                  className="w-full flex items-center gap-2.5 px-2.5 py-2 text-xs font-medium rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800 active:bg-neutral-200 dark:active:bg-neutral-700 text-neutral-800 dark:text-neutral-200 transition-colors text-left cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed touch-manipulation"
                 >
                   <div className="w-6 h-6 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-600 dark:text-neutral-400 shrink-0">
                     {isExportingPdf ? (
@@ -338,26 +296,43 @@ const MobileFloatingNav: FC<MobileFloatingNavProps> = ({
                       <Download className="w-3.5 h-3.5" />
                     )}
                   </div>
-                  <span className="flex-1">{isExportingPdf ? 'Generating PDF...' : 'Export as PDF'}</span>
+                  <span className="flex-1 truncate">{isExportingPdf ? 'Exporting...' : 'Export as PDF'}</span>
                 </button>
 
-                {/* 4. Sign In (Only if unauthenticated) */}
-                {!user && (
+                {/* 4. Batch Selection Actions (if any items selected) */}
+                {selectedIdsCount > 0 && (
                   <>
-                    <div className="h-px bg-neutral-200/80 dark:bg-neutral-800/80 my-1" />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onOpenAuth();
-                        setIsMoreMenuOpen(false);
-                      }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-medium rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800 active:bg-neutral-200 dark:active:bg-neutral-700 text-neutral-800 dark:text-neutral-200 transition-colors text-left cursor-pointer touch-manipulation"
-                    >
-                      <div className="w-6 h-6 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-600 dark:text-neutral-400 shrink-0">
-                        <LogIn className="w-3.5 h-3.5" />
-                      </div>
-                      <span className="flex-1">Sign In</span>
-                    </button>
+                    <div className="h-px bg-neutral-200/80 dark:bg-neutral-800/80 my-1 mx-1" />
+                    {onDeselectAll && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onDeselectAll();
+                          setIsMoreMenuOpen(false);
+                        }}
+                        className="w-full flex items-center gap-2.5 px-2.5 py-2 text-xs font-medium rounded-xl text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 active:bg-neutral-200 dark:active:bg-neutral-700 transition-colors text-left cursor-pointer touch-manipulation"
+                      >
+                        <div className="w-6 h-6 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-500 shrink-0">
+                          <X className="w-3.5 h-3.5" />
+                        </div>
+                        <span className="flex-1 truncate">Deselect</span>
+                      </button>
+                    )}
+                    {onBatchDelete && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onBatchDelete();
+                          setIsMoreMenuOpen(false);
+                        }}
+                        className="w-full flex items-center gap-2.5 px-2.5 py-2 text-xs font-semibold rounded-xl text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 active:bg-red-100 dark:active:bg-red-950/60 transition-colors text-left cursor-pointer touch-manipulation"
+                      >
+                        <div className="w-6 h-6 rounded-lg bg-red-100 dark:bg-red-950/80 flex items-center justify-center text-red-600 dark:text-red-400 shrink-0">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </div>
+                        <span className="flex-1 truncate">Delete ({selectedIdsCount})</span>
+                      </button>
+                    )}
                   </>
                 )}
               </div>
@@ -373,7 +348,6 @@ const MobileFloatingNav: FC<MobileFloatingNavProps> = ({
 export const Header: FC<HeaderProps> = ({
   activeView,
   onSelectView,
-  onOpenAuth,
   onExportPdf,
   isExportingPdf = false,
   onOpenNewSale,
@@ -464,7 +438,7 @@ export const Header: FC<HeaderProps> = ({
               onClick={onExportPdf}
               disabled={isExportingPdf}
               className="px-2.5 py-1 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-neutral-100 border border-neutral-200/70 dark:border-neutral-700/70 rounded-md text-[11px] font-medium transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs disabled:opacity-60 disabled:cursor-not-allowed shrink-0"
-              title="Export as PDF"
+              title="Export"
             >
               {isExportingPdf ? (
                 <>
@@ -543,7 +517,6 @@ export const Header: FC<HeaderProps> = ({
         isAiOpen={isAiOpen}
         onExportPdf={onExportPdf}
         isExportingPdf={isExportingPdf}
-        onOpenAuth={onOpenAuth}
         selectedIdsCount={selectedIdsCount}
         onBatchDelete={onBatchDelete}
         onDeselectAll={onDeselectAll}
