@@ -154,7 +154,7 @@ export function UserNav({
   if (!currentUser && isLoadingUser) {
     return (
       <div
-        className={cn("h-8 w-[76px] rounded-lg animate-pulse bg-muted/40", className)}
+        className={cn("h-8 w-[76px] rounded-md animate-pulse bg-muted/40", className)}
         aria-hidden="true"
       />
     );
@@ -167,7 +167,7 @@ export function UserNav({
           type="button"
           onClick={handleOpenSettings}
           className={cn(
-            "inline-flex h-9 items-center gap-2 px-2.5 rounded-lg text-foreground hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer select-none max-w-[180px] sm:max-w-[220px]",
+            "inline-flex h-8 items-center gap-1.5 px-2 rounded-md text-foreground hover:bg-neutral-100 dark:hover:bg-neutral-800/80 transition-colors cursor-pointer select-none max-w-[180px] sm:max-w-[220px]",
             className
           )}
           title="Settings"
@@ -184,14 +184,14 @@ export function UserNav({
           <span className="hidden sm:inline truncate text-sm font-medium text-foreground">
             {displayName}
           </span>
-          <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground shrink-0 opacity-70" />
+          <ChevronsUpDown className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-muted-foreground shrink-0 opacity-70" />
         </button>
       ) : (
         <Button
           variant="outline"
           size="sm"
           onClick={handleOpenSignIn}
-          className={cn("cursor-pointer gap-1.5 text-xs font-medium rounded-lg h-8 px-3", className)}
+          className={cn("cursor-pointer gap-1.5 text-xs font-medium rounded-md h-8 px-2.5", className)}
         >
           <LogIn className="h-3.5 w-3.5" />
           <span>Sign in</span>

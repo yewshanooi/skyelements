@@ -80,7 +80,7 @@ export function MiniAppHeader({
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                className="flex items-center gap-1.5 px-2 py-1 -ml-1 rounded-md text-foreground hover:bg-neutral-100 dark:hover:bg-neutral-800/80 transition-colors cursor-pointer select-none truncate"
+                className="flex h-8 items-center gap-1.5 px-2 -ml-1 rounded-md text-foreground hover:bg-neutral-100 dark:hover:bg-neutral-800/80 transition-colors cursor-pointer select-none truncate"
                 title="Switch App"
               >
                 {activeApp ? (
