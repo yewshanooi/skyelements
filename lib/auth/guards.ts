@@ -2,6 +2,14 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { User } from "@supabase/supabase-js";
 
+function sanitizeRedirect(path: string, fallback = '/apps'): string {
+    if (!path || typeof path !== 'string') return fallback;
+    const trimmed = path.trim();
+    return trimmed.startsWith('/') && !trimmed.startsWith('//') && !trimmed.startsWith('/\\')
+        ? trimmed
+        : fallback;
+}
+
 /**
  * Redirects the user to the specified path if they are already authenticated.
  * Used on guest-only pages like login, signup, forgot-password.
@@ -11,7 +19,7 @@ export async function redirectIfAuthenticated(path: string = '/apps'): Promise<v
     const { data } = await supabase.auth.getUser();
 
     if (data?.user) {
-        redirect(path);
+        redirect(sanitizeRedirect(path));
     }
 }
 

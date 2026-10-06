@@ -571,13 +571,6 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
         onClose={() => setInvoiceSale(null)}
       />
 
-      <AuthDialog
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
-        defaultMode={authModalMode}
-        redirectTo={`/sales/${currentView}`}
-      />
-
       {isAiOpen && (
         <Suspense fallback={null}>
           <AiAssistantDrawer

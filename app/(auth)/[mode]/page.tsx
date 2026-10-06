@@ -56,15 +56,16 @@ export default async function AuthModePage({
   }
 
   const { redirectTo } = await searchParams;
+  const targetRedirect = redirectTo || "/apps";
 
   if (mode === "login" || mode === "signup") {
-    await redirectIfAuthenticated();
+    await redirectIfAuthenticated(targetRedirect);
     const redirectQuery = redirectTo ? `&redirectTo=${encodeURIComponent(redirectTo)}` : "";
     redirect(`/?auth=${mode}${redirectQuery}`);
   }
 
   if (mode === "forgot-password") {
-    await redirectIfAuthenticated();
+    await redirectIfAuthenticated(targetRedirect);
     redirect("/?auth=forgot-password");
   }
 
