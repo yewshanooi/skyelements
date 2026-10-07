@@ -26,6 +26,7 @@ import {
   type LucideIcon,
 } from "lucide-react"
 import { useTheme } from "next-themes"
+import { useRouter } from "next/navigation"
 import { isRedirectError } from "next/dist/client/components/redirect-error"
 import { cn } from "@/lib/utils"
 
@@ -61,7 +62,7 @@ import { createClient } from "@/lib/supabase/client"
 import { deleteAccount, updateProfile } from "@/lib/actions/profile"
 import type { UserProfile } from "@/lib/profile"
 import { signout as authSignout } from "@/lib/actions/auth"
-import { deleteAllChats as apiDeleteAllChats } from "@/app/notes/chat-actions"
+import { deleteAllAiChats as apiDeleteAllChats } from "@/lib/ai/actions"
 import { deleteAllNotes as apiDeleteAllNotes } from "@/app/notes/note-actions"
 
 interface SettingsDialogProps {
@@ -152,6 +153,7 @@ export function SettingsDialog({
   onDeleteAccount,
 }: SettingsDialogProps) {
   const { theme, setTheme } = useTheme()
+  const router = useRouter()
   const isMobile = useIsMobile()
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
@@ -175,6 +177,8 @@ export function SettingsDialog({
   // Confirm dialog state
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogType | null>(null)
   const [deletingAccount, setDeletingAccount] = useState(false)
+  const [clearingNotes, setClearingNotes] = useState(false)
+  const [clearingChats, setClearingChats] = useState(false)
   const [signingOut, setSigningOut] = useState(false)
   const [accountError, setAccountError] = useState<string | null>(null)
 
@@ -322,11 +326,22 @@ export function SettingsDialog({
       title: "Clear your note history?",
       description: "This will clear all your notes. This action cannot be undone.",
       icon: Trash2,
+      loading: clearingNotes,
       onConfirm: async () => {
-        if (onDeleteAllNotes) {
-          await onDeleteAllNotes()
-        } else {
-          await apiDeleteAllNotes()
+        setClearingNotes(true)
+        try {
+          if (onDeleteAllNotes) {
+            await onDeleteAllNotes()
+          } else {
+            await apiDeleteAllNotes()
+          }
+          window.dispatchEvent(new CustomEvent("skyelements:notes-cleared"))
+          router.refresh()
+          setConfirmDialog(null)
+        } catch (error) {
+          console.error("Failed to clear notes:", error)
+        } finally {
+          setClearingNotes(false)
         }
       },
     },
@@ -334,11 +349,22 @@ export function SettingsDialog({
       title: "Clear your chat history?",
       description: "This will clear all your chats. This action cannot be undone.",
       icon: Trash2,
+      loading: clearingChats,
       onConfirm: async () => {
-        if (onDeleteAllChats) {
-          await onDeleteAllChats()
-        } else {
-          await apiDeleteAllChats()
+        setClearingChats(true)
+        try {
+          if (onDeleteAllChats) {
+            await onDeleteAllChats()
+          } else {
+            await apiDeleteAllChats()
+          }
+          window.dispatchEvent(new CustomEvent("skyelements:chats-cleared"))
+          router.refresh()
+          setConfirmDialog(null)
+        } catch (error) {
+          console.error("Failed to clear chats:", error)
+        } finally {
+          setClearingChats(false)
         }
       },
     },
@@ -522,7 +548,7 @@ export function SettingsDialog({
         <>
           <SettingsSection
             title="Custom instructions"
-            description="Additional behavior, style, and tone preferences for Chats."
+            description="Additional behavior, style, and tone preferences for Skye."
           >
             <div className="flex w-full items-start gap-2">
               <Textarea
@@ -578,7 +604,7 @@ export function SettingsDialog({
         <>
           <SettingsSection title="Data" description="Manage your mini apps data.">
             <SettingsRow
-              label="Clear notes"
+              label="Clear Notes"
               action={
                 <ActionButton
                   label="Clear"
@@ -588,7 +614,7 @@ export function SettingsDialog({
               }
             />
             <SettingsRow
-              label="Clear chats"
+              label="Clear Skye"
               action={
                 <ActionButton
                   label="Clear"

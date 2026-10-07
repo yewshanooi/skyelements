@@ -1,4 +1,7 @@
-import type { ChatMessage } from "@/app/notes/chat-actions";
+export type ChatMessage = {
+  role: 'user' | 'assistant';
+  content: string;
+};
 
 // ---------------------------------------------------------------------------
 // File type support (for chat attachments)

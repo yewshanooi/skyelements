@@ -33,11 +33,6 @@ export async function createClient(): Promise<SupabaseClient> {
 }
 
 /**
- * Alias for createClient to ensure full backwards compatibility with action callers.
- */
-export const createActionClient = createClient;
-
-/**
  * Helper to fetch both the Supabase server client and the authenticated user in one call.
  * Throws an error if the user is not authenticated.
  */

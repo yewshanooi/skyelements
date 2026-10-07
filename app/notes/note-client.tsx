@@ -12,13 +12,48 @@ import { Editor } from "@/components/blocks/editor-00/editor";
 
 interface NoteClientProps {
   noteId?: string | null;
+  initialNote?: Note | null;
   onNoteActivity?: (noteId: string, title: string) => void;
 }
 
-export function NoteClient({ noteId, onNoteActivity }: NoteClientProps) {
+function parseNoteContent(content?: string): SerializedEditorState | undefined {
+  if (!content) return undefined;
+
+  try {
+    const parsed = JSON.parse(content) as { root?: unknown };
+    if (parsed?.root) return parsed as SerializedEditorState;
+  } catch {
+    // AI-created notes may contain markdown/plain text instead of editor JSON.
+  }
+
+  return {
+    root: {
+      children: content.split(/\r?\n/).map((text) => ({
+        children: text
+          ? [{ detail: 0, format: 0, mode: "normal", style: "", text, type: "text", version: 1 }]
+          : [],
+        direction: "ltr",
+        format: "",
+        indent: 0,
+        type: "paragraph",
+        version: 1,
+      })),
+      direction: "ltr",
+      format: "",
+      indent: 0,
+      type: "root",
+      version: 1,
+    },
+  } as SerializedEditorState;
+}
+
+export function NoteClient({ noteId, initialNote, onNoteActivity }: NoteClientProps) {
+  const isInitialNote = Boolean(initialNote && noteId && initialNote.id === noteId);
   const [currentNoteId, setCurrentNoteId] = useState<string | null>(noteId ?? null);
-  const [title, setTitle] = useState("");
-  const [editorState, setEditorState] = useState<SerializedEditorState | undefined>(undefined);
+  const [title, setTitle] = useState(isInitialNote && initialNote ? initialNote.title : "");
+  const [editorState, setEditorState] = useState<SerializedEditorState | undefined>(() =>
+    isInitialNote ? parseNoteContent(initialNote?.content) : undefined
+  );
   const [loading, setLoading] = useState(false);
   const [showLoadingBar, setShowLoadingBar] = useState(false);
   const [editorKey, setEditorKey] = useState(0);
@@ -27,7 +62,9 @@ export function NoteClient({ noteId, onNoteActivity }: NoteClientProps) {
   const titleSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const contentSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeNoteIdRef = useRef<string | null>(noteId ?? null);
-  const noteRequestRef = useRef<{ noteId: string; promise: Promise<Note> } | null>(null);
+  const noteRequestRef = useRef<{ noteId: string; promise: Promise<Note> } | null>(
+    isInitialNote && initialNote ? { noteId: initialNote.id, promise: Promise.resolve(initialNote) } : null
+  );
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;
@@ -57,11 +94,7 @@ export function NoteClient({ noteId, onNoteActivity }: NoteClientProps) {
         .then((note: Note) => {
           if (activeNoteIdRef.current !== activeNoteId) return;
           setTitle(note.title);
-          try {
-            setEditorState(note.content ? JSON.parse(note.content) : undefined);
-          } catch {
-            setEditorState(undefined);
-          }
+          setEditorState(parseNoteContent(note.content));
           setEditorKey(prev => prev + 1);
           setLoading(false);
         })

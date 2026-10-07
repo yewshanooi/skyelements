@@ -16,7 +16,9 @@ function InnerAppLayoutShell({ children }: { children: React.ReactNode }) {
     pathname === "/notes" ||
     pathname?.startsWith("/notes/") ||
     pathname === "/sales" ||
-    pathname?.startsWith("/sales/");
+    pathname?.startsWith("/sales/") ||
+    pathname === "/skye" ||
+    pathname?.startsWith("/skye/");
 
   // If on a mini-app route but the user is definitely not logged in, keep NavigationBar mounted
   // to avoid any split-second flash of MiniAppShell during unauthenticated redirects.

@@ -38,7 +38,9 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
     pathname === "/notes" ||
     pathname.startsWith("/notes/") ||
     pathname === "/sales" ||
-    pathname.startsWith("/sales/");
+    pathname.startsWith("/sales/") ||
+    pathname === "/skye" ||
+    pathname.startsWith("/skye/");
 
   if (isProtectedMiniApp && !user) {
     const redirectUrl = new URL("/", request.url);

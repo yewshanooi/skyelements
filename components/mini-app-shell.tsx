@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { LayoutGrid, ChevronsUpDown } from "lucide-react";
+import { LayoutGrid, ChevronsUpDown, Sparkles } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,9 +17,30 @@ import type { UserProfile } from "@/lib/profile";
 import { UserNav } from "@/components/user-nav";
 import { cn } from "@/lib/utils";
 
-const APPS = [
+type AppItem = {
+  id: string;
+  name: string;
+  href: string;
+  emoji?: string;
+  icon?: (className?: string) => React.ReactNode;
+};
+
+const APPS: AppItem[] = [
   { id: "notes", name: "Notes", emoji: "📝", href: "/notes" },
   { id: "sales", name: "Sales Dashboard", emoji: "📊", href: "/sales" },
+  {
+    id: "skye",
+    name: "Skye",
+    icon: (className) => (
+      <Sparkles
+        className={cn(
+          "w-3.5 h-3.5 !text-purple-600 dark:!text-purple-400 !stroke-purple-600 dark:!stroke-purple-400 group-focus/dropdown-menu-item:!text-purple-600 dark:group-focus/dropdown-menu-item:!text-purple-400 group-hover/dropdown-menu-item:!text-purple-600 dark:group-hover/dropdown-menu-item:!text-purple-400 group-focus/dropdown-menu-item:!stroke-purple-600 dark:group-focus/dropdown-menu-item:!stroke-purple-400 group-hover/dropdown-menu-item:!stroke-purple-600 dark:group-hover/dropdown-menu-item:!stroke-purple-400 shrink-0",
+          className
+        )}
+      />
+    ),
+    href: "/skye",
+  },
 ];
 
 export interface MiniAppHeaderProps {
@@ -42,6 +63,9 @@ export function MiniAppHeader({
   // Determine current active app based on URL path
   const activeApp = React.useMemo(() => {
     if (!pathname) return null;
+    if (pathname === "/skye" || pathname.startsWith("/skye/")) {
+      return APPS.find((a) => a.id === "skye") ?? null;
+    }
     if (pathname === "/notes" || pathname.startsWith("/notes/")) {
       return APPS.find((a) => a.id === "notes") ?? null;
     }
@@ -85,8 +109,8 @@ export function MiniAppHeader({
               >
                 {activeApp ? (
                   <>
-                    <span className="text-sm select-none leading-none shrink-0">
-                      {activeApp.emoji}
+                    <span className="flex items-center justify-center w-4 h-4 shrink-0 text-sm select-none leading-none">
+                      {activeApp.icon ? activeApp.icon("w-3.5 h-3.5") : activeApp.emoji}
                     </span>
                     <span className="text-sm sm:text-base font-semibold tracking-tight text-foreground truncate">
                       {activeApp.name}
@@ -112,7 +136,14 @@ export function MiniAppHeader({
                       activeApp?.id === app.id ? "font-semibold bg-accent text-accent-foreground" : ""
                     }`}
                   >
-                    <span className="text-sm select-none leading-none">{app.emoji}</span>
+                    <span
+                      className={cn(
+                        "flex items-center justify-center w-4 h-4 shrink-0 text-sm select-none leading-none",
+                        app.id === "skye" && "text-purple-600 dark:text-purple-400"
+                      )}
+                    >
+                      {app.icon ? app.icon("w-3.5 h-3.5") : app.emoji}
+                    </span>
                     <span className="flex-1">{app.name}</span>
                   </Link>
                 </DropdownMenuItem>
@@ -120,7 +151,7 @@ export function MiniAppHeader({
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild className="cursor-pointer">
                 <Link href="/apps" className="flex items-center gap-2.5 w-full">
-                  <LayoutGrid className="h-4 w-4 text-muted-foreground" />
+                  <LayoutGrid className="h-4 w-4 shrink-0 !text-muted-foreground group-focus/dropdown-menu-item:!text-muted-foreground group-hover/dropdown-menu-item:!text-muted-foreground" />
                   <span>All Mini Apps</span>
                 </Link>
               </DropdownMenuItem>
@@ -170,7 +201,8 @@ export function MiniAppShell({
   const pathname = usePathname();
   const isNotes = pathname === "/notes" || pathname?.startsWith("/notes/");
   const isSales = pathname === "/sales" || pathname?.startsWith("/sales/");
-  const isScrollable = scrollable !== undefined ? scrollable : (!isNotes && !isSales);
+  const isSkye = pathname === "/skye" || pathname?.startsWith("/skye/");
+  const isScrollable = scrollable !== undefined ? scrollable : (!isNotes && !isSales && !isSkye);
 
   return (
     <div

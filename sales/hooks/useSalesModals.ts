@@ -9,27 +9,7 @@ export function useSalesModals() {
   const [authModalMode, setAuthModalMode] = useState<'login' | 'signup'>('login');
   const [invoiceSale, setInvoiceSale] = useState<SaleItem | null>(null);
   const [selectedMapSale, setSelectedMapSale] = useState<SaleItem | null>(null);
-  const [isAiOpen, setIsAiOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-
-  useEffect(() => {
-    try {
-      if (sessionStorage.getItem('sales_ai_drawer_open') === 'true') setIsAiOpen(true);
-    } catch {}
-  }, []);
-
-  const handleToggleAi = useCallback(() => {
-    setIsAiOpen((current) => {
-      const next = !current;
-      try { sessionStorage.setItem('sales_ai_drawer_open', String(next)); } catch {}
-      return next;
-    });
-  }, []);
-
-  const handleCloseAi = useCallback(() => {
-    setIsAiOpen(false);
-    try { sessionStorage.setItem('sales_ai_drawer_open', 'false'); } catch {}
-  }, []);
 
   const handleOpenAuth = useCallback((mode: 'login' | 'signup' = 'login') => {
     setAuthModalMode(mode);
@@ -40,7 +20,7 @@ export function useSalesModals() {
     isSaleModalOpen, setIsSaleModalOpen,
     editingSale, setEditingSale, defaultStoreForNewSale, setDefaultStoreForNewSale,
     isAuthModalOpen, setIsAuthModalOpen, authModalMode, invoiceSale, setInvoiceSale,
-    selectedMapSale, setSelectedMapSale, isAiOpen, selectedIds, setSelectedIds,
-    handleToggleAi, handleCloseAi, handleOpenAuth,
+    selectedMapSale, setSelectedMapSale, selectedIds, setSelectedIds,
+    handleOpenAuth,
   };
 }

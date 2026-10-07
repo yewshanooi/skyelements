@@ -76,7 +76,9 @@ export function NavigationBar({ forceShow = false, user: initialUser }: Navigati
       pathname === "/notes" ||
       pathname?.startsWith("/notes/") ||
       pathname === "/sales" ||
-      pathname?.startsWith("/sales/"))
+      pathname?.startsWith("/sales/") ||
+      pathname === "/skye" ||
+      pathname?.startsWith("/skye/"))
   ) {
     return null
   }

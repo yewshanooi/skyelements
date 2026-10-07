@@ -61,10 +61,6 @@ const KanbanBoardView = dynamic(
   () => import('@/sales/views/kanban/KanbanBoardView').then((m) => ({ default: m.KanbanBoardView })),
   { ssr: false, loading: () => <ViewLoading /> }
 );
-const AiAssistantDrawer = dynamic(
-  () => import('@/sales/ai/AiAssistantDrawer').then((m) => ({ default: m.AiAssistantDrawer })),
-  { ssr: false }
-);
 
 interface DashboardContentProps {
   initialSales?: SaleItem[];
@@ -247,21 +243,9 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
     isSaleModalOpen, setIsSaleModalOpen,
     editingSale, setEditingSale, defaultStoreForNewSale, setDefaultStoreForNewSale,
     isAuthModalOpen, setIsAuthModalOpen, authModalMode, invoiceSale, setInvoiceSale,
-    selectedMapSale, setSelectedMapSale, isAiOpen, selectedIds, setSelectedIds,
-    handleToggleAi, handleCloseAi, handleOpenAuth,
+    selectedMapSale, setSelectedMapSale, selectedIds, setSelectedIds,
+    handleOpenAuth,
   } = useSalesModals();
-
-  // Global keyboard shortcut to toggle AI Assistant (Ctrl+J or Cmd+J)
-  useEffect(() => {
-    const handleGlobalKeyDown = (e: globalThis.KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'j') {
-        e.preventDefault();
-        handleToggleAi();
-      }
-    };
-    window.addEventListener('keydown', handleGlobalKeyDown);
-    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [handleToggleAi]);
 
   // Fetch sales on mount if not pre-populated
   useEffect(() => {
@@ -472,8 +456,6 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
         selectedIdsCount={currentView === 'table' ? selectedIds.length : 0}
         onBatchDelete={handleBatchDelete}
         onDeselectAll={() => setSelectedIds([])}
-        onToggleAi={handleToggleAi}
-        isAiOpen={isAiOpen}
       />
 
       <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-2.5 sm:px-4 md:px-6 py-3 sm:py-4 pb-28 sm:pb-32 md:pb-6 w-full max-w-full">
@@ -570,27 +552,6 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
         sale={invoiceSale}
         onClose={() => setInvoiceSale(null)}
       />
-
-      {isAiOpen && (
-        <Suspense fallback={null}>
-          <AiAssistantDrawer
-            isOpen={isAiOpen}
-            onClose={handleCloseAi}
-            sales={sales}
-            onCreateSale={async (newSaleData) => {
-              const created = await createSaleAction(newSaleData);
-              setSales((prev) => [created, ...prev]);
-              return created;
-            }}
-            onUpdateSale={async (saleId, updates) => {
-              await handleUpdateSaleInline(saleId, updates);
-            }}
-            onDeleteSale={handleDelete}
-            onSwitchView={(v) => handleSelectView(v)}
-            onSetSearch={(query) => handleSearchChange(query)}
-          />
-        </Suspense>
-      )}
     </div>
   );
 }

@@ -4,7 +4,8 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, Sparkles } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "Mini Apps",
@@ -14,7 +15,8 @@ export const metadata: Metadata = {
 interface MiniAppItem {
   id: string;
   name: string;
-  emoji: string;
+  emoji?: string;
+  icon?: (className?: string) => React.ReactNode;
   version: string;
   description: string;
   tags: string[];
@@ -27,8 +29,8 @@ const MINI_APPS: MiniAppItem[] = [
     name: "Notes",
     emoji: "📝",
     version: "v1.0.0",
-    description: "AI-powered note-taking app with multi-turn reasoning and rich markdown editor.",
-    tags: ["AI Chat", "Markdown", "Reasoning"],
+    description: "Note-taking app with markdown editing and clean organization.",
+    tags: ["Notes", "Markdown", "Organization"],
     href: "/notes",
   },
   {
@@ -36,9 +38,25 @@ const MINI_APPS: MiniAppItem[] = [
     name: "Sales Dashboard",
     emoji: "📊",
     version: "v1.0.0",
-    description: "Manage sales, track revenue analytics, and organize orders across multiple channels.",
+    description: "Manage sales, track revenue, and organize orders across channels.",
     tags: ["Analytics", "Multi-view", "PDF Export"],
     href: "/sales",
+  },
+  {
+    id: "skye",
+    name: "Skye",
+    icon: (className) => (
+      <Sparkles
+        className={cn(
+          "w-6 h-6 !text-purple-600 dark:!text-purple-400 !stroke-purple-600 dark:!stroke-purple-400 shrink-0",
+          className
+        )}
+      />
+    ),
+    version: "v1.0.0",
+    description: "AI assistant to chat, analyze, and assist across your mini apps.",
+    tags: ["Assistant", "Workspace", "Reasoning"],
+    href: "/skye",
   },
 ];
 
@@ -53,9 +71,9 @@ export default async function AppsPage() {
   }
 
   return (
-    <main className="flex-1 w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 flex flex-col justify-start">
+    <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 flex flex-col justify-start">
       {/* Apps Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
         {MINI_APPS.map((app) => (
           <Link
             key={app.id}
@@ -67,7 +85,7 @@ export default async function AppsPage() {
                 {/* Top Bar inside Card: Icon & Version */}
                 <div className="flex items-center justify-between gap-3">
                   <div className="w-12 h-12 rounded-xl bg-muted/70 dark:bg-neutral-800/80 border border-border/60 flex items-center justify-center text-2xl shadow-2xs group-hover:scale-105 transition-transform duration-200 select-none">
-                    {app.emoji}
+                    {app.icon ? app.icon("w-6 h-6") : app.emoji}
                   </div>
                   <Badge variant="outline" className="font-mono text-xs text-muted-foreground font-normal">
                     {app.version}

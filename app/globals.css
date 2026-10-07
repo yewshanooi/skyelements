@@ -215,6 +215,12 @@
   background: transparent;
 }
 
+::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
 /* Prevent Radix Dialog / react-remove-scroll from hiding the vertical scrollbar and shifting layout */
 html body[data-scroll-locked],
 body[data-scroll-locked] {
