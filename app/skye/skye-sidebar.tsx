@@ -70,11 +70,9 @@ export function SkyeSidebar({
         <SidebarContent>
           <SidebarGroup className="group-data-[collapsible=icon]:hidden">
             <SidebarGroupLabel>Chats</SidebarGroupLabel>
-            {onNewChat && (
-              <SidebarGroupAction title="New chat" onClick={onNewChat}>
-                <Plus /> <span className="sr-only">New chat</span>
-              </SidebarGroupAction>
-            )}
+            <SidebarGroupAction title="New chat" onClick={onNewChat}>
+              <Plus /> <span className="sr-only">New chat</span>
+            </SidebarGroupAction>
             <SidebarMenu>
               {chats.length === 0 ? (
                 <SidebarMenuItem>
@@ -87,7 +85,7 @@ export function SkyeSidebar({
                   <SidebarMenuItem key={chat.id}>
                     <SidebarMenuButton
                       isActive={activeChatId === chat.id}
-                      onClick={() => onSelectChat?.(chat.id)}
+                      onClick={() => onSelectChat(chat.id)}
                     >
                       <Bot />
                       <span>{chat.title || "New chat"}</span>
@@ -113,7 +111,7 @@ export function SkyeSidebar({
                       >
                         <DropdownMenuItem
                           className="cursor-pointer"
-                          onClick={() => onTogglePinChat?.(chat.id, chat.is_pinned || false)}
+                          onClick={() => onTogglePinChat(chat.id, chat.is_pinned)}
                         >
                           {chat.is_pinned ? <PinOff /> : <Pin />}
                           <span>{chat.is_pinned ? "Unpin" : "Pin"}</span>
@@ -172,7 +170,7 @@ export function SkyeSidebar({
               variant="destructive"
               onClick={() => {
                 if (pendingDeleteId) {
-                  onDeleteChat?.(pendingDeleteId);
+                  onDeleteChat(pendingDeleteId);
                   setPendingDeleteId(null);
                 }
               }}

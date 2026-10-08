@@ -118,7 +118,6 @@ import { SkyeSidebar } from "./skye-sidebar";
 // ---------------------------------------------------------------------------
 
 type SpeechRecognitionResultLike = {
-  isFinal: boolean;
   [index: number]: { transcript: string };
 };
 
@@ -135,7 +134,6 @@ type SpeechRecognitionLike = {
   lang: string;
   start: () => void;
   stop: () => void;
-  abort: () => void;
   onresult: ((event: SpeechRecognitionEventLike) => void) | null;
   onend: (() => void) | null;
   onerror: ((event: { error: string }) => void) | null;
@@ -257,7 +255,6 @@ type DisplayMessage = {
   content: string;
   toolResults?: AiToolResult[];
   attachments: DisplayAttachment[];
-  isOptimistic?: boolean;
 };
 
 const greetings = [
@@ -370,7 +367,6 @@ function ToolResultCard({ card }: { card: NonNullable<AiToolResult['card']> }) {
 // ---------------------------------------------------------------------------
 
 interface ToolMarkerItem {
-  name: string;
   label: string;
   tooltip: string;
   icon: LucideIcon;
@@ -398,14 +394,14 @@ function getAiToolMarkers(toolResults: AiToolResult[]): ToolMarkerItem[] {
 
     const known = TOOL_LABELS[lowerName];
     if (known) {
-      markers.push({ name: rawName, label: known.label, tooltip: known.tooltip, icon: known.icon });
+      markers.push({ label: known.label, tooltip: known.tooltip, icon: known.icon });
     } else {
       const words = rawName.replace(/^ai_/i, '').split('_');
       const verb = words[0];
       const rest = words.slice(1).join(' ');
       const gerund = verb.endsWith('e') ? `${verb.slice(0, -1)}ing` : `${verb}ing`;
       const label = `${gerund.charAt(0).toUpperCase() + gerund.slice(1)} ${rest}`.trim();
-      markers.push({ name: rawName, label, tooltip: `Tool: ${rawName}`, icon: SearchIcon });
+      markers.push({ label, tooltip: `Tool: ${rawName}`, icon: SearchIcon });
     }
   }
 
@@ -557,7 +553,6 @@ const InputArea = memo(function InputArea({
   setSelectedModel,
   effort,
   setEffort,
-  isOverLimit,
   isDraggingOver,
   fileInputRef,
   onPromptChange,
@@ -583,7 +578,6 @@ const InputArea = memo(function InputArea({
   setSelectedModel: (id: string) => void;
   effort: ThinkingEffort;
   setEffort: (effort: ThinkingEffort) => void;
-  isOverLimit: boolean;
   isDraggingOver: boolean;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   onPromptChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
@@ -853,7 +847,7 @@ const InputArea = memo(function InputArea({
             size="icon-xs"
             onClick={onSend}
             title="Send"
-            disabled={isInputDisabled || isOverLimit || (!prompt.trim() && !hasPendingAttachments)}
+            disabled={isInputDisabled || (!prompt.trim() && !hasPendingAttachments)}
           >
             <ArrowUpIcon />
             <span className="sr-only">Send</span>
@@ -1291,8 +1285,8 @@ export function SkyeClient({ user, initialThinkingEffort }: SkyeClientProps) {
   }, [processFiles]);
 
   // Send message
-  const handleSend = async (customPrompt?: string) => {
-    const textToSend = (customPrompt ?? prompt).trim();
+  const handleSend = async () => {
+    const textToSend = prompt.trim();
     if (!textToSend && pendingAttachments.length === 0) return;
     if (loading) return;
 
@@ -1339,7 +1333,6 @@ export function SkyeClient({ user, initialThinkingEffort }: SkyeClientProps) {
         role: 'user',
         content: textToSend,
         attachments: displayAttachments,
-        isOptimistic: true,
       };
 
       setMessages((prev) => [...prev, optimisticUserMsg]);
@@ -1429,13 +1422,12 @@ export function SkyeClient({ user, initialThinkingEffort }: SkyeClientProps) {
       setSelectedModel={setSelectedModel}
       effort={effort}
       setEffort={handleEffortChange}
-      isOverLimit={prompt.length > MAX_INPUT_CHARS}
       isDraggingOver={isDraggingOver}
       fileInputRef={fileInputRef}
       onPromptChange={(e) => setPrompt(e.target.value.slice(0, MAX_INPUT_CHARS))}
       onKeyDown={handleKeyDown}
       onPaste={handlePaste}
-      onSend={() => handleSend()}
+      onSend={handleSend}
       isVoiceInputSupported={isVoiceInputSupported}
       isListening={isListening}
       onToggleVoiceInput={handleToggleVoiceInput}
