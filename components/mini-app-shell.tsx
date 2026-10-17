@@ -86,11 +86,19 @@ export function MiniAppHeader({
             title="Home"
           >
             <Image
+              src="/logo/skyelements-green-1.png"
+              alt="SkyElements Green 1 Logo"
+              width={100}
+              height={100}
+              className="block h-7 w-7 select-none sm:hidden"
+              priority
+            />
+            <Image
               src="/logo/skyelements.png"
               alt="SkyElements Logo"
               width={160}
               height={37}
-              className="h-7 w-auto select-none"
+              className="hidden h-7 w-auto select-none sm:block"
               priority
             />
           </Link>
