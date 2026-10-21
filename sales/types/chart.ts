@@ -24,7 +24,7 @@ export type WidgetWidth = '1/4' | '2/4' | '3/4' | '4/4';
 
 export const ALL_WIDGET_WIDTHS: WidgetWidth[] = ['1/4', '2/4', '3/4', '4/4'];
 
-export type WidgetCategory = 'overview' | 'revenue' | 'breakdown' | 'customers' | 'operations';
+type WidgetCategory = 'overview' | 'revenue' | 'breakdown' | 'customers' | 'operations';
 
 export interface WidgetConfig {
   id: string;
@@ -290,7 +290,7 @@ export const KPI_CONFIG_MAP = new Map<KpiCardId, KpiCardDefinition>(
   ALL_KPI_DEFINITIONS.map((c) => [c.id, c])
 );
 
-export const DEFAULT_KPI_ORDER: KpiCardId[] = [
+const DEFAULT_KPI_ORDER: KpiCardId[] = [
   'net_profit',
   'gross_revenue',
   'profit_margin',
@@ -309,7 +309,7 @@ export const DEFAULT_KPI_SIZES: Record<string, KpiCardSize> = Object.fromEntries
   DEFAULT_KPI_ORDER.map((id) => [id, '1x1'])
 );
 
-export const DEFAULT_KPI_HIDDEN: Record<string, boolean> = {
+const DEFAULT_KPI_HIDDEN: Record<string, boolean> = {
   total_cost: true,
   roi: true,
   total_orders: true,
@@ -352,7 +352,7 @@ export const getCardColSpan = (
 
 export const MAX_OVERVIEW_ROWS = 3;
 
-export const getCardSpan = (
+const getCardSpan = (
   id: KpiCardId,
   sizes: Record<string, KpiCardSize> = DEFAULT_KPI_SIZES,
   cols: number = 6

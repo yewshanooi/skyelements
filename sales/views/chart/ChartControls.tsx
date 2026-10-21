@@ -14,7 +14,7 @@ import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 // =========================================================================
 // 1. Segmented Control / Button Pill Group
 // =========================================================================
-export interface SegmentOption<T extends string> {
+interface SegmentOption<T extends string> {
   value: T;
   label?: string;
 }

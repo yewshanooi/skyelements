@@ -15,7 +15,7 @@ import {
  * Runs with the caller's Supabase client, so RLS limits it to that user.
  */
 
-export type OptionsByType = Record<OptionType, string[]>;
+type OptionsByType = Record<OptionType, string[]>;
 
 /** Upper bounds keep the system prompt small and bounded. */
 const MAX_OPTIONS_PER_TYPE_IN_PROMPT = 60;

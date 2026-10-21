@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import type { SaleItem } from '@/sales/types';
-import { geocodeAddress } from '@/sales/services/geocodeService';
+import { geocodeAddress } from '@/sales/lib/geocoder';
 import { normalizeCoordinates } from '@/sales/lib/locationParser';
 import { extractStoragePath, mapRowToSaleItem, SALES_SELECT_COLUMNS } from '@/sales/lib/saleMappers';
 
@@ -46,7 +46,8 @@ async function resolveCoordinates(
 
   if (location && (finalLat === undefined || finalLng === undefined || isNaN(finalLat) || isNaN(finalLng))) {
     try {
-      const coords = await geocodeAddress(location);
+      // Keep saves snappy: the browser pickers already resolve most locations before this point.
+      const coords = await geocodeAddress(location, { deadlineMs: 3500 });
       if (coords) {
         finalLat = coords.lat;
         finalLng = coords.lng;

@@ -331,7 +331,7 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
     }
   }, []);
 
-  const handleUpdateLocation = useCallback(async (saleId: string, location: string, lat: number, lng: number) => {
+  const handleUpdateLocation = useCallback(async (saleId: string, location: string, lat?: number, lng?: number) => {
     try {
       const norm = normalizeCoordinates(lat, lng);
       const updated = await updateSaleAction(
@@ -542,7 +542,6 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
                   sortOrder={sortOrder}
                   onSortChange={handleSortChange}
                   onSelectSale={handleOpenEdit}
-                  onOpenNewSale={handleOpenNew}
                   onUpdateStore={handleUpdateStore}
                 />
               )}

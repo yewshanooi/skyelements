@@ -1,15 +1,16 @@
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import type { FC, DragEvent } from 'react';
-import { Plus, User, ShoppingBag, Calendar } from 'lucide-react';
+import { User, ShoppingBag, Calendar } from 'lucide-react';
 import type { SaleItem, SortField, SortOrder } from '@/sales/types';
 import { TagPill } from '@/sales/views/table/TagPill';
 import { NotionFilterBar } from '@/sales/filters/NotionFilterBar';
-import { filterSales, type FilterState } from '@/sales/lib/filterUtils';
+import { filterSales, hasActiveFilters, type FilterState } from '@/sales/lib/filterUtils';
 import { formatDayMonth } from '@/sales/lib/dateUtils';
 import { useOptionsStore } from '@/sales/context/OptionsContext';
 import { getTagColorHex } from '@/sales/lib/optionTypes';
+import { useDragAutoScroll } from '@/hooks/useDragAutoScroll';
 
 interface KanbanBoardViewProps {
   sales: SaleItem[];
@@ -17,9 +18,8 @@ interface KanbanBoardViewProps {
   onFiltersChange: (filters: FilterState) => void;
   sortField?: SortField;
   sortOrder?: SortOrder;
-  onSortChange?: (field: SortField, order: SortOrder) => void;
+  onSortChange: (field: SortField, order: SortOrder) => void;
   onSelectSale: (sale: SaleItem) => void;
-  onOpenNewSale: (defaultStore?: string) => void;
   onUpdateStore?: (saleId: string, newStore: string) => Promise<void>;
 }
 
@@ -40,31 +40,19 @@ export const KanbanBoardView: FC<KanbanBoardViewProps> = ({
   sales,
   filters,
   onFiltersChange,
-  sortField: propSortField = 'sales',
-  sortOrder: propSortOrder = 'desc',
+  sortField = 'sales',
+  sortOrder = 'desc',
   onSortChange,
   onSelectSale,
-  onOpenNewSale,
   onUpdateStore,
 }) => {
   const { getOptionNames, getOptionColor } = useOptionsStore();
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverCol, setDragOverCol] = useState<string | null>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
 
-  const [internalSortField, setInternalSortField] = useState<SortField>(propSortField);
-  const [internalSortOrder, setInternalSortOrder] = useState<SortOrder>(propSortOrder);
-
-  const sortField = propSortField ?? internalSortField;
-  const sortOrder = propSortOrder ?? internalSortOrder;
-
-  const setSort = (field: SortField, order: SortOrder) => {
-    if (onSortChange) {
-      onSortChange(field, order);
-    } else {
-      setInternalSortField(field);
-      setInternalSortOrder(order);
-    }
-  };
+  // Auto-scroll while dragging so cards can be dropped into columns on rows that are out of view.
+  useDragAutoScroll(draggedId !== null, gridRef);
 
   // High-performance Schwartzian transform sorting (precomputes sort keys once in O(N))
   const filteredAndSortedSales = useMemo(() => {
@@ -109,18 +97,22 @@ export const KanbanBoardView: FC<KanbanBoardViewProps> = ({
     }
     data.set(UNASSIGNED_KEY, unassigned);
 
-    const cols: BoardColumn[] = storeNames.map((name) => ({
+    // A Store filter narrows the board to just the selected store columns.
+    const visibleStoreNames =
+      filters.stores.length > 0 ? storeNames.filter((n) => filters.stores.includes(n)) : storeNames;
+
+    const cols: BoardColumn[] = visibleStoreNames.map((name) => ({
       key: name,
       value: name,
       label: name,
       hex: getTagColorHex(getOptionColor('marketplace', name)),
     }));
-    if (unassigned.sales.length > 0 || storeNames.length === 0) {
+    if (unassigned.sales.length > 0) {
       cols.push({ key: UNASSIGNED_KEY, value: '', label: 'No store', hex: UNASSIGNED_HEX });
     }
 
     return { columns: cols, columnData: data };
-  }, [filteredAndSortedSales, storeNames, getOptionColor]);
+  }, [filteredAndSortedSales, storeNames, filters.stores, getOptionColor]);
 
   const handleDragStart = (e: DragEvent<HTMLDivElement>, saleId: string) => {
     e.dataTransfer.setData('text/plain', saleId);
@@ -167,20 +159,31 @@ export const KanbanBoardView: FC<KanbanBoardViewProps> = ({
         storageKeyPrefix="board"
         sortField={sortField}
         sortOrder={sortOrder}
-        onSortChange={setSort}
+        onSortChange={onSortChange}
         filters={filters}
         onFiltersChange={onFiltersChange}
       />
 
-      {storeNames.length === 0 && (
-        <p className="text-xs text-neutral-500 dark:text-neutral-400">
-          The board has one column per store. Create stores from the Store column in the table (or
-          when adding an order) and they will appear here.
-        </p>
+      {/* No stores and nothing to show: a single board-level empty state instead of empty columns */}
+      {columns.length === 0 && (
+        <div className="min-h-[306px] px-4 flex flex-col items-center justify-center text-center rounded-xl bg-white dark:bg-[#1f1f1f] border border-dashed border-neutral-200 dark:border-neutral-800 space-y-3">
+          <ShoppingBag className="w-10 h-10 text-neutral-300 dark:text-neutral-600 mx-auto" />
+          <h3 className="text-sm font-semibold text-neutral-800 dark:text-neutral-200">
+            {hasActiveFilters(filters) ? 'No orders match the current filters' : 'No stores available'}
+          </h3>
+          <p className="text-xs text-neutral-400 max-w-sm mx-auto">
+            {hasActiveFilters(filters)
+              ? 'Try adjusting or clearing your filters.'
+              : 'Try creating a store when adding a new sale.'}
+          </p>
+        </div>
       )}
 
-      {/* One column per store (scrolls sideways when there are many) */}
-      <div className="flex gap-4 sm:gap-6 pb-6 overflow-x-auto">
+      {/* One column per store, max 2 per row (wraps onto new rows like the Chart grid) */}
+      <div
+        ref={gridRef}
+        className={`grid grid-cols-1 ${columns.length > 1 ? 'md:grid-cols-2' : ''} gap-3.5 sm:gap-5 pb-6`}
+      >
         {columns.map((col) => {
           const colInfo = columnData.get(col.key) ?? { sales: [], total: 0 };
           const colSales = colInfo.sales;
@@ -194,7 +197,7 @@ export const KanbanBoardView: FC<KanbanBoardViewProps> = ({
               onDragOver={(e) => handleDragOver(e, col.key)}
               onDragLeave={handleDragLeave}
               onDrop={(e) => handleDrop(e, col)}
-              className={`flex flex-col flex-1 min-w-[280px] sm:min-w-[320px] rounded-xl bg-neutral-100/60 dark:bg-[#1f1f1f]/80 border transition-all duration-200 p-3 sm:p-4 min-h-[300px] md:min-h-[550px] max-h-[75vh] md:max-h-[800px] shadow-xs ${
+              className={`flex flex-col min-w-0 rounded-xl bg-neutral-100/60 dark:bg-[#1f1f1f]/80 border transition-all duration-200 p-3 sm:p-4 min-h-[300px] md:min-h-[500px] max-h-[75vh] md:max-h-[700px] shadow-xs ${
                 isOver
                   ? 'border-blue-500/80 ring-2 ring-blue-500/20 bg-blue-50/20 dark:bg-blue-950/20'
                   : 'border-neutral-200/80 dark:border-neutral-800'
@@ -229,15 +232,21 @@ export const KanbanBoardView: FC<KanbanBoardViewProps> = ({
               </div>
 
               {/* Cards Container */}
-              <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+              <div
+                className={
+                  colSales.length === 0
+                    ? 'flex-1 flex flex-col min-h-0'
+                    : 'flex-1 overflow-y-auto space-y-3 pr-1'
+                }
+              >
                 {colSales.length === 0 ? (
-                  <div className="py-16 px-4 text-center border border-dashed border-neutral-200 dark:border-neutral-800 rounded-xl space-y-3">
+                  <div className="flex-1 w-full py-16 px-4 flex flex-col items-center justify-center text-center border border-dashed border-neutral-200 dark:border-neutral-800 rounded-xl space-y-3">
                     <ShoppingBag className="w-10 h-10 text-neutral-300 dark:text-neutral-600 mx-auto" />
                     <h3 className="text-sm font-semibold text-neutral-800 dark:text-neutral-200">
                       No orders in {col.label}
                     </h3>
                     <p className="text-xs text-neutral-400 max-w-sm mx-auto">
-                      Drag orders here or add a new order.
+                      Drag to assign orders to this store.
                     </p>
                   </div>
                 ) : (
@@ -300,15 +309,6 @@ export const KanbanBoardView: FC<KanbanBoardViewProps> = ({
                   })
                 )}
               </div>
-
-              {/* Column Footer Button */}
-              <button
-                onClick={() => onOpenNewSale(col.value || undefined)}
-                className="mt-3 py-2 w-full text-center text-xs font-medium text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200 hover:bg-white dark:hover:bg-neutral-800/80 rounded-lg border border-dashed border-neutral-300 dark:border-neutral-700 transition-all flex items-center justify-center gap-1.5 shadow-2xs hover:shadow-xs cursor-pointer"
-              >
-                <Plus className="w-3.5 h-3.5 text-neutral-400" />
-                <span>New order</span>
-              </button>
             </div>
           );
         })}

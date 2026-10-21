@@ -16,11 +16,11 @@ import { filterSales, DEFAULT_EMPTY_FILTERS, hasActiveFilters, type FilterState 
 
 interface TimelineViewProps {
   sales: SaleItem[];
-  filters?: FilterState;
-  onFiltersChange?: (filters: FilterState) => void;
-  currentYear?: number;
-  currentMonth?: number;
-  onChangeYearMonth?: (year: number, month: number) => void;
+  filters: FilterState;
+  onFiltersChange: (filters: FilterState) => void;
+  currentYear: number;
+  currentMonth: number;
+  onChangeYearMonth: (year: number, month: number) => void;
   onSelectSale: (sale: SaleItem) => void;
 }
 
@@ -42,47 +42,17 @@ function normalizeDate(raw?: string): string {
 
 export const TimelineView: FC<TimelineViewProps> = ({
   sales,
-  filters: propFilters,
-  onFiltersChange: propOnFiltersChange,
-  currentYear: propYear,
-  currentMonth: propMonth,
-  onChangeYearMonth,
+  filters,
+  onFiltersChange,
+  currentYear,
+  currentMonth,
+  onChangeYearMonth: setYearMonth,
   onSelectSale,
 }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const today = useMemo(() => new Date(), []);
   const todayDateStr = useMemo(() => formatIsoDate(today), [today]);
-
-  const [internalYear, setInternalYear] = useState<number>(today.getFullYear());
-  const [internalMonth, setInternalMonth] = useState<number>(today.getMonth());
-  const [internalFilters, setInternalFilters] = useState<FilterState>(() => ({
-    ...DEFAULT_EMPTY_FILTERS,
-  }));
-
-  const currentYear = propYear ?? internalYear;
-  const currentMonth = propMonth ?? internalMonth;
-  const activeFilters = propFilters || internalFilters;
-
-  const handleFiltersChange = useCallback(
-    (newFilters: FilterState) => {
-      if (propOnFiltersChange) {
-        propOnFiltersChange(newFilters);
-      } else {
-        setInternalFilters(newFilters);
-      }
-    },
-    [propOnFiltersChange]
-  );
-
-  const setYearMonth = (y: number, m: number) => {
-    if (onChangeYearMonth) {
-      onChangeYearMonth(y, m);
-    } else {
-      setInternalYear(y);
-      setInternalMonth(m);
-    }
-  };
 
   // Track visible container width so empty state message stays dead-center in viewport
   const [containerWidth, setContainerWidth] = useState<number | undefined>(undefined);
@@ -286,7 +256,7 @@ export const TimelineView: FC<TimelineViewProps> = ({
 
   // Filter and sort sales for the timeline efficiently
   const relevantSales = useMemo(() => {
-    const filtered = filterSales(sales, activeFilters).filter((s) => Boolean(s.date));
+    const filtered = filterSales(sales, filters).filter((s) => Boolean(s.date));
 
     if (filtered.length <= 1) return filtered;
 
@@ -297,7 +267,7 @@ export const TimelineView: FC<TimelineViewProps> = ({
 
     mapped.sort((a, b) => b.time - a.time);
     return mapped.map((m) => m.sale);
-  }, [sales, activeFilters]);
+  }, [sales, filters]);
 
   // Sales falling within the active timeline window (prev tail + current month + next head)
   const timelineSales = useMemo(() => {
@@ -307,11 +277,11 @@ export const TimelineView: FC<TimelineViewProps> = ({
     });
   }, [relevantSales, dayIndexMap]);
 
-  const isFilterActive = useMemo(() => hasActiveFilters(activeFilters), [activeFilters]);
+  const isFilterActive = useMemo(() => hasActiveFilters(filters), [filters]);
 
   const handleResetFilters = useCallback(() => {
-    handleFiltersChange({ ...DEFAULT_EMPTY_FILTERS });
-  }, [handleFiltersChange]);
+    onFiltersChange({ ...DEFAULT_EMPTY_FILTERS });
+  }, [onFiltersChange]);
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -319,8 +289,8 @@ export const TimelineView: FC<TimelineViewProps> = ({
       <NotionFilterBar
         storageKeyPrefix="timeline"
         showSort={false}
-        filters={activeFilters}
-        onFiltersChange={handleFiltersChange}
+        filters={filters}
+        onFiltersChange={onFiltersChange}
         extraRightActions={
           <div className="flex items-center gap-1.5 sm:gap-2">
             <div className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-md text-xs font-medium bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 border border-neutral-200/80 dark:border-neutral-700/80 shadow-2xs shrink-0">
@@ -446,7 +416,7 @@ export const TimelineView: FC<TimelineViewProps> = ({
                   <p className="text-xs text-neutral-400 max-w-sm mx-auto">
                     {isFilterActive
                       ? 'Try adjusting your active filters to view orders.'
-                      : 'Navigate to a different month or add a new sale to see it.'}
+                      : 'Navigate to a different month or add a new sale to view.'}
                   </p>
                   {isFilterActive && (
                     <button

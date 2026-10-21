@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import type { SaleItem } from '@/sales/types';
 
 export function useSalesModals() {

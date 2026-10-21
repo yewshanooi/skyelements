@@ -24,7 +24,7 @@ export const DEFAULT_EMPTY_FILTERS: FilterState = {
   dateRange: 'all',
 };
 
-export interface ParsedUrlState {
+interface ParsedUrlState {
   filters: FilterState;
   sortField?: SortField;
   sortOrder?: SortOrder;
@@ -210,7 +210,7 @@ export function buildSearchParamsFromFilters(
 }
 
 
-export function matchesDateFilter(dateStr?: string, dateFilter?: DateFilterConfig, legacyRange?: string): boolean {
+function matchesDateFilter(dateStr?: string, dateFilter?: DateFilterConfig, legacyRange?: string): boolean {
   if (dateFilter) {
     const { startDate, endDate } = dateFilter;
 

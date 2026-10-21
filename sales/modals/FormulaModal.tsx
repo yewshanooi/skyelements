@@ -24,7 +24,7 @@ import {
 import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 
 
-export interface FormulaModalProps {
+interface FormulaModalProps {
   isOpen: boolean;
   onClose: () => void;
   sales: SaleItem[];

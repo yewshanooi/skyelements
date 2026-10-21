@@ -173,7 +173,7 @@ export function normalizeFormula(saved?: string | null): string {
   return saved.replace(/round\(\s+#/g, 'round(#');
 }
 
-export interface FormulaDetails {
+interface FormulaDetails {
   isValid: boolean;
   result: unknown;
   numericValue: number;
@@ -246,7 +246,7 @@ function isDefaultFormula(formulaStr?: string | null): boolean {
 /**
  * Replaces column tokens in formula with row values.
  */
-export function substituteFormulaTokens(
+function substituteFormulaTokens(
   formulaStr: string,
   item: Partial<SaleItem> | null | undefined
 ): { expr: string; variables: { token: string; value: number | string; colId: string }[] } {
@@ -672,7 +672,7 @@ class ExpressionParser {
  * Safe Abstract Syntax Evaluator for Mathematical and Logical Expressions.
  * Completely eliminates the use of `eval()` and `new Function()`.
  */
-export function evaluateSafeExpression(expr: string): unknown {
+function evaluateSafeExpression(expr: string): unknown {
   const tokens = tokenize(expr);
   const parser = new ExpressionParser(tokens);
   return parser.parse();

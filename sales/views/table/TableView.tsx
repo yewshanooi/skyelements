@@ -36,7 +36,7 @@ import { useAuth } from '@/sales/context/AuthContext';
 import { uploadInvoiceFile } from '@/sales/services/salesService';
 import { deleteInvoiceFileAction } from '@/sales/services/salesActions';
 
-export type ColumnId =
+type ColumnId =
   | 'select'
   | 'quantity'
   | 'item'
@@ -124,14 +124,14 @@ interface TableViewProps {
   onFiltersChange: (filters: FilterState) => void;
   sortField?: SortField;
   sortOrder?: SortOrder;
-  onSortChange?: (field: SortField, order: SortOrder) => void;
+  onSortChange: (field: SortField, order: SortOrder) => void;
   onEditSale: (sale: SaleItem) => void;
   onUpdateSale?: (saleId: string, updates: Partial<SaleItem>) => Promise<void>;
   onDeleteSale: (id: string) => void;
   onViewInvoice: (sale: SaleItem) => void;
   onSelectMapPin?: (sale: SaleItem) => void;
-  selectedIds?: string[];
-  onSelectionChange?: (ids: string[]) => void;
+  selectedIds: string[];
+  onSelectionChange: (ids: string[]) => void;
   onResetSearch?: () => void;
 }
 
@@ -139,43 +139,18 @@ export const TableView: FC<TableViewProps> = ({
   sales,
   filters,
   onFiltersChange,
-  sortField: propSortField = 'date',
-  sortOrder: propSortOrder = 'desc',
-  onSortChange,
+  sortField = 'date',
+  sortOrder = 'desc',
+  onSortChange: setSort,
   onEditSale,
   onUpdateSale,
   onDeleteSale,
   onViewInvoice,
   onSelectMapPin,
-  selectedIds: controlledSelectedIds,
-  onSelectionChange,
+  selectedIds,
+  onSelectionChange: setSelectedIds,
   onResetSearch,
 }) => {
-  const [internalSortField, setInternalSortField] = useState<SortField>(propSortField);
-  const [internalSortOrder, setInternalSortOrder] = useState<SortOrder>(propSortOrder);
-
-  const sortField = propSortField ?? internalSortField;
-  const sortOrder = propSortOrder ?? internalSortOrder;
-
-  const setSort = (field: SortField, order: SortOrder) => {
-    if (onSortChange) {
-      onSortChange(field, order);
-    } else {
-      setInternalSortField(field);
-      setInternalSortOrder(order);
-    }
-  };
-
-  const [internalSelectedIds, setInternalSelectedIds] = useState<string[]>([]);
-  const selectedIds = controlledSelectedIds ?? internalSelectedIds;
-  const setSelectedIds = (ids: string[]) => {
-    if (onSelectionChange) {
-      onSelectionChange(ids);
-    } else {
-      setInternalSelectedIds(ids);
-    }
-  };
-
   // Active cell inline edit state (Excel-like)
   const [editingCell, setEditingCell] = useState<{ saleId: string; field: keyof SaleItem } | null>(null);
   const [tempValue, setTempValue] = useState<string>('');

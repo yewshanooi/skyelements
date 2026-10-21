@@ -19,15 +19,7 @@ export interface SalesSettings {
 
 export type SalesSettingKey = keyof SalesSettings;
 
-export const SALES_SETTING_KEYS: readonly SalesSettingKey[] = [
-  'formula',
-  'tableColumnWidths',
-  'chartLayout',
-  'overviewKpiLayout',
-  'chartSubcontrols',
-];
-
-export const MAX_FORMULA_LENGTH = 2000;
+const MAX_FORMULA_LENGTH = 2000;
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);

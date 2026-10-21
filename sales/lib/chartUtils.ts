@@ -4,7 +4,7 @@ import type { SaleItem } from '@/sales/types';
 import type { KpiStats } from '@/sales/types/chart';
 
 /** Labels for sales that have no value in an option column. */
-export const NOT_SET_LABEL = 'Not set';
+const NOT_SET_LABEL = 'Not set';
 export const NO_STORE_LABEL = 'No store';
 
 /**

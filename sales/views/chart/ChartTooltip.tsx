@@ -2,7 +2,7 @@
 
 import type { FC, ReactNode } from 'react';
 
-export interface ChartTooltipCardProps {
+interface ChartTooltipCardProps {
   title: ReactNode;
   children: ReactNode;
   className?: string;
@@ -31,7 +31,7 @@ export const ChartTooltipCard: FC<ChartTooltipCardProps> = ({
   );
 };
 
-export interface ChartTooltipRowProps {
+interface ChartTooltipRowProps {
   label: string;
   value: ReactNode;
   valueClass?: string;

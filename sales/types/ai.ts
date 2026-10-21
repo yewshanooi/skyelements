@@ -1,5 +1,3 @@
-import type { SaleItem } from '@/sales/types';
-
 export type SalesMetric =
   | 'revenue'
   | 'cost'
@@ -66,72 +64,5 @@ export interface QueryMetricsResult {
   rowCount: number;
   chartSpec: ChartSpec;
   source: 'postgres_rpc' | 'snapshot_fallback';
-}
-
-export interface PendingCreateForm {
-  initialValues?: Partial<SaleItem>;
-  confirmed?: boolean;
-  cancelled?: boolean;
-}
-
-export interface PendingUpdateForm {
-  orderId?: string;
-  searchHint?: string;
-  initialValues?: Partial<SaleItem>;
-  confirmed?: boolean;
-  cancelled?: boolean;
-}
-
-export interface ChatMessage {
-  id: string;
-  role: 'user' | 'model' | 'system';
-  text: string;
-  timestamp: number;
-  toolCalls?: Array<{
-    name: string;
-    args: Record<string, unknown>;
-  }>;
-  chartSpec?: ChartSpec;
-  createdSale?: SaleItem;
-  updatedSale?: {
-    item: SaleItem;
-    changes: Record<string, { before: unknown; after: unknown }>;
-  };
-  pendingDelete?: {
-    id: string;
-    itemName: string;
-    customer: string;
-    subtotal: number;
-    confirmed?: boolean;
-    cancelled?: boolean;
-  };
-  pendingCreateForm?: PendingCreateForm;
-  pendingUpdateForm?: PendingUpdateForm;
-  actionExecuted?: string;
-  error?: boolean;
-  errorMessage?: string;
-}
-
-export interface AiServerResponse {
-  id: string;
-  role: 'model';
-  text: string;
-  timestamp: number;
-  toolCalls?: Array<{
-    name: string;
-    args: Record<string, unknown>;
-  }>;
-  chartSpec?: ChartSpec;
-  pendingDelete?: {
-    id: string;
-    itemName: string;
-    customer: string;
-    subtotal: number;
-  };
-  pendingCreateForm?: PendingCreateForm;
-  pendingUpdateForm?: PendingUpdateForm;
-  actionExecuted?: string;
-  error?: boolean;
-  errorMessage?: string;
 }
 

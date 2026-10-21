@@ -45,7 +45,7 @@ interface MiniCardProps {
   cardRef?: (node: HTMLDivElement | null) => void;
 }
 
-export const MiniKpiCard: FC<MiniCardProps> = ({
+const MiniKpiCard: FC<MiniCardProps> = ({
   config,
   stats,
   size = '1x1',
@@ -211,7 +211,7 @@ interface GalleryCardProps {
   onDragStart: (e: ReactDragEvent<HTMLDivElement>) => void;
 }
 
-export const GalleryControlItem: FC<GalleryCardProps> = ({
+const GalleryControlItem: FC<GalleryCardProps> = ({
   config,
   stats,
   disabled = false,

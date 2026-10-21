@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import type { FC } from 'react';
-import { Map, Marker, Popup, NavigationControl, LngLatBounds } from 'maplibre-gl';
+import { Map as MapLibreMap, Marker, Popup, NavigationControl, LngLatBounds } from 'maplibre-gl';
 import {
   MapPin,
   Maximize2,
@@ -17,19 +17,21 @@ import {
   Edit2,
 } from 'lucide-react';
 import type { SaleItem } from '@/sales/types';
-import { geocodeAddress, searchLocations, type LocationSuggestion } from '@/sales/services/geocodeService';
+import { geocodeAddress } from '@/sales/lib/geocoder';
+import { useLocationSearch } from '@/sales/hooks/useLocationSearch';
 import { normalizeCoordinates, extractEmbeddedCoordinates } from '@/sales/lib/locationParser';
+import { MAP_STYLE, createPinElement } from '@/sales/lib/mapShared';
 import { NotionFilterBar } from '@/sales/filters/NotionFilterBar';
-import { filterSales, DEFAULT_EMPTY_FILTERS, type FilterState } from '@/sales/lib/filterUtils';
+import { filterSales, type FilterState } from '@/sales/lib/filterUtils';
 import { formatDateDisplay } from '@/sales/lib/dateUtils';
 import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 
 interface MapViewProps {
   sales: SaleItem[];
-  filters?: FilterState;
-  onFiltersChange?: (filters: FilterState) => void;
+  filters: FilterState;
+  onFiltersChange: (filters: FilterState) => void;
   onSelectSale: (sale: SaleItem) => void;
-  onUpdateSaleLocation: (saleId: string, location: string, lat: number, lng: number) => Promise<void>;
+  onUpdateSaleLocation: (saleId: string, location: string, lat?: number, lng?: number) => Promise<void>;
   selectedSalePin?: SaleItem | null;
 }
 
@@ -43,25 +45,50 @@ const escapeHtml = (str?: string | number | null): string => {
     .replace(/'/g, '&#039;');
 };
 
-const MAP_STYLE = {
-  version: 8 as const,
-  sources: {
-    'osm-tiles': {
-      type: 'raster' as const,
-      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-      tileSize: 256,
-    },
-  },
-  layers: [
-    {
-      id: 'osm-layer',
-      type: 'raster' as const,
-      source: 'osm-tiles',
-      minzoom: 0,
-      maxzoom: 19,
-    },
-  ],
-};
+interface MarkerEntry {
+  marker: Marker;
+  /** Fingerprint of everything the marker renders; unchanged sales keep their existing marker. */
+  signature: string;
+  /** Always the latest sale object, so a popup click never opens stale data. */
+  sale: SaleItem;
+}
+
+const BATCH_CONCURRENCY = 3;
+
+function buildPopupContent(sale: SaleItem): HTMLDivElement {
+  const popupContent = document.createElement('div');
+  popupContent.className = 'p-3.5 min-w-[230px] max-w-[270px] text-xs font-sans bg-white dark:bg-[#202020] text-neutral-900 dark:text-neutral-100 transition-colors';
+  popupContent.innerHTML = `
+    <div class="flex items-start justify-between gap-2 border-b pb-2.5 pr-6 border-neutral-100 dark:border-neutral-800">
+      <span class="font-semibold text-neutral-900 dark:text-neutral-100 leading-snug line-clamp-2">${escapeHtml(sale.item)}</span>
+    </div>
+    <div class="space-y-1.5 pt-2 text-neutral-600 dark:text-neutral-300">
+      <div class="flex items-center justify-between text-xs">
+        <span class="text-neutral-400 dark:text-neutral-500 font-medium">Customer:</span>
+        <span class="font-medium text-neutral-800 dark:text-neutral-200">${escapeHtml(sale.customer)}</span>
+      </div>
+      <div class="flex items-center justify-between text-xs">
+        <span class="text-neutral-400 dark:text-neutral-500 font-medium">Date:</span>
+        <span class="text-neutral-700 dark:text-neutral-300 font-mono text-[11px]">${escapeHtml(formatDateDisplay(sale.date))}</span>
+      </div>
+      <div class="flex items-center justify-between text-xs">
+        <span class="text-neutral-400 dark:text-neutral-500 font-medium">Net Sales:</span>
+        <span class="font-mono font-bold text-emerald-600 dark:text-emerald-400">RM ${sale.sales.toFixed(2)}</span>
+      </div>
+      ${sale.location
+      ? `<div class="text-[11px] text-neutral-600 dark:text-neutral-400 mt-2 pt-2 border-t border-neutral-100 dark:border-neutral-800 flex items-start gap-1.5 leading-relaxed">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-rose-500 shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
+                <circle cx="12" cy="10" r="3"/>
+              </svg>
+              <span class="line-clamp-2">${escapeHtml(sale.location)}</span>
+            </div>`
+      : ''
+    }
+    </div>
+  `;
+  return popupContent;
+}
 
 function computeSalesBounds(sales: SaleItem[]): LngLatBounds | null {
   const bounds = new LngLatBounds();
@@ -79,17 +106,22 @@ function computeSalesBounds(sales: SaleItem[]): LngLatBounds | null {
 
 export const MapView: FC<MapViewProps> = ({
   sales,
-  filters: propFilters,
-  onFiltersChange: propOnFiltersChange,
+  filters,
+  onFiltersChange,
   onSelectSale,
   onUpdateSaleLocation,
   selectedSalePin,
 }) => {
   const mapWrapperRef = useRef<HTMLDivElement>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<Map | null>(null);
-  const markersRef = useRef<Marker[]>([]);
+  const mapInstanceRef = useRef<MapLibreMap | null>(null);
+  const markersRef = useRef<Map<string, MarkerEntry>>(new Map());
   const hasInitializedBoundsRef = useRef(false);
+  // Marker popups call through a ref so changing the callback never forces markers to rebuild.
+  const onSelectSaleRef = useRef(onSelectSale);
+  useEffect(() => {
+    onSelectSaleRef.current = onSelectSale;
+  }, [onSelectSale]);
 
   const [isFullscreen, setIsFullscreen] = useState(false);
   useBodyScrollLock(isFullscreen);
@@ -102,23 +134,12 @@ export const MapView: FC<MapViewProps> = ({
   const [isBatchGeocoding, setIsBatchGeocoding] = useState(false);
   const [batchProgress, setBatchProgress] = useState<{ current: number; total: number; success: number } | null>(null);
 
-  // Manual address input and live suggestions
+  // Manual address input and live suggestions (derived from the input; no separate suggestion state)
   const [manualAddressInput, setManualAddressInput] = useState<{ id: string; address: string } | null>(null);
-  const [drawerSuggestions, setDrawerSuggestions] = useState<LocationSuggestion[]>([]);
-  const [isFetchingSuggestions, setIsFetchingSuggestions] = useState(false);
-  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Map Filter state
-  const [internalFilters, setInternalFilters] = useState<FilterState>(DEFAULT_EMPTY_FILTERS);
-
-  const filters = propFilters ?? internalFilters;
-  const setFilters = (newFilters: FilterState) => {
-    if (propOnFiltersChange) {
-      propOnFiltersChange(newFilters);
-    } else {
-      setInternalFilters(newFilters);
-    }
-  };
+  const { suggestions: drawerSuggestions, isLoading: isFetchingSuggestions } = useLocationSearch(
+    manualAddressInput?.address ?? '',
+    manualAddressInput !== null
+  );
 
   // Filtered dataset
   const filteredSales = useMemo(() => {
@@ -153,7 +174,7 @@ export const MapView: FC<MapViewProps> = ({
 
       // The viewport is intentionally not persisted: it depends on the device's screen,
       // so the map auto-fits to the user's located sales on each visit instead.
-      const map = new Map({
+      const map = new MapLibreMap({
         container: mapContainerRef.current,
         style: MAP_STYLE,
         center: defaultCenter,
@@ -166,81 +187,46 @@ export const MapView: FC<MapViewProps> = ({
       mapInstanceRef.current = map;
     }
 
+    const markers = markersRef.current;
     return () => {
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
       }
+      // Markers belong to the map that was just removed.
+      markers.clear();
+      hasInitializedBoundsRef.current = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
 
-  // Update Markers whenever located sales change
+  // Sync markers with located sales. Only added, changed or removed sales touch the DOM.
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map) return;
 
-    // Clear old markers
-    markersRef.current.forEach((m) => m.remove());
-    markersRef.current = [];
+    const entries = markersRef.current;
+    const seen = new Set<string>();
 
-    // Create marker for each located sale
-    locatedSales.forEach((sale) => {
+    for (const sale of locatedSales) {
       const norm = normalizeCoordinates(sale.latitude, sale.longitude);
-      if (!norm) return;
+      if (!norm) continue;
+      seen.add(sale.id);
+
+      const signature = [norm.lat, norm.lng, sale.item, sale.customer, sale.date, sale.sales, sale.location].join('|');
+      const existing = entries.get(sale.id);
+      if (existing) {
+        existing.sale = sale;
+        if (existing.signature === signature) continue;
+        existing.marker.remove();
+        entries.delete(sale.id);
+      }
 
       try {
-        const el = document.createElement('div');
-        el.className = 'group cursor-pointer flex flex-col items-center select-none';
-        el.innerHTML = `
-          <div class="relative flex flex-col items-center group">
-            <div class="w-8 h-8 rounded-full bg-blue-600 dark:bg-blue-500 border-2 border-white dark:border-neutral-900 shadow-md flex items-center justify-center text-white group-hover:scale-110 transition-transform">
-              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
-                <circle cx="12" cy="10" r="3" fill="white"/>
-              </svg>
-            </div>
-            <div class="w-2.5 h-2.5 bg-blue-600 dark:bg-blue-500 rotate-45 -mt-1.5 shadow-xs border-r-2 border-b-2 border-white dark:border-neutral-900 z-0"></div>
-            <div class="w-2 h-1 bg-black/20 dark:bg-black/40 rounded-full mt-0.5 blur-[1px]"></div>
-          </div>
-        `;
-
-        // Custom Popup Card
-        const popupContent = document.createElement('div');
-        popupContent.className = 'p-3.5 min-w-[230px] max-w-[270px] text-xs font-sans bg-white dark:bg-[#202020] text-neutral-900 dark:text-neutral-100 transition-colors';
-        popupContent.innerHTML = `
-          <div class="flex items-start justify-between gap-2 border-b pb-2.5 pr-6 border-neutral-100 dark:border-neutral-800">
-            <span class="font-semibold text-neutral-900 dark:text-neutral-100 leading-snug line-clamp-2">${escapeHtml(sale.item)}</span>
-          </div>
-          <div class="space-y-1.5 pt-2 text-neutral-600 dark:text-neutral-300">
-            <div class="flex items-center justify-between text-xs">
-              <span class="text-neutral-400 dark:text-neutral-500 font-medium">Customer:</span>
-              <span class="font-medium text-neutral-800 dark:text-neutral-200">${escapeHtml(sale.customer)}</span>
-            </div>
-            <div class="flex items-center justify-between text-xs">
-              <span class="text-neutral-400 dark:text-neutral-500 font-medium">Date:</span>
-              <span class="text-neutral-700 dark:text-neutral-300 font-mono text-[11px]">${escapeHtml(formatDateDisplay(sale.date))}</span>
-            </div>
-            <div class="flex items-center justify-between text-xs">
-              <span class="text-neutral-400 dark:text-neutral-500 font-medium">Net Sales:</span>
-              <span class="font-mono font-bold text-emerald-600 dark:text-emerald-400">RM ${sale.sales.toFixed(2)}</span>
-            </div>
-            ${sale.location
-            ? `<div class="text-[11px] text-neutral-600 dark:text-neutral-400 mt-2 pt-2 border-t border-neutral-100 dark:border-neutral-800 flex items-start gap-1.5 leading-relaxed">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-rose-500 shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
-                      <circle cx="12" cy="10" r="3"/>
-                    </svg>
-                    <span class="line-clamp-2">${escapeHtml(sale.location)}</span>
-                  </div>`
-            : ''
-          }
-          </div>
-        `;
-
+        const popupContent = buildPopupContent(sale);
         popupContent.addEventListener('click', () => {
-          onSelectSale(sale);
+          onSelectSaleRef.current(entries.get(sale.id)?.sale ?? sale);
         });
 
         const popup = new Popup({
@@ -259,16 +245,23 @@ export const MapView: FC<MapViewProps> = ({
           maxWidth: '280px',
         }).setDOMContent(popupContent);
 
-        const marker = new Marker({ element: el, anchor: 'bottom' })
+        const marker = new Marker({ element: createPinElement(), anchor: 'bottom' })
           .setLngLat([norm.lng, norm.lat])
           .setPopup(popup)
           .addTo(map);
 
-        markersRef.current.push(marker);
+        entries.set(sale.id, { marker, signature, sale });
       } catch (err) {
         console.warn(`[MapView] Error adding marker for sale ${sale.id}:`, err);
       }
-    });
+    }
+
+    for (const [id, entry] of entries) {
+      if (!seen.has(id)) {
+        entry.marker.remove();
+        entries.delete(id);
+      }
+    }
 
     // Auto-fit bounds ONLY on initial load and when no specific pin is forced
     if (!hasInitializedBoundsRef.current && locatedSales.length > 0 && !selectedSalePin) {
@@ -278,46 +271,26 @@ export const MapView: FC<MapViewProps> = ({
         map.fitBounds(bounds, { padding: 60, maxZoom: 12, duration: 600 });
       }
     }
-  }, [locatedSales, onSelectSale, selectedSalePin]);
+  }, [locatedSales, selectedSalePin]);
 
-  // If a specific pin was selected from another view, fly to it & open its popup
+  // If a specific pin was selected from another view, fly to it & open its popup.
+  // Markers are synced by the effect above, which runs first in the same commit.
   useEffect(() => {
-    if (!selectedSalePin) return;
+    const map = mapInstanceRef.current;
+    if (!map || !selectedSalePin) return;
+
     const norm =
       normalizeCoordinates(selectedSalePin.latitude, selectedSalePin.longitude) ||
       extractEmbeddedCoordinates(selectedSalePin.location);
     if (!norm) return;
 
-    const flyAndOpen = () => {
-      const map = mapInstanceRef.current;
-      if (!map) return;
+    map.flyTo({ center: [norm.lng, norm.lat], zoom: 14.5, duration: 1000 });
 
-      map.flyTo({
-        center: [norm.lng, norm.lat],
-        zoom: 14.5,
-        duration: 1000,
-      });
-
-      const targetMarker = markersRef.current.find((m) => {
-        const lngLat = m.getLngLat();
-        return (
-          Math.abs(lngLat.lng - norm.lng) < 0.0002 &&
-          Math.abs(lngLat.lat - norm.lat) < 0.0002
-        );
-      });
-      if (targetMarker && !targetMarker.getPopup()?.isOpen()) {
-        targetMarker.togglePopup();
-      }
-    };
-
-    flyAndOpen();
-    const t1 = setTimeout(flyAndOpen, 300);
-    const t2 = setTimeout(flyAndOpen, 700);
-    return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-    };
-  }, [selectedSalePin, locatedSales]);
+    const marker = markersRef.current.get(selectedSalePin.id)?.marker;
+    if (marker && !marker.getPopup()?.isOpen()) {
+      marker.togglePopup();
+    }
+  }, [selectedSalePin]);
 
   // Toggle fullscreen mode
   const toggleFullscreen = useCallback(async () => {
@@ -378,38 +351,25 @@ export const MapView: FC<MapViewProps> = ({
     }
   };
 
-  // Live suggestion search for manual input
+  // Suggestions are derived from this input by useLocationSearch.
   const handleAddressInputChange = (saleId: string, value: string) => {
     setManualAddressInput({ id: saleId, address: value });
-    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+  };
 
-    if (value.trim().length >= 2) {
-      setIsFetchingSuggestions(true);
-      debounceTimerRef.current = setTimeout(async () => {
-        try {
-          const suggestions = await searchLocations(value);
-          setDrawerSuggestions(suggestions);
-        } catch {
-          setDrawerSuggestions([]);
-        } finally {
-          setIsFetchingSuggestions(false);
-        }
-      }, 250);
-    } else {
-      setDrawerSuggestions([]);
-      setIsFetchingSuggestions(false);
-    }
+  const clearGeocodeError = (saleId: string) => {
+    setFailedGeocodeMap((prev) => {
+      if (!(saleId in prev)) return prev;
+      const copy = { ...prev };
+      delete copy[saleId];
+      return copy;
+    });
   };
 
   // Auto-geocode single item
   const handleAutoGeocodeItem = async (sale: SaleItem) => {
     if (!sale.location) return;
     setGeocodingId(sale.id);
-    setFailedGeocodeMap((prev) => {
-      const copy = { ...prev };
-      delete copy[sale.id];
-      return copy;
-    });
+    clearGeocodeError(sale.id);
 
     try {
       const coords = await geocodeAddress(sale.location);
@@ -446,28 +406,26 @@ export const MapView: FC<MapViewProps> = ({
     let success = 0;
     setBatchProgress({ current: 0, total, success: 0 });
 
-    for (const sale of geocodableUnlocatedSales) {
-      if (!sale.location) {
-        current++;
-        setBatchProgress({ current, total, success });
-        continue;
-      }
-
-      try {
-        const coords = await geocodeAddress(sale.location);
-        if (coords) {
-          await onUpdateSaleLocation(sale.id, sale.location, coords.lat, coords.lng);
-          success++;
+    // A few workers drain a shared queue: offline-resolvable rows finish instantly while
+    // network lookups overlap, without hammering the geocoder.
+    const queue = [...geocodableUnlocatedSales];
+    const worker = async () => {
+      for (let sale = queue.shift(); sale; sale = queue.shift()) {
+        try {
+          const coords = sale.location ? await geocodeAddress(sale.location) : null;
+          if (coords && sale.location) {
+            await onUpdateSaleLocation(sale.id, sale.location, coords.lat, coords.lng);
+            success++;
+          }
+        } catch (err) {
+          console.warn(`Batch geocoding failed for ${sale.id}:`, err);
+        } finally {
+          current++;
+          setBatchProgress({ current, total, success });
         }
-      } catch (err) {
-        console.warn(`Batch geocoding failed for ${sale.id}:`, err);
-      } finally {
-        current++;
-        setBatchProgress({ current, total, success });
-        // Minimal delay to prevent UI freezing
-        await new Promise((r) => setTimeout(r, 40));
       }
-    }
+    };
+    await Promise.all(Array.from({ length: Math.min(BATCH_CONCURRENCY, queue.length) }, worker));
 
     setIsBatchGeocoding(false);
     setTimeout(() => setBatchProgress(null), 3000);
@@ -479,12 +437,7 @@ export const MapView: FC<MapViewProps> = ({
     try {
       await onUpdateSaleLocation(saleId, displayName, lat, lng);
       setManualAddressInput(null);
-      setDrawerSuggestions([]);
-      setFailedGeocodeMap((prev) => {
-        const copy = { ...prev };
-        delete copy[saleId];
-        return copy;
-      });
+      clearGeocodeError(saleId);
     } finally {
       setGeocodingId(null);
     }
@@ -496,18 +449,9 @@ export const MapView: FC<MapViewProps> = ({
     try {
       const query = manualAddressInput.address.trim();
       const coords = await geocodeAddress(query);
-      if (coords) {
-        await onUpdateSaleLocation(saleId, query, coords.lat, coords.lng);
-      } else {
-        await onUpdateSaleLocation(saleId, query, undefined as unknown as number, undefined as unknown as number);
-      }
+      await onUpdateSaleLocation(saleId, query, coords?.lat, coords?.lng);
       setManualAddressInput(null);
-      setDrawerSuggestions([]);
-      setFailedGeocodeMap((prev) => {
-        const copy = { ...prev };
-        delete copy[saleId];
-        return copy;
-      });
+      clearGeocodeError(saleId);
     } finally {
       setGeocodingId(null);
     }
@@ -521,7 +465,7 @@ export const MapView: FC<MapViewProps> = ({
         storageKeyPrefix="map"
         showSort={false}
         filters={filters}
-        onFiltersChange={setFilters}
+        onFiltersChange={onFiltersChange}
       />
 
       {/* Map Card */}
@@ -755,10 +699,7 @@ export const MapView: FC<MapViewProps> = ({
                                 <span>Save & Pin</span>
                               </button>
                               <button
-                                onClick={() => {
-                                  setManualAddressInput(null);
-                                  setDrawerSuggestions([]);
-                                }}
+                                onClick={() => setManualAddressInput(null)}
                                 className="px-3 py-1.5 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 rounded-lg text-xs font-medium transition-colors cursor-pointer"
                               >
                                 Cancel

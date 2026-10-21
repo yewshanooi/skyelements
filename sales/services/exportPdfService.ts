@@ -25,7 +25,7 @@ import {
 // FORMATTING HELPERS
 // ============================================================================
 
-export const formatCurrency = (val: number | null | undefined): string => {
+const formatCurrency = (val: number | null | undefined): string => {
   const num = Number(val || 0);
   return num.toLocaleString('en-MY', {
     minimumFractionDigits: 2,
@@ -33,7 +33,7 @@ export const formatCurrency = (val: number | null | undefined): string => {
   });
 };
 
-export const formatCurrencyCompact = (val: number | null | undefined): string => {
+const formatCurrencyCompact = (val: number | null | undefined): string => {
   const num = Number(val || 0);
   if (Math.abs(num) >= 1000000) return `RM ${(num / 1000000).toFixed(1)}M`;
   if (Math.abs(num) >= 1000) return `RM ${(num / 1000).toFixed(1)}k`;
@@ -568,7 +568,7 @@ function drawDayOfWeekChartCanvas(days: DayOfWeekPoint[]): string | null {
 // MAIN PDF GENERATION EXPORT SERVICE
 // ============================================================================
 
-export interface ExportPdfOptions {
+interface ExportPdfOptions {
   filename?: string;
   reportTitle?: string;
   /** Returns the user's saved tag class for an option, so the report matches their colors. */

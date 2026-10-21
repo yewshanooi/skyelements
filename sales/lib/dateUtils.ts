@@ -39,7 +39,7 @@ export const DAYS_OF_WEEK = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
 /**
  * Checks if a given year, month (1-12), and day are a valid calendar date.
  */
-export function isValidDateParts(year: number, month: number, day: number): boolean {
+function isValidDateParts(year: number, month: number, day: number): boolean {
   if (year < 1900 || year > 2100) return false;
   if (month < 1 || month > 12) return false;
   if (day < 1) return false;
@@ -51,7 +51,7 @@ export function isValidDateParts(year: number, month: number, day: number): bool
 /**
  * Formats year, month (1-12), day into standard ISO format: YYYY-MM-DD.
  */
-export function formatIsoParts(year: number, month: number, day: number): string {
+function formatIsoParts(year: number, month: number, day: number): string {
   return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
 
@@ -91,42 +91,6 @@ export function formatDayMonth(dateStr?: string): string {
     return `${parts[2].padStart(2, '0')}/${parts[1].padStart(2, '0')}`;
   }
 
-  return dateStr;
-}
-
-/**
- * Formats YYYY-MM or YYYY-MM-DD into MM/YYYY for monthly trend charts.
- */
-export function formatMonthYear(dateStr?: string): string {
-  if (!dateStr) return '';
-  const trimmed = dateStr.trim();
-  if (!trimmed) return '';
-
-  const clean = trimmed.split('T')[0].split(' ')[0];
-  const parts = clean.split('-');
-  if (parts.length >= 2 && parts[0].length === 4) {
-    return `${parts[1].padStart(2, '0')}/${parts[0]}`;
-  }
-
-  return dateStr;
-}
-
-/**
- * Formats YYYY-MM-DD into friendly short string like "18 Aug 2026" or "18 Aug".
- */
-export function formatDateShort(dateStr?: string, includeYear = true): string {
-  if (!dateStr) return '';
-  const clean = dateStr.trim().split('T')[0].split(' ')[0];
-  const parts = clean.split('-');
-  if (parts.length === 3) {
-    const y = parseInt(parts[0], 10);
-    const m = parseInt(parts[1], 10);
-    const d = parseInt(parts[2], 10);
-    if (m >= 1 && m <= 12) {
-      const monthName = MONTH_NAMES_SHORT[m - 1];
-      return includeYear ? `${d} ${monthName} ${y}` : `${d} ${monthName}`;
-    }
-  }
   return dateStr;
 }
 
@@ -241,7 +205,7 @@ export function parseDateString(raw?: string): string | null {
   return null;
 }
 
-export interface CalendarGridCell {
+interface CalendarGridCell {
   dayNumber: number;
   dateStr: string;
   isCurrentMonth: boolean;

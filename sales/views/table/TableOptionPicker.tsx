@@ -350,7 +350,7 @@ export const TableOptionPicker: FC<TableOptionPickerProps> = ({
             {filteredOptions.length === 0 && !search.trim() ? (
               <div className="text-center py-4 text-xs text-neutral-400 italic">
                 {options.length === 0
-                  ? 'No options yet. Type a name above to create one.'
+                  ? 'No options available'
                   : 'No options found'}
               </div>
             ) : (

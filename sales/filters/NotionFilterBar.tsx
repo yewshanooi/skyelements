@@ -662,7 +662,7 @@ export const NotionFilterBar: FC<NotionFilterBarProps> = ({
                   {activeFilteredOptions.length === 0 ? (
                     <div className="text-center py-4 text-xs text-neutral-400 italic">
                       {activeOptionsList.length === 0
-                        ? 'No options yet. Create them from any Category, Store or Status cell in the table.'
+                        ? 'No options available. Create one before filtering.'
                         : 'No matching options'}
                     </div>
                   ) : (

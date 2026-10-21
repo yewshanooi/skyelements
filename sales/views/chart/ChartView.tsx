@@ -25,6 +25,7 @@ import { NotionFilterBar } from '@/sales/filters/NotionFilterBar';
 import { filterSales, DEFAULT_EMPTY_FILTERS, type FilterState } from '@/sales/lib/filterUtils';
 import { useSalesSettings, useSyncSetting } from '@/sales/context/SettingsContext';
 import { useOptionsStore } from '@/sales/context/OptionsContext';
+import { useDragAutoScroll } from '@/hooks/useDragAutoScroll';
 import type {
   WidgetConfig,
   WidgetWidth,
@@ -69,8 +70,8 @@ import { TopItemsWidget } from './widgets/TopItemsWidget';
 
 interface ChartViewProps {
   sales: SaleItem[];
-  filters?: FilterState;
-  onFiltersChange?: (filters: FilterState) => void;
+  filters: FilterState;
+  onFiltersChange: (filters: FilterState) => void;
   onResetSearch?: () => void;
 }
 
@@ -200,8 +201,8 @@ const WIDGET_CONFIG_MAP = new Map(ALL_WIDGET_CONFIGS.map((w) => [w.id, w]));
 
 export const ChartView: FC<ChartViewProps> = ({
   sales,
-  filters: propFilters,
-  onFiltersChange: propOnFiltersChange,
+  filters,
+  onFiltersChange,
   onResetSearch,
 }) => {
   // Modal & Expansion state
@@ -335,16 +336,6 @@ export const ChartView: FC<ChartViewProps> = ({
   // Save layout changes to the user's account
   useSyncSetting('chartLayout', layout as unknown as Record<string, unknown>);
 
-  // Chart Filter state
-  const [internalFilters, setInternalFilters] = useState<FilterState>(DEFAULT_EMPTY_FILTERS);
-  const filters = propFilters ?? internalFilters;
-  const setFilters = (newFilters: FilterState) => {
-    if (propOnFiltersChange) {
-      propOnFiltersChange(newFilters);
-    } else {
-      setInternalFilters(newFilters);
-    }
-  };
 
   // Filtered dataset
   const filteredSales = useMemo(() => filterSales(sales, filters), [sales, filters]);
@@ -404,7 +395,7 @@ export const ChartView: FC<ChartViewProps> = ({
   );
 
   const handleResetFilters = () => {
-    setFilters(DEFAULT_EMPTY_FILTERS);
+    onFiltersChange(DEFAULT_EMPTY_FILTERS);
     onResetSearch?.();
   };
 
@@ -467,66 +458,8 @@ export const ChartView: FC<ChartViewProps> = ({
     setDragOverWidgetId(null);
   };
 
-  // Auto-scroll viewport during drag
-  const autoScrollRafRef = useRef<number | null>(null);
-  const dragClientYRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    if (!draggedWidgetId) {
-      if (autoScrollRafRef.current) {
-        cancelAnimationFrame(autoScrollRafRef.current);
-        autoScrollRafRef.current = null;
-      }
-      dragClientYRef.current = null;
-      return;
-    }
-
-    const scrollThreshold = 140;
-    const maxScrollSpeed = 24;
-
-    const scrollLoop = () => {
-      const clientY = dragClientYRef.current;
-      if (clientY !== null) {
-        const viewportHeight = window.innerHeight;
-        if (clientY < scrollThreshold) {
-          const intensity = Math.max(0.1, (scrollThreshold - clientY) / scrollThreshold);
-          window.scrollBy(0, -Math.max(3, Math.round(intensity * maxScrollSpeed)));
-        } else if (clientY > viewportHeight - scrollThreshold) {
-          const intensity = Math.max(0.1, (clientY - (viewportHeight - scrollThreshold)) / scrollThreshold);
-          window.scrollBy(0, Math.max(3, Math.round(intensity * maxScrollSpeed)));
-        }
-      }
-      autoScrollRafRef.current = requestAnimationFrame(scrollLoop);
-    };
-
-    autoScrollRafRef.current = requestAnimationFrame(scrollLoop);
-
-    const handleWindowDragOver = (e: DragEvent) => {
-      dragClientYRef.current = e.clientY;
-    };
-
-    const handleWindowDragEnd = () => {
-      dragClientYRef.current = null;
-      if (autoScrollRafRef.current) {
-        cancelAnimationFrame(autoScrollRafRef.current);
-        autoScrollRafRef.current = null;
-      }
-    };
-
-    window.addEventListener('dragover', handleWindowDragOver, { passive: true });
-    window.addEventListener('dragend', handleWindowDragEnd);
-    window.addEventListener('drop', handleWindowDragEnd);
-
-    return () => {
-      window.removeEventListener('dragover', handleWindowDragOver);
-      window.removeEventListener('dragend', handleWindowDragEnd);
-      window.removeEventListener('drop', handleWindowDragEnd);
-      if (autoScrollRafRef.current) {
-        cancelAnimationFrame(autoScrollRafRef.current);
-        autoScrollRafRef.current = null;
-      }
-    };
-  }, [draggedWidgetId]);
+  // Auto-scroll the scroll container while dragging so cards can be dropped out of view.
+  useDragAutoScroll(draggedWidgetId !== null, gridContainerRef);
 
   // Card Width & Visibility Handlers
   const handleWidthChange = (widgetId: string, width: WidgetWidth) => {
@@ -805,7 +738,7 @@ export const ChartView: FC<ChartViewProps> = ({
         storageKeyPrefix="chart"
         showSort={false}
         filters={filters}
-        onFiltersChange={setFilters}
+        onFiltersChange={onFiltersChange}
         extraRightActions={
           <button
             type="button"
@@ -821,7 +754,7 @@ export const ChartView: FC<ChartViewProps> = ({
 
       {/* Zero State if no active cards toggled */}
       {orderedVisibleWidgets.length === 0 ? (
-        <div className="p-12 text-center rounded-xl bg-white dark:bg-[#1f1f1f] border border-dashed border-neutral-200 dark:border-neutral-800 space-y-3">
+        <div className="min-h-[306px] px-4 flex flex-col items-center justify-center text-center rounded-xl bg-white dark:bg-[#1f1f1f] border border-dashed border-neutral-200 dark:border-neutral-800 space-y-3">
           <PieIcon className="w-10 h-10 text-neutral-300 dark:text-neutral-600 mx-auto" />
           <h3 className="text-sm font-semibold text-neutral-800 dark:text-neutral-200">
             No active cards toggled
@@ -841,7 +774,7 @@ export const ChartView: FC<ChartViewProps> = ({
           </div>
         </div>
       ) : filteredSales.length === 0 ? (
-        <div className="p-12 text-center rounded-xl bg-white dark:bg-[#1f1f1f] border border-dashed border-neutral-200 dark:border-neutral-800 space-y-3">
+        <div className="min-h-[306px] px-4 flex flex-col items-center justify-center text-center rounded-xl bg-white dark:bg-[#1f1f1f] border border-dashed border-neutral-200 dark:border-neutral-800 space-y-3">
           <Layers2 className="w-10 h-10 text-neutral-300 dark:text-neutral-600 mx-auto" />
           <h3 className="text-sm font-semibold text-neutral-800 dark:text-neutral-200">
             No orders match the selected filters

@@ -10,7 +10,7 @@ import {
   type SalesOption,
 } from '@/sales/lib/optionTypes';
 
-export type OptionActionResult = { ok: true } | { ok: false; error: string };
+type OptionActionResult = { ok: true } | { ok: false; error: string };
 
 const OPTION_COLUMNS = 'id, type, name, color';
 

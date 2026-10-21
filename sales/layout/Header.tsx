@@ -351,9 +351,11 @@ export const Header: FC<HeaderProps> = ({
             })}
           </div>
 
-          {/* Center: Search Bar */}
-          <div className="flex items-center justify-center flex-1 min-w-0 max-w-[256px] mx-auto">
-            <div className="relative flex items-center w-full">
+          {/* Right: Search, Export, Orders Count, Deselect All, Delete Selection, and Notion Blue New Button */}
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Search Bar (sits immediately left of Export) - hidden while rows are selected */}
+            {selectedIdsCount === 0 && (
+            <div className="relative flex items-center w-56 shrink-0">
               <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none" />
               <input
                 type="text"
@@ -373,11 +375,10 @@ export const Header: FC<HeaderProps> = ({
                 </button>
               )}
             </div>
-          </div>
+            )}
 
-          {/* Right: Export, Orders Count, Deselect All, Delete Selection, and Notion Blue New Button */}
-          <div className="flex items-center gap-2 shrink-0">
-            {/* Export PDF Button */}
+            {/* Export PDF Button - hidden while rows are selected */}
+            {selectedIdsCount === 0 && (
             <button
               type="button"
               onClick={onExportPdf}
@@ -397,6 +398,7 @@ export const Header: FC<HeaderProps> = ({
                 </>
               )}
             </button>
+            )}
 
             {/* Order Count */}
             {salesCount > 0 && selectedIdsCount === 0 && (
