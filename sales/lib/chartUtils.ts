@@ -3,6 +3,10 @@
 import type { SaleItem } from '@/sales/types';
 import type { KpiStats } from '@/sales/types/chart';
 
+/** Labels for sales that have no value in an option column. */
+export const NOT_SET_LABEL = 'Not set';
+export const NO_STORE_LABEL = 'No store';
+
 /**
  * Computes all dashboard KPIs in a single O(N) pass.
  */
@@ -249,7 +253,7 @@ export const computeStoreComparison = (
   const map = new Map<string, { name: string; revenue: number; profit: number; cost: number; orders: number; units: number }>();
 
   filteredSales.forEach((s) => {
-    const st = s.marketplace || 'Other';
+    const st = s.marketplace || NO_STORE_LABEL;
     const cur = map.get(st) || {
       name: st,
       revenue: 0,
@@ -321,7 +325,7 @@ export const computeTopCustomers = (filteredSales: SaleItem[]): TopCustomerPoint
 
   return Array.from(map.values())
     .map((c) => {
-      let topCat = 'General';
+      let topCat = '-';
       let maxCount = 0;
       Object.entries(c.categories).forEach(([cat, count]) => {
         if (count > maxCount) {
@@ -427,7 +431,7 @@ export const computePaymentMethods = (
 
   let calculatedProfit = 0;
   filteredSales.forEach((s) => {
-    const meth = s.payment_method || 'Unspecified';
+    const meth = s.payment_method || NOT_SET_LABEL;
     const cur = map.get(meth) || {
       method: meth,
       count: 0,
@@ -456,73 +460,66 @@ export const computePaymentMethods = (
     .sort((a, b) => b.profit - a.profit);
 };
 
-export interface FulfillmentPipelineData {
-  orderStatuses: Array<{ status: string; count: number; revenue: number; profit: number; pct: number }>;
-  paymentStatuses: Array<{ status: string; count: number; revenue: number; profit: number; pct: number }>;
-  completionRate: string;
-  pendingRevenue: number;
-  pendingProfit: number;
+export interface StatusBreakdownPoint {
+  status: string;
+  count: number;
+  revenue: number;
+  profit: number;
+  pct: number;
+  /** True for the bucket of sales that have no value in this column. */
+  isUnset?: boolean;
 }
 
-/**
- * Aggregates fulfillment pipeline and delivery status with profit tracking.
- */
-export const computeFulfillmentData = (filteredSales: SaleItem[]): FulfillmentPipelineData => {
-  const orderStatusCounts: Record<string, { count: number; revenue: number; profit: number }> = {
-    Delivered: { count: 0, revenue: 0, profit: 0 },
-    Shipped: { count: 0, revenue: 0, profit: 0 },
-    Processing: { count: 0, revenue: 0, profit: 0 },
-  };
+export interface FulfillmentPipelineData {
+  orderStatuses: StatusBreakdownPoint[];
+  paymentStatuses: StatusBreakdownPoint[];
+}
 
-  const paymentStatusCounts: Record<string, { count: number; revenue: number; profit: number }> = {
-    Paid: { count: 0, revenue: 0, profit: 0 },
-    Processing: { count: 0, revenue: 0, profit: 0 },
-    'On Hold': { count: 0, revenue: 0, profit: 0 },
-  };
+function buildStatusBreakdown(
+  filteredSales: SaleItem[],
+  field: 'order_status' | 'payment_status',
+  optionNames: string[]
+): StatusBreakdownPoint[] {
+  const zero = () => ({ count: 0, revenue: 0, profit: 0 });
+  // The user's saved options come first (in their order); values only found in sales follow.
+  const buckets = new Map<string, { count: number; revenue: number; profit: number }>();
+  optionNames.forEach((name) => buckets.set(name, zero()));
+  const unset = zero();
 
   filteredSales.forEach((s) => {
-    if (s.order_status && orderStatusCounts[s.order_status]) {
-      orderStatusCounts[s.order_status].count += 1;
-      orderStatusCounts[s.order_status].revenue += s.subtotal || 0;
-      orderStatusCounts[s.order_status].profit += s.sales || 0;
-    }
-
-    if (s.payment_status && paymentStatusCounts[s.payment_status]) {
-      paymentStatusCounts[s.payment_status].count += 1;
-      paymentStatusCounts[s.payment_status].revenue += s.subtotal || 0;
-      paymentStatusCounts[s.payment_status].profit += s.sales || 0;
-    }
+    const value = (s[field] || '').trim();
+    const bucket = value ? buckets.get(value) ?? buckets.set(value, zero()).get(value)! : unset;
+    bucket.count += 1;
+    bucket.revenue += s.subtotal || 0;
+    bucket.profit += s.sales || 0;
   });
 
   const totalOrders = filteredSales.length;
-  const deliveredCount = orderStatusCounts['Delivered']?.count || 0;
-  const completionRate = totalOrders > 0 ? ((deliveredCount / totalOrders) * 100).toFixed(1) : '100';
+  const toPoint = (status: string, d: { count: number; revenue: number; profit: number }, isUnset = false) => ({
+    status,
+    count: d.count,
+    revenue: Number(d.revenue.toFixed(2)),
+    profit: Number(d.profit.toFixed(2)),
+    pct: totalOrders > 0 ? Number(((d.count / totalOrders) * 100).toFixed(1)) : 0,
+    ...(isUnset ? { isUnset: true } : {}),
+  });
 
-  const pendingRevenue =
-    (paymentStatusCounts['Processing']?.revenue || 0) + (paymentStatusCounts['On Hold']?.revenue || 0);
-  const pendingProfit =
-    (paymentStatusCounts['Processing']?.profit || 0) + (paymentStatusCounts['On Hold']?.profit || 0);
+  const rows = Array.from(buckets.entries()).map(([status, d]) => toPoint(status, d));
+  if (unset.count > 0) rows.push(toPoint(NOT_SET_LABEL, unset, true));
+  return rows;
+}
 
-  return {
-    orderStatuses: Object.entries(orderStatusCounts).map(([status, d]) => ({
-      status,
-      count: d.count,
-      revenue: Number(d.revenue.toFixed(2)),
-      profit: Number(d.profit.toFixed(2)),
-      pct: totalOrders > 0 ? Number(((d.count / totalOrders) * 100).toFixed(1)) : 0,
-    })),
-    paymentStatuses: Object.entries(paymentStatusCounts).map(([status, d]) => ({
-      status,
-      count: d.count,
-      revenue: Number(d.revenue.toFixed(2)),
-      profit: Number(d.profit.toFixed(2)),
-      pct: totalOrders > 0 ? Number(((d.count / totalOrders) * 100).toFixed(1)) : 0,
-    })),
-    completionRate,
-    pendingRevenue: Number(pendingRevenue.toFixed(2)),
-    pendingProfit: Number(pendingProfit.toFixed(2)),
-  };
-};
+/**
+ * Breaks sales down by the user's own Order Status and Payment Status options.
+ */
+export const computeFulfillmentData = (
+  filteredSales: SaleItem[],
+  orderStatusOptions: string[],
+  paymentStatusOptions: string[]
+): FulfillmentPipelineData => ({
+  orderStatuses: buildStatusBreakdown(filteredSales, 'order_status', orderStatusOptions),
+  paymentStatuses: buildStatusBreakdown(filteredSales, 'payment_status', paymentStatusOptions),
+});
 
 export interface DayOfWeekPoint {
   day: string;
@@ -587,7 +584,7 @@ export const computeTopProducts = (
   filteredSales.forEach((s) => {
     const cur = map.get(s.item) || {
       item: s.item,
-      category: s.category || 'General',
+      category: s.category || '-',
       units: 0,
       revenue: 0,
       profit: 0,

@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { SaleItem, StoreType } from '@/sales/types';
+import type { SaleItem } from '@/sales/types';
 
 export function useSalesModals() {
   const [isSaleModalOpen, setIsSaleModalOpen] = useState(false);
   const [editingSale, setEditingSale] = useState<SaleItem | null>(null);
-  const [defaultStoreForNewSale, setDefaultStoreForNewSale] = useState<StoreType | string | undefined>();
+  const [defaultStoreForNewSale, setDefaultStoreForNewSale] = useState<string | undefined>();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'signup'>('login');
   const [invoiceSale, setInvoiceSale] = useState<SaleItem | null>(null);

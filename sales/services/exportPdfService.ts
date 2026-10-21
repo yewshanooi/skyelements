@@ -5,6 +5,7 @@ import autoTable from 'jspdf-autotable';
 import type { SaleItem } from '@/sales/types';
 import type { FilterState } from '@/sales/lib/filterUtils';
 import { formatDateDisplay } from '@/sales/lib/dateUtils';
+import { DEFAULT_OPTION_COLOR, getTagColorHex, type OptionType } from '@/sales/lib/optionTypes';
 import {
   computeKpiStats,
   computeTrendData,
@@ -12,7 +13,7 @@ import {
   computeCategoryMatrix,
   computeTopCustomers,
   computeDayOfWeekData,
-  computeFulfillmentData,
+  NO_STORE_LABEL,
   computeTopProducts,
   type TrendDataPoint,
   type StoreComparisonPoint,
@@ -206,7 +207,11 @@ function drawTrendChartCanvas(data: TrendDataPoint[]): string | null {
 /**
  * Renders Store Comparison & Donut Share onto an offscreen canvas
  */
-function drawStoreChartCanvas(stores: StoreComparisonPoint[], totalRevenue: number): string | null {
+function drawStoreChartCanvas(
+  stores: StoreComparisonPoint[],
+  totalRevenue: number,
+  storeColors: Record<string, string>
+): string | null {
   if (typeof document === 'undefined' || !stores || stores.length === 0) return null;
 
   const width = 825;
@@ -235,14 +240,7 @@ function drawStoreChartCanvas(stores: StoreComparisonPoint[], totalRevenue: numb
 
   ctx.fillStyle = '#64748b';
   ctx.font = '11px Helvetica, Arial, sans-serif';
-  ctx.fillText('Revenue share and profit margins across Shopee, Carousell, and direct sales', 24, 48);
-
-  // Color mapping
-  const storeColors: Record<string, string> = {
-    Shopee: '#ee4d2d',
-    Carousell: '#008f79',
-    Other: '#64748b',
-  };
+  ctx.fillText('Revenue share and profit margins across your stores', 24, 48);
 
   // Left Donut Chart
   const donutCenterX = 145;
@@ -573,6 +571,15 @@ function drawDayOfWeekChartCanvas(days: DayOfWeekPoint[]): string | null {
 export interface ExportPdfOptions {
   filename?: string;
   reportTitle?: string;
+  /** Returns the user's saved tag class for an option, so the report matches their colors. */
+  getOptionTagClass?: (type: OptionType, name: string) => string;
+}
+
+const FALLBACK_STORE_COLOR = '#64748b';
+
+function hexToRgb(hex: string): [number, number, number] {
+  const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
+  return m ? [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)] : [71, 85, 105];
 }
 
 /**
@@ -597,7 +604,16 @@ export async function generateSalesPdfReport(
   const topCustomers = computeTopCustomers(sales);
   const topProducts = computeTopProducts(sales, kpi.totalSales);
   const dayOfWeekData = computeDayOfWeekData(sales);
-  const fulfillment = computeFulfillmentData(sales);
+
+  // Colors come from the user's own option colors (the default color falls back to neutral gray)
+  const tagClassFor = (type: OptionType, name: string) =>
+    options?.getOptionTagClass?.(type, name) ?? DEFAULT_OPTION_COLOR;
+  const storeColors: Record<string, string> = {};
+  storeData.forEach((st) => {
+    storeColors[st.name] = st.name === NO_STORE_LABEL
+      ? FALLBACK_STORE_COLOR
+      : getTagColorHex(tagClassFor('marketplace', st.name));
+  });
 
   // 2. Initialize Landscape A4 PDF (297mm x 210mm)
   const doc = new jsPDF({
@@ -685,15 +701,15 @@ export async function generateSalesPdfReport(
     (index + 1).toString(),
     formatDateDisplay(s.date) || '-',
     s.item || 'Untitled',
-    s.category || 'General',
-    s.marketplace || 'Direct',
-    s.customer || 'Anonymous',
+    s.category || '-',
+    s.marketplace || '-',
+    s.customer || '-',
     s.quantity.toString(),
     formatCurrency(s.subtotal),
     formatCurrency(s.cost),
     formatCurrency(s.sales),
-    s.order_status || 'Delivered',
-    s.payment_status || 'Paid',
+    s.order_status || '-',
+    s.payment_status || '-',
   ]);
 
   // Section 1 Table (starts directly beneath KPI strip)
@@ -805,12 +821,10 @@ export async function generateSalesPdfReport(
       // Status pill formatting
       if (data.section === 'body' && data.column.index === 10) {
         const val = data.cell.raw as string;
-        if (val === 'Delivered') {
-          data.cell.styles.textColor = [5, 150, 105];
-        } else if (val === 'Shipped') {
-          data.cell.styles.textColor = [37, 99, 235];
-        } else {
-          data.cell.styles.textColor = [217, 119, 6];
+        // Use the user's color for this status; unset or default-colored statuses stay neutral
+        const tagClass = val && val !== '-' ? tagClassFor('order_status', val) : DEFAULT_OPTION_COLOR;
+        if (tagClass !== DEFAULT_OPTION_COLOR) {
+          data.cell.styles.textColor = hexToRgb(getTagColorHex(tagClass));
         }
       }
     },
@@ -845,7 +859,7 @@ export async function generateSalesPdfReport(
     { title: 'UNITS SOLD', val: `${kpi.totalUnits} Units`, sub: `Avg ${kpi.itemsPerOrder.toFixed(1)} / order`, highlight: false },
     { title: 'AVG PROFIT / ORDER', val: `RM ${kpi.avgProfitPerOrder.toFixed(2)}`, sub: `Per Item: RM ${kpi.avgPricePerItem.toFixed(2)}`, highlight: false },
     { title: 'AVG PROFIT / UNIT', val: `RM ${kpi.avgProfitPerUnit}`, sub: 'Net contribution / unit', highlight: false },
-    { title: 'FULFILLMENT RATE', val: `${fulfillment.completionRate}%`, sub: `Pending: RM ${formatCurrency(fulfillment.pendingRevenue)}`, highlight: false },
+    { title: 'ORDERS / CUSTOMER', val: (kpi.totalOrders / Math.max(1, kpi.uniqueCustomersCount)).toFixed(1), sub: 'Average repeat orders', highlight: false },
   ];
 
   kpiCards.forEach((c, idx) => {
@@ -902,7 +916,7 @@ export async function generateSalesPdfReport(
     }
 
     // 2. Multichannel Store Comparison Canvas Chart
-    const storeImg = drawStoreChartCanvas(storeData, kpi.totalSubtotal);
+    const storeImg = drawStoreChartCanvas(storeData, kpi.totalSubtotal, storeColors);
     if (storeImg) {
       doc.addImage(storeImg, 'PNG', marginX + chartW + 5, chartRowY, chartW, chartH);
     }

@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import type { SaleItem } from '@/sales/types';
-import { CATEGORIES, STORE_TYPES } from '@/sales/types';
+import type { OptionType, SalesOption } from '@/sales/lib/optionTypes';
+import { loadUserSalesOptions, matchOptionName } from '@/sales/lib/optionLookup';
 import type {
   SalesMetric,
   SalesDimension,
@@ -97,14 +98,12 @@ function parseMultiFilter(
   return Array.from(new Set(result));
 }
 
-function canonicalizeCategory(cat: string): string {
-  const match = CATEGORIES.find((c) => c.toLowerCase() === cat.toLowerCase().trim());
-  return match || cat.trim();
-}
-
-function canonicalizeMarketplace(store: string): string {
-  const match = STORE_TYPES.find((s) => s.toLowerCase() === store.toLowerCase().trim());
-  return match || store.trim();
+/**
+ * Maps a free-text value to the spelling of the user's saved option (case-insensitive).
+ * Values that aren't saved options are kept as typed (trimmed).
+ */
+function canonicalizeOption(options: SalesOption[], type: OptionType, value: string): string {
+  return matchOptionName(options, type, value) ?? value.trim();
 }
 
 function formatDisplayDate(dateStr?: string): string {
@@ -439,10 +438,31 @@ export async function executeSalesMetricsQuery(
   const orderBy = sanitizeSortOrder(args.order_by);
   const filters = args.filters;
 
-  const targetCategories = parseMultiFilter(filters?.category, filters?.categories).map(canonicalizeCategory);
-  const targetMarketplaces = parseMultiFilter(filters?.marketplace, filters?.marketplaces).map(canonicalizeMarketplace);
-  const targetOrderStatuses = parseMultiFilter(filters?.order_status, filters?.order_statuses);
-  const targetPaymentStatuses = parseMultiFilter(filters?.payment_status, filters?.payment_statuses);
+  // Resolve the signed-in user first so filter values can be matched to their own options
+  let user: { id?: string } | null = null;
+  let supabase: Awaited<ReturnType<typeof createClient>> | null = null;
+  try {
+    supabase = await createClient();
+    const { data: authData } = await supabase.auth.getUser();
+    user = authData?.user ?? null;
+  } catch {
+    user = null;
+  }
+  const userOptions: SalesOption[] =
+    user?.id && supabase ? await loadUserSalesOptions(supabase, user.id) : [];
+
+  const targetCategories = parseMultiFilter(filters?.category, filters?.categories).map((v) =>
+    canonicalizeOption(userOptions, 'category', v)
+  );
+  const targetMarketplaces = parseMultiFilter(filters?.marketplace, filters?.marketplaces).map((v) =>
+    canonicalizeOption(userOptions, 'marketplace', v)
+  );
+  const targetOrderStatuses = parseMultiFilter(filters?.order_status, filters?.order_statuses).map((v) =>
+    canonicalizeOption(userOptions, 'order_status', v)
+  );
+  const targetPaymentStatuses = parseMultiFilter(filters?.payment_status, filters?.payment_statuses).map((v) =>
+    canonicalizeOption(userOptions, 'payment_status', v)
+  );
   const targetCustomers = parseMultiFilter(filters?.customer, filters?.customers);
   const targetItems = parseMultiFilter(filters?.item, filters?.items);
 
@@ -480,16 +500,6 @@ export async function executeSalesMetricsQuery(
 
   let dataRows: Array<Record<string, unknown>> = [];
   let executionSource: 'postgres_rpc' | 'snapshot_fallback' = 'postgres_rpc';
-
-  let user: { id?: string } | null = null;
-  let supabase: Awaited<ReturnType<typeof createClient>> | null = null;
-  try {
-    supabase = await createClient();
-    const { data: authData } = await supabase.auth.getUser();
-    user = authData?.user ?? null;
-  } catch {
-    user = null;
-  }
 
   if (user && supabase) {
     // 1. Primary: Server-side PostgreSQL RPC

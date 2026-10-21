@@ -25,7 +25,12 @@ import { formatDateDisplay } from '@/sales/lib/dateUtils';
 import { TableOptionPicker } from '@/sales/views/table/TableOptionPicker';
 import { TableDatePicker } from '@/sales/views/table/TableDatePicker';
 import { FormulaModal } from '@/sales/modals/FormulaModal';
-import { evaluateSalesFormula, DEFAULT_FORMULA, STORAGE_KEY_FORMULA } from '@/sales/lib/formulaEngine';
+import { evaluateSalesFormula } from '@/sales/lib/formulaEngine';
+import {
+  useFormulaSetting,
+  useSalesSettings,
+  useSyncSetting,
+} from '@/sales/context/SettingsContext';
 import { TableLocationPicker } from '@/sales/views/table/TableLocationPicker';
 import { useAuth } from '@/sales/context/AuthContext';
 import { uploadInvoiceFile } from '@/sales/services/salesService';
@@ -86,8 +91,6 @@ const MIN_COLUMN_WIDTHS: Record<ColumnId, number> = {
   location: 110,
   actions: 65,
 };
-
-const STORAGE_KEY_COLUMN_WIDTHS = 'sales_dashboard_table_column_widths_v2';
 
 const TABLE_COLUMNS: {
   id: ColumnId;
@@ -189,58 +192,23 @@ export const TableView: FC<TableViewProps> = ({
   const [uploadingSaleId, setUploadingSaleId] = useState<string | null>(null);
   const { user } = useAuth();
 
-  // Custom formula state
-  const [customFormula, setCustomFormula] = useState<string>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const savedFormula = localStorage.getItem(STORAGE_KEY_FORMULA);
-        if (savedFormula && savedFormula !== 'round( # Subtotal (in MYR) - # Cost(s) , 2)') {
-          return savedFormula.replace(/round\(\s+#/g, 'round(#');
-        }
-      } catch { }
-    }
-    return DEFAULT_FORMULA;
-  });
+  // Custom formula (synced across views and devices via the database)
+  const [customFormula, setCustomFormula] = useFormulaSetting();
+  const { getSettings } = useSalesSettings();
+  const [settings] = useState(getSettings); // snapshot of saved settings used to seed local state
 
   const fileInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
 
-  // Column Resizing state & persistence
-  const [columnWidths, setColumnWidths] = useState<Record<ColumnId, number>>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const storedWidths = localStorage.getItem(STORAGE_KEY_COLUMN_WIDTHS);
-        if (storedWidths) {
-          const parsed = JSON.parse(storedWidths);
-          return { ...DEFAULT_COLUMN_WIDTHS, ...parsed };
-        }
-      } catch { }
-    }
-    return { ...DEFAULT_COLUMN_WIDTHS };
-  });
+  // Column Resizing state & persistence (saved to the user's account)
+  const [columnWidths, setColumnWidths] = useState<Record<ColumnId, number>>(() => ({
+    ...DEFAULT_COLUMN_WIDTHS,
+    ...(settings.tableColumnWidths as Partial<Record<ColumnId, number>> | undefined),
+  }));
   const [resizingCol, setResizingCol] = useState<ColumnId | null>(null);
   const dragOccurredRef = useRef(false);
 
-  // Listen to custom formula storage changes
-  useEffect(() => {
-    const handleStorage = () => {
-      const savedFormula = localStorage.getItem(STORAGE_KEY_FORMULA);
-      if (savedFormula) {
-        setCustomFormula(savedFormula.replace(/round\(\s+#/g, 'round(#'));
-      }
-    };
-    window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
-  }, []);
-
-  // Persist column widths
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    try {
-      localStorage.setItem(STORAGE_KEY_COLUMN_WIDTHS, JSON.stringify(columnWidths));
-    } catch {
-      /* ignore storage error */
-    }
-  }, [columnWidths]);
+  // Save once a drag finishes rather than on every animation frame
+  useSyncSetting('tableColumnWidths', resizingCol ? undefined : columnWidths);
 
   useEffect(() => {
     if (!resizingCol) return;

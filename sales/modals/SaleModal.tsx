@@ -18,7 +18,7 @@ import {
   Binary,
   Coins,
 } from 'lucide-react';
-import type { SaleItem, StoreType, OrderStatus, PaymentStatus, Category, PaymentMethod } from '@/sales/types';
+import type { SaleItem } from '@/sales/types';
 import { TagPill } from '@/sales/views/table/TagPill';
 import { TableOptionPicker } from '@/sales/views/table/TableOptionPicker';
 import { TableDatePicker } from '@/sales/views/table/TableDatePicker';
@@ -26,7 +26,8 @@ import { TableLocationPicker } from '@/sales/views/table/TableLocationPicker';
 import { normalizeCoordinates } from '@/sales/lib/locationParser';
 import { formatDateDisplay } from '@/sales/lib/dateUtils';
 import { FormulaModal } from '@/sales/modals/FormulaModal';
-import { evaluateSalesFormula, DEFAULT_FORMULA, STORAGE_KEY_FORMULA } from '@/sales/lib/formulaEngine';
+import { evaluateSalesFormula } from '@/sales/lib/formulaEngine';
+import { useFormulaSetting } from '@/sales/context/SettingsContext';
 import { useAuth } from '@/sales/context/AuthContext';
 import { uploadInvoiceFile } from '@/sales/services/salesService';
 import { deleteInvoiceFileAction } from '@/sales/services/salesActions';
@@ -37,24 +38,24 @@ interface SaleModalProps {
   onClose: () => void;
   onSave: (saleData: Omit<SaleItem, 'id'> | SaleItem) => Promise<void>;
   initialData?: SaleItem | null;
-  defaultStore?: StoreType | string;
+  defaultStore?: string;
   onOpenFullMap?: (sale: SaleItem) => void;
 }
 
 interface SaleFormData {
   quantity: number | string;
   item: string;
-  category: Category | string;
+  category: string;
   cost: number | string;
   customer: string;
   date: string;
   invoice_name?: string | null;
   invoice_url?: string | null;
   location: string;
-  marketplace: StoreType | string;
-  order_status: OrderStatus | string;
-  payment_method: PaymentMethod | string;
-  payment_status: PaymentStatus | string;
+  marketplace: string;
+  order_status: string;
+  payment_method: string;
+  payment_status: string;
   sales: number;
   subtotal: number | string;
   latitude?: number;
@@ -86,7 +87,7 @@ function toSaleItem(formData: SaleFormData, calculatedSales: number, id: string)
 
 function getInitialFormData(
   initialData?: SaleItem | null,
-  defaultStore?: StoreType | string
+  defaultStore?: string
 ): SaleFormData {
   if (initialData) {
     const coords = normalizeCoordinates(initialData.latitude, initialData.longitude);
@@ -109,9 +110,9 @@ function getInitialFormData(
       invoice_url: initialData.invoice_url || null,
       location: initialData.location || '',
       marketplace: initialData.marketplace || (defaultStore || ''),
-      order_status: (initialData.order_status || '') as OrderStatus,
+      order_status: initialData.order_status || '',
       payment_method: initialData.payment_method || '',
-      payment_status: (initialData.payment_status || '') as PaymentStatus,
+      payment_status: initialData.payment_status || '',
       sales: initialData.sales ?? 0,
       subtotal:
         initialData.subtotal !== undefined && initialData.subtotal !== null
@@ -136,9 +137,9 @@ function getInitialFormData(
     invoice_url: null,
     location: '',
     marketplace: '',
-    order_status: '' as OrderStatus,
+    order_status: '',
     payment_method: '',
-    payment_status: '' as PaymentStatus,
+    payment_status: '',
     sales: 0,
     subtotal: '',
     latitude: undefined,
@@ -163,12 +164,7 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
   const [isUploadingInvoice, setIsUploadingInvoice] = useState(false);
   const { user } = useAuth();
 
-  const [customFormula, setCustomFormula] = useState<string>(() => {
-    if (typeof window === 'undefined') return DEFAULT_FORMULA;
-    const saved = localStorage.getItem(STORAGE_KEY_FORMULA);
-    if (!saved || saved === 'round( # Subtotal (in MYR) - # Cost(s) , 2)') return DEFAULT_FORMULA;
-    return saved.replace(/round\(\s+#/g, 'round(#');
-  });
+  const [customFormula, setCustomFormula] = useFormulaSetting();
 
   const [formData, setFormData] = useState<SaleFormData>(() =>
     getInitialFormData(initialData, defaultStore)
@@ -177,18 +173,6 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Listen to custom formula storage changes
-  useEffect(() => {
-    const handleStorage = () => {
-      const saved = localStorage.getItem(STORAGE_KEY_FORMULA);
-      if (saved) {
-        setCustomFormula(saved.replace(/round\(\s+#/g, 'round(#'));
-      }
-    };
-    window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
-  }, []);
 
   // Keyboard Escape listener to close popup
   useEffect(() => {
@@ -600,18 +584,9 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
                     type="marketplace"
                     currentValue={formData.marketplace}
                     onSelect={(val) => {
-                      const newStore = val;
-                      const currentPay = formData.payment_method || '';
-                      const updatedPayment =
-                        newStore === 'Shopee' && currentPay && !currentPay.startsWith('Shopee')
-                          ? 'Shopee - ShopeePay Balance'
-                          : newStore === 'Carousell' && currentPay && currentPay.startsWith('Shopee')
-                            ? 'Online Banking'
-                            : formData.payment_method;
                       setFormData((prev) => ({
                         ...prev,
-                        marketplace: newStore as StoreType,
-                        payment_method: updatedPayment,
+                        marketplace: val,
                       }));
                       setActiveOptionPicker(null);
                     }}
@@ -651,7 +626,7 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
                     onSelect={(val) => {
                       setFormData((prev) => ({
                         ...prev,
-                        order_status: val as OrderStatus,
+                        order_status: val,
                       }));
                       setActiveOptionPicker(null);
                     }}
@@ -731,7 +706,7 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
                     onSelect={(val) => {
                       setFormData((prev) => ({
                         ...prev,
-                        payment_status: val as PaymentStatus,
+                        payment_status: val,
                       }));
                       setActiveOptionPicker(null);
                     }}
@@ -849,8 +824,6 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
           currentFormula={customFormula}
           onSaveFormula={(newFormula) => {
             setCustomFormula(newFormula);
-            localStorage.setItem(STORAGE_KEY_FORMULA, newFormula);
-            window.dispatchEvent(new Event('storage'));
           }}
         />
       )}

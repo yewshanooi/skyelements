@@ -16,14 +16,14 @@ import {
   Trash2,
   MoreVertical,
 } from 'lucide-react';
-import type { ViewMode, StoreType } from '@/sales/types';
+import type { ViewMode } from '@/sales/types';
 
 interface HeaderProps {
   activeView: ViewMode;
   onSelectView: (view: ViewMode) => void;
   onExportPdf: () => void;
   isExportingPdf?: boolean;
-  onOpenNewSale?: (defaultStore?: StoreType | string) => void;
+  onOpenNewSale?: (defaultStore?: string) => void;
   searchQuery?: string;
   onSearchChange?: (query: string) => void;
   salesCount?: number;
@@ -60,7 +60,7 @@ interface MobileFloatingNavProps {
   onSelectView: (view: ViewMode) => void;
   searchQuery?: string;
   onSearchChange?: (query: string) => void;
-  onOpenNewSale?: (defaultStore?: StoreType | string) => void;
+  onOpenNewSale?: (defaultStore?: string) => void;
   onExportPdf: () => void;
   isExportingPdf?: boolean;
   selectedIdsCount?: number;

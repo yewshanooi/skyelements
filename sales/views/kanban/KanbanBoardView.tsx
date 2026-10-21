@@ -3,11 +3,13 @@
 import { useState, useMemo } from 'react';
 import type { FC, DragEvent } from 'react';
 import { Plus, User, ShoppingBag, Calendar } from 'lucide-react';
-import type { SaleItem, StoreType, SortField, SortOrder } from '@/sales/types';
+import type { SaleItem, SortField, SortOrder } from '@/sales/types';
 import { TagPill } from '@/sales/views/table/TagPill';
 import { NotionFilterBar } from '@/sales/filters/NotionFilterBar';
 import { filterSales, type FilterState } from '@/sales/lib/filterUtils';
 import { formatDayMonth } from '@/sales/lib/dateUtils';
+import { useOptionsStore } from '@/sales/context/OptionsContext';
+import { getTagColorHex } from '@/sales/lib/optionTypes';
 
 interface KanbanBoardViewProps {
   sales: SaleItem[];
@@ -17,37 +19,22 @@ interface KanbanBoardViewProps {
   sortOrder?: SortOrder;
   onSortChange?: (field: SortField, order: SortOrder) => void;
   onSelectSale: (sale: SaleItem) => void;
-  onOpenNewSale: (defaultStore?: StoreType | string) => void;
-  onUpdateStore?: (saleId: string, newStore: StoreType | string) => Promise<void>;
+  onOpenNewSale: (defaultStore?: string) => void;
+  onUpdateStore?: (saleId: string, newStore: string) => Promise<void>;
 }
 
-interface ColumnConfig {
-  id: StoreType;
+interface BoardColumn {
+  /** Unique React/drag key. */
+  key: string;
+  /** Store value written to a sale when it is dropped here ('' = no store). */
+  value: string;
   label: string;
-  dotColor: string;
-  badgeBg: string;
-  borderAccent: string;
-  headerBg: string;
+  /** Solid accent color derived from the store's saved option color. */
+  hex: string;
 }
 
-const STORE_COLUMNS: ColumnConfig[] = [
-  {
-    id: 'Shopee',
-    label: 'Shopee',
-    dotColor: 'bg-orange-500',
-    badgeBg: 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20',
-    borderAccent: 'hover:border-orange-500/40',
-    headerBg: 'bg-orange-50/50 dark:bg-orange-950/20',
-  },
-  {
-    id: 'Carousell',
-    label: 'Carousell',
-    dotColor: 'bg-red-500',
-    badgeBg: 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20',
-    borderAccent: 'hover:border-red-500/40',
-    headerBg: 'bg-red-50/50 dark:bg-red-950/20',
-  },
-];
+const UNASSIGNED_KEY = '__unassigned__';
+const UNASSIGNED_HEX = '#9b9a97';
 
 export const KanbanBoardView: FC<KanbanBoardViewProps> = ({
   sales,
@@ -60,8 +47,9 @@ export const KanbanBoardView: FC<KanbanBoardViewProps> = ({
   onOpenNewSale,
   onUpdateStore,
 }) => {
+  const { getOptionNames, getOptionColor } = useOptionsStore();
   const [draggedId, setDraggedId] = useState<string | null>(null);
-  const [dragOverCol, setDragOverCol] = useState<StoreType | null>(null);
+  const [dragOverCol, setDragOverCol] = useState<string | null>(null);
 
   const [internalSortField, setInternalSortField] = useState<SortField>(propSortField);
   const [internalSortOrder, setInternalSortOrder] = useState<SortOrder>(propSortOrder);
@@ -105,27 +93,34 @@ export const KanbanBoardView: FC<KanbanBoardViewProps> = ({
     return mapped.map((m) => m.sale);
   }, [sales, sortField, sortOrder, filters]);
 
-  // Single-pass column grouping and total aggregation
-  const storeColumnData = useMemo(() => {
-    const data: Record<StoreType, { sales: SaleItem[]; total: number }> = {
-      Shopee: { sales: [], total: 0 },
-      Carousell: { sales: [], total: 0 },
-    };
+  const storeNames = getOptionNames('marketplace');
 
-    for (let i = 0; i < filteredAndSortedSales.length; i++) {
-      const s = filteredAndSortedSales[i];
-      const mp = (s.marketplace || '').trim().toLowerCase();
-      if (mp === 'shopee') {
-        data.Shopee.sales.push(s);
-        data.Shopee.total += s.sales || 0;
-      } else if (mp === 'carousell') {
-        data.Carousell.sales.push(s);
-        data.Carousell.total += s.sales || 0;
-      }
+  // One column per store the user has created, in creation order. Sales with no store (or a store
+  // that is no longer in the list) go to an "No store" column so nothing silently disappears.
+  const { columns, columnData } = useMemo(() => {
+    const data = new Map<string, { sales: SaleItem[]; total: number }>();
+    storeNames.forEach((name) => data.set(name, { sales: [], total: 0 }));
+    const unassigned = { sales: [] as SaleItem[], total: 0 };
+
+    for (const s of filteredAndSortedSales) {
+      const bucket = data.get((s.marketplace || '').trim()) ?? unassigned;
+      bucket.sales.push(s);
+      bucket.total += s.sales || 0;
+    }
+    data.set(UNASSIGNED_KEY, unassigned);
+
+    const cols: BoardColumn[] = storeNames.map((name) => ({
+      key: name,
+      value: name,
+      label: name,
+      hex: getTagColorHex(getOptionColor('marketplace', name)),
+    }));
+    if (unassigned.sales.length > 0 || storeNames.length === 0) {
+      cols.push({ key: UNASSIGNED_KEY, value: '', label: 'No store', hex: UNASSIGNED_HEX });
     }
 
-    return data;
-  }, [filteredAndSortedSales]);
+    return { columns: cols, columnData: data };
+  }, [filteredAndSortedSales, storeNames, getOptionColor]);
 
   const handleDragStart = (e: DragEvent<HTMLDivElement>, saleId: string) => {
     e.dataTransfer.setData('text/plain', saleId);
@@ -138,11 +133,11 @@ export const KanbanBoardView: FC<KanbanBoardViewProps> = ({
     setDragOverCol(null);
   };
 
-  const handleDragOver = (e: DragEvent<HTMLDivElement>, colId: StoreType) => {
+  const handleDragOver = (e: DragEvent<HTMLDivElement>, colKey: string) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
-    if (dragOverCol !== colId) {
-      setDragOverCol(colId);
+    if (dragOverCol !== colKey) {
+      setDragOverCol(colKey);
     }
   };
 
@@ -152,19 +147,18 @@ export const KanbanBoardView: FC<KanbanBoardViewProps> = ({
     setDragOverCol(null);
   };
 
-  const handleDrop = async (e: DragEvent<HTMLDivElement>, colId: StoreType) => {
+  const handleDrop = async (e: DragEvent<HTMLDivElement>, col: BoardColumn) => {
     e.preventDefault();
     setDragOverCol(null);
     const saleId = e.dataTransfer.getData('text/plain') || draggedId;
     if (saleId && onUpdateStore) {
       const targetSale = sales.find((s) => s.id === saleId);
-      if (targetSale && targetSale.marketplace !== colId) {
-        await onUpdateStore(saleId, colId);
+      if (targetSale && (targetSale.marketplace || '') !== col.value) {
+        await onUpdateStore(saleId, col.value);
       }
     }
     setDraggedId(null);
   };
-
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -178,38 +172,55 @@ export const KanbanBoardView: FC<KanbanBoardViewProps> = ({
         onFiltersChange={onFiltersChange}
       />
 
-      {/* 2-Column Store Board Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 pb-6">
-        {STORE_COLUMNS.map((col) => {
-          const colInfo = storeColumnData[col.id] || { sales: [], total: 0 };
+      {storeNames.length === 0 && (
+        <p className="text-xs text-neutral-500 dark:text-neutral-400">
+          The board has one column per store. Create stores from the Store column in the table (or
+          when adding an order) and they will appear here.
+        </p>
+      )}
+
+      {/* One column per store (scrolls sideways when there are many) */}
+      <div className="flex gap-4 sm:gap-6 pb-6 overflow-x-auto">
+        {columns.map((col) => {
+          const colInfo = columnData.get(col.key) ?? { sales: [], total: 0 };
           const colSales = colInfo.sales;
           const colTotal = colInfo.total;
-          const isOver = dragOverCol === col.id;
+          const isOver = dragOverCol === col.key;
+          const isUnassignedCol = col.key === UNASSIGNED_KEY;
 
           return (
             <div
-              key={col.id}
-              onDragOver={(e) => handleDragOver(e, col.id)}
+              key={col.key}
+              onDragOver={(e) => handleDragOver(e, col.key)}
               onDragLeave={handleDragLeave}
-              onDrop={(e) => handleDrop(e, col.id)}
-              className={`flex flex-col rounded-xl bg-neutral-100/60 dark:bg-[#1f1f1f]/80 border transition-all duration-200 p-3 sm:p-4 min-h-[300px] md:min-h-[550px] max-h-[75vh] md:max-h-[800px] shadow-xs ${
+              onDrop={(e) => handleDrop(e, col)}
+              className={`flex flex-col flex-1 min-w-[280px] sm:min-w-[320px] rounded-xl bg-neutral-100/60 dark:bg-[#1f1f1f]/80 border transition-all duration-200 p-3 sm:p-4 min-h-[300px] md:min-h-[550px] max-h-[75vh] md:max-h-[800px] shadow-xs ${
                 isOver
                   ? 'border-blue-500/80 ring-2 ring-blue-500/20 bg-blue-50/20 dark:bg-blue-950/20'
                   : 'border-neutral-200/80 dark:border-neutral-800'
               }`}
             >
               {/* Column Header */}
-              <div className={`flex items-center justify-between pb-3 mb-3 border-b border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2.5 ${col.headerBg}`}>
-                <div className="flex items-center gap-2.5">
-                  <span className={`w-2.5 h-2.5 rounded-full ${col.dotColor} shadow-xs`} />
-                  <span className="text-sm font-bold text-neutral-900 dark:text-neutral-100">
+              <div
+                className="flex items-center justify-between pb-3 mb-3 border-b border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2.5"
+                style={{ backgroundColor: `${col.hex}1a` }}
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span
+                    className="w-2.5 h-2.5 rounded-full shadow-xs shrink-0"
+                    style={{ backgroundColor: col.hex }}
+                  />
+                  <span className="text-sm font-bold text-neutral-900 dark:text-neutral-100 truncate">
                     {col.label}
                   </span>
-                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${col.badgeBg}`}>
+                  <span
+                    className="text-xs font-semibold px-2 py-0.5 rounded-full border shrink-0 text-neutral-700 dark:text-neutral-300"
+                    style={{ backgroundColor: `${col.hex}1a`, borderColor: `${col.hex}40` }}
+                  >
                     {colSales.length} {colSales.length === 1 ? 'sale' : 'sales'}
                   </span>
                 </div>
-                <div className="text-right">
+                <div className="text-right shrink-0 pl-2">
                   <span className="text-xs font-mono font-bold text-neutral-800 dark:text-neutral-200">
                     RM {colTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
@@ -256,8 +267,11 @@ export const KanbanBoardView: FC<KanbanBoardViewProps> = ({
                           )}
                         </div>
 
-                        {/* Pills: Category + Order Status */}
+                        {/* Pills: Store (only in the "No store" column, for leftover values) + Category + Statuses */}
                         <div className="flex items-center gap-1.5 flex-wrap">
+                          {isUnassignedCol && sale.marketplace && (
+                            <TagPill text={sale.marketplace} type="marketplace" className="text-[10px]" />
+                          )}
                           <TagPill text={sale.category} type="category" className="text-[10px]" />
                           <TagPill text={sale.order_status} type="order_status" className="text-[10px]" />
                           {sale.payment_status && (
@@ -289,7 +303,7 @@ export const KanbanBoardView: FC<KanbanBoardViewProps> = ({
 
               {/* Column Footer Button */}
               <button
-                onClick={() => onOpenNewSale()}
+                onClick={() => onOpenNewSale(col.value || undefined)}
                 className="mt-3 py-2 w-full text-center text-xs font-medium text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200 hover:bg-white dark:hover:bg-neutral-800/80 rounded-lg border border-dashed border-neutral-300 dark:border-neutral-700 transition-all flex items-center justify-center gap-1.5 shadow-2xs hover:shadow-xs cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5 text-neutral-400" />

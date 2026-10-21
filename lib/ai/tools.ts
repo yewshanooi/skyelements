@@ -3,6 +3,27 @@ import type { QuerySalesMetricsArgs } from '@/sales/types/ai';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { AiToolResult } from './types';
 import { isValidUuid } from './context';
+import {
+  DEFAULT_OPTION_COLOR,
+  MAX_OPTION_NAME_LENGTH,
+  OPTION_TYPES,
+  OPTION_TYPE_LABELS,
+  isOptionType,
+  isValidOptionColor,
+  type OptionType,
+} from '@/sales/lib/optionTypes';
+import {
+  groupOptionNames,
+  loadUserSalesOptions,
+  matchOptionName,
+} from '@/sales/lib/optionLookup';
+
+const OPTION_COLOR_NAMES = [
+  'default', 'gray', 'brown', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'red',
+] as const;
+
+const USER_OPTION_NOTE =
+  'Must match one of the user\'s own saved options (listed in the system prompt). Options are user-defined; never invent one.';
 
 // ==============================================================================
 // 1. Tool Declaration Definitions for Gemini Function Calling
@@ -128,7 +149,7 @@ export const AI_TOOLS = [
             },
             category: {
               type: 'STRING',
-              description: 'Exact category filter (e.g. "Collectibles")',
+              description: 'Category filter. Use one of the user\'s saved Category options (case-insensitive).',
             },
             categories: {
               type: 'ARRAY',
@@ -137,7 +158,7 @@ export const AI_TOOLS = [
             },
             marketplace: {
               type: 'STRING',
-              description: 'Exact marketplace filter (Shopee, Carousell)',
+              description: 'Store filter. Use one of the user\'s saved Store options (case-insensitive).',
             },
             marketplaces: {
               type: 'ARRAY',
@@ -146,11 +167,11 @@ export const AI_TOOLS = [
             },
             order_status: {
               type: 'STRING',
-              description: 'Fulfillment status (Processing, Shipped, Delivered)',
+              description: 'Order status filter. Use one of the user\'s saved Order Status options (case-insensitive).',
             },
             payment_status: {
               type: 'STRING',
-              description: 'Payment status (On Hold, Processing, Paid)',
+              description: 'Payment status filter. Use one of the user\'s saved Payment Status options (case-insensitive).',
             },
             customer: {
               type: 'STRING',
@@ -188,7 +209,7 @@ export const AI_TOOLS = [
         },
         marketplace: {
           type: 'STRING',
-          description: 'Optional filter by marketplace (Shopee or Carousell).',
+          description: 'Optional filter by store (one of the user\'s saved Store options).',
         },
         limit: {
           type: 'NUMBER',
@@ -200,7 +221,7 @@ export const AI_TOOLS = [
   {
     name: 'ai_create_sale',
     description:
-      'Record a new sales order into the Sales Dashboard database.',
+      'Record a new sales order into the Sales Dashboard database. The option fields (category, marketplace, payment_method, order_status, payment_status) are optional and left blank when the user did not specify them. A value must be one of the user\'s saved options; if it is not, nothing is recorded and the tool reports the valid choices so you can ask the user to pick one or to create the new option (ai_create_sales_option).',
     parameters: {
       type: 'OBJECT',
       properties: {
@@ -209,13 +230,39 @@ export const AI_TOOLS = [
         subtotal: { type: 'NUMBER', description: 'Total selling price in MYR.' },
         cost: { type: 'NUMBER', description: 'Total item cost in MYR (default 0).' },
         customer: { type: 'STRING', description: 'Customer name.' },
-        marketplace: { type: 'STRING', description: 'Marketplace platform (Shopee, Carousell, etc.).' },
-        category: { type: 'STRING', description: 'Item category.' },
-        order_status: { type: 'STRING', description: 'Order status (Delivered, Shipped, Processing).' },
-        payment_status: { type: 'STRING', description: 'Payment status (Paid, Processing, On Hold).' },
+        marketplace: { type: 'STRING', description: `Store. ${USER_OPTION_NOTE} Omit if not specified.` },
+        category: { type: 'STRING', description: `Category. ${USER_OPTION_NOTE} Omit if not specified.` },
+        payment_method: { type: 'STRING', description: `Payment method. ${USER_OPTION_NOTE} Omit if not specified.` },
+        order_status: { type: 'STRING', description: `Order status. ${USER_OPTION_NOTE} Omit if not specified.` },
+        payment_status: { type: 'STRING', description: `Payment status. ${USER_OPTION_NOTE} Omit if not specified.` },
         notes: { type: 'STRING', description: 'Optional order notes.' },
       },
       required: ['item', 'subtotal'],
+    },
+  },
+  {
+    name: 'ai_create_sales_option',
+    description:
+      'Create a new option for one of the Sales Dashboard option columns (Category, Store, Order Status, Payment Status, Payment Method). Only call this when the user has explicitly asked for the option to be created or has confirmed they want it. Options are the user\'s own, so never create them speculatively.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        type: {
+          type: 'STRING',
+          enum: [...OPTION_TYPES],
+          description: 'Which option column: category, marketplace (Store), order_status, payment_status, or payment_method.',
+        },
+        name: {
+          type: 'STRING',
+          description: `The option text (max ${MAX_OPTION_NAME_LENGTH} characters).`,
+        },
+        color: {
+          type: 'STRING',
+          enum: [...OPTION_COLOR_NAMES],
+          description: 'Optional color for the option tag. Omit to use the default color; the user can change it later.',
+        },
+      },
+      required: ['type', 'name'],
     },
   },
 ];
@@ -432,7 +479,7 @@ export async function executeAiTool(
 
         let query = supabase
           .from('sales')
-          .select('id, item, quantity, subtotal, cost, sales, customer, marketplace, category, order_status, payment_status, date')
+          .select('id, item, quantity, subtotal, cost, sales, customer, marketplace, category, payment_method, order_status, payment_status, date')
           .eq('user_id', userId)
           .order('date', { ascending: false })
           .limit(limitNum);
@@ -467,11 +514,52 @@ export async function executeAiTool(
         const rawCost = Number(args.cost) || 0;
         const cost = Math.max(0, Math.min(10000000, Number.isFinite(rawCost) ? rawCost : 0));
         const customer = String(args.customer || '').trim().slice(0, 200);
-        const marketplace = String(args.marketplace || 'Shopee').trim().slice(0, 100) || 'Shopee';
-        const category = String(args.category || 'General').trim().slice(0, 100) || 'General';
-        const order_status = String(args.order_status || 'Delivered').trim().slice(0, 50) || 'Delivered';
-        const payment_status = String(args.payment_status || 'Paid').trim().slice(0, 50) || 'Paid';
         const notes = String(args.notes || '').trim().slice(0, 2000);
+
+        // Option columns are user-defined: unspecified stays blank, and anything specified must
+        // match one of the user's saved options (spelling is normalized to the saved option).
+        const userOptions = await loadUserSalesOptions(supabase, userId);
+        const grouped = groupOptionNames(userOptions);
+        const resolved: Record<OptionType, string> = {
+          category: '',
+          marketplace: '',
+          order_status: '',
+          payment_status: '',
+          payment_method: '',
+        };
+        const unknownValues: Array<{ field: OptionType; label: string; value: string; valid_options: string[] }> = [];
+
+        for (const type of OPTION_TYPES) {
+          const rawValue = typeof args[type] === 'string' ? (args[type] as string).trim().slice(0, MAX_OPTION_NAME_LENGTH) : '';
+          if (!rawValue) continue;
+          const matched = matchOptionName(userOptions, type, rawValue);
+          if (matched) {
+            resolved[type] = matched;
+          } else {
+            unknownValues.push({
+              field: type,
+              label: OPTION_TYPE_LABELS[type],
+              value: rawValue,
+              valid_options: grouped[type],
+            });
+          }
+        }
+
+        if (unknownValues.length > 0) {
+          return {
+            toolName,
+            output: {
+              success: false,
+              recorded: false,
+              error: 'Some values are not saved options, so no sale was recorded.',
+              unknown_values: unknownValues,
+              next_step:
+                'Ask the user whether to use one of the valid options or create the new option (ai_create_sales_option), then retry. If valid_options is empty, the user has not created any options for that field yet.',
+            },
+          };
+        }
+
+        const { category, marketplace, payment_method, order_status, payment_status } = resolved;
 
         const { data, error } = await supabase
           .from('sales')
@@ -484,6 +572,7 @@ export async function executeAiTool(
             customer,
             marketplace,
             category,
+            payment_method,
             order_status,
             payment_status,
             notes,
@@ -501,12 +590,63 @@ export async function executeAiTool(
           output: {
             success: true,
             id: data.id,
-            message: `Recorded sale for "${item}" (RM ${subtotal.toFixed(2)}) on ${marketplace}.`,
+            message: `Recorded sale for "${item}" (RM ${subtotal.toFixed(2)})${marketplace ? ` on ${marketplace}` : ''}.`,
           },
           card: {
             type: 'sale_created',
             title: `Sale Recorded: ${item}`,
             data,
+          },
+        };
+      }
+
+      case 'ai_create_sales_option': {
+        const type = args.type;
+        if (!isOptionType(type)) {
+          return { toolName, output: { error: `Invalid type. Use one of: ${OPTION_TYPES.join(', ')}.` } };
+        }
+        const name = typeof args.name === 'string' ? args.name.trim() : '';
+        if (!name || name.length > MAX_OPTION_NAME_LENGTH) {
+          return { toolName, output: { error: `Name must be 1-${MAX_OPTION_NAME_LENGTH} characters.` } };
+        }
+        const colorClass = typeof args.color === 'string' ? `tag-${args.color.trim().toLowerCase()}` : DEFAULT_OPTION_COLOR;
+        const color = isValidOptionColor(colorClass) ? colorClass : DEFAULT_OPTION_COLOR;
+
+        const existing = await loadUserSalesOptions(supabase, userId);
+        const already = matchOptionName(existing, type, name);
+        if (already) {
+          return {
+            toolName,
+            output: {
+              success: true,
+              already_exists: true,
+              message: `"${already}" already exists as a ${OPTION_TYPE_LABELS[type]} option.`,
+              name: already,
+            },
+          };
+        }
+
+        const { error } = await supabase
+          .from('sales_options')
+          .insert({ user_id: userId, type, name, color });
+
+        if (error) {
+          // 23505 = unique_violation (created concurrently, e.g. from another device)
+          if (error.code === '23505') {
+            return {
+              toolName,
+              output: { success: true, already_exists: true, message: `"${name}" already exists.`, name },
+            };
+          }
+          return { toolName, output: { error: `Failed to create option: ${error.message}` } };
+        }
+
+        return {
+          toolName,
+          output: {
+            success: true,
+            message: `Created ${OPTION_TYPE_LABELS[type]} option "${name}". The user can change its color in the Sales Dashboard.`,
+            name,
           },
         };
       }

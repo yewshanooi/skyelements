@@ -23,6 +23,8 @@ import {
 } from 'lucide-react';
 import { NotionFilterBar } from '@/sales/filters/NotionFilterBar';
 import { filterSales, DEFAULT_EMPTY_FILTERS, type FilterState } from '@/sales/lib/filterUtils';
+import { useSalesSettings, useSyncSetting } from '@/sales/context/SettingsContext';
+import { useOptionsStore } from '@/sales/context/OptionsContext';
 import type {
   WidgetConfig,
   WidgetWidth,
@@ -72,9 +74,6 @@ interface ChartViewProps {
   onResetSearch?: () => void;
 }
 
-const STORAGE_KEY_CHART_LAYOUT = 'sales_dashboard_chart_layout_v3';
-const STORAGE_KEY_OVERVIEW_KPI_LAYOUT = 'sales_dashboard_overview_kpi_layout_v3';
-
 // Widget registry definition
 const ALL_WIDGET_CONFIGS: WidgetConfig[] = [
   {
@@ -121,9 +120,9 @@ const ALL_WIDGET_CONFIGS: WidgetConfig[] = [
   {
     id: 'store_comparison',
     title: 'Store Performance',
-    subtitle: 'Shopee vs Carousell multichannel breakdown',
+    subtitle: 'Profit and margin across your stores',
     category: 'operations',
-    description: 'Shopee vs Carousell performance comparison.',
+    description: 'Performance comparison across your stores.',
     icon: StoreIcon,
     defaultWidth: '2/4',
     allowedWidths: ALL_WIDGET_WIDTHS,
@@ -221,12 +220,15 @@ export const ChartView: FC<ChartViewProps> = ({
 
   // Overview Mini Cards Customization state
   const [isCustomizingOverviewInModal, setIsCustomizingOverviewInModal] = useState(false);
+  const { getOptionNames } = useOptionsStore();
+  const { getSettings } = useSalesSettings();
+  const [settings] = useState(getSettings); // snapshot of saved settings used to seed local state
   const [overviewKpiLayout, setOverviewKpiLayout] = useState<OverviewKpiLayoutState>(() => {
-    if (typeof window === 'undefined') return DEFAULT_OVERVIEW_KPI_LAYOUT;
     try {
-      const stored = localStorage.getItem(STORAGE_KEY_OVERVIEW_KPI_LAYOUT);
-      if (stored) {
-        const parsed = JSON.parse(stored);
+      const parsed = settings.overviewKpiLayout as
+        | { order?: KpiCardId[]; hidden?: OverviewKpiLayoutState['hidden']; sizes?: OverviewKpiLayoutState['sizes'] }
+        | undefined;
+      if (parsed) {
         const registered = ALL_KPI_DEFINITIONS.map((c) => c.id);
         const existing = Array.isArray(parsed.order)
           ? parsed.order.filter((id: KpiCardId) => registered.includes(id))
@@ -241,20 +243,13 @@ export const ChartView: FC<ChartViewProps> = ({
         });
       }
     } catch {
-      /* ignore storage error */
+      /* fall back to defaults if the saved layout is malformed */
     }
     return DEFAULT_OVERVIEW_KPI_LAYOUT;
   });
 
-  // Save overview mini cards layout to localStorage
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    try {
-      localStorage.setItem(STORAGE_KEY_OVERVIEW_KPI_LAYOUT, JSON.stringify(overviewKpiLayout));
-    } catch {
-      /* ignore storage error */
-    }
-  }, [overviewKpiLayout]);
+  // Save overview mini cards layout to the user's account
+  useSyncSetting('overviewKpiLayout', overviewKpiLayout as unknown as Record<string, unknown>);
 
   // Widget specific subcontrols persistence
   interface ChartSubcontrolsState {
@@ -273,13 +268,7 @@ export const ChartView: FC<ChartViewProps> = ({
       donutBreakdown: 'items',
       categorySortBy: 'profit',
     };
-    if (typeof window !== 'undefined') {
-      try {
-        const stored = localStorage.getItem('sales_dashboard_chart_subcontrols_v1');
-        if (stored) return { ...defaults, ...JSON.parse(stored) };
-      } catch { }
-    }
-    return defaults;
+    return { ...defaults, ...(settings.chartSubcontrols as Partial<ChartSubcontrolsState> | undefined) };
   });
 
   const setSubcontrol = <K extends keyof ChartSubcontrolsState>(
@@ -307,20 +296,15 @@ export const ChartView: FC<ChartViewProps> = ({
   const categorySortBy = subcontrols.categorySortBy;
   const setCategorySortBy = (v: 'revenue' | 'profit' | 'margin' | ((prev: 'revenue' | 'profit' | 'margin') => 'revenue' | 'profit' | 'margin')) => setSubcontrol('categorySortBy', v);
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    try {
-      localStorage.setItem('sales_dashboard_chart_subcontrols_v1', JSON.stringify(subcontrols));
-    } catch { }
-  }, [subcontrols]);
+  useSyncSetting('chartSubcontrols', subcontrols as unknown as Record<string, unknown>);
 
-  // Load layout from localStorage or fallback to default
+  // Load the saved layout from the user's account or fall back to default
   const [layout, setLayout] = useState<WidgetLayoutState>(() => {
-    if (typeof window === 'undefined') return DEFAULT_LAYOUT;
     try {
-      const stored = localStorage.getItem(STORAGE_KEY_CHART_LAYOUT);
-      if (stored) {
-        const parsed = JSON.parse(stored);
+      const parsed = settings.chartLayout as
+        | { order?: string[]; widths?: Record<string, string>; hidden?: Record<string, boolean> }
+        | undefined;
+      if (parsed) {
         const registeredIds = ALL_WIDGET_CONFIGS.map((w) => w.id);
         const existingOrder = Array.isArray(parsed.order)
           ? parsed.order.filter((id: string) => registeredIds.includes(id))
@@ -329,9 +313,10 @@ export const ChartView: FC<ChartViewProps> = ({
         const finalOrder = [...existingOrder, ...missingIds];
 
         const normalizedWidths: Record<string, WidgetWidth> = { ...DEFAULT_LAYOUT.widths };
-        if (parsed.widths && typeof parsed.widths === 'object') {
-          Object.keys(parsed.widths).forEach((id) => {
-            normalizedWidths[id] = normalizeWidgetWidth(parsed.widths[id], DEFAULT_LAYOUT.widths[id] || '4/4');
+        const savedWidths = parsed.widths;
+        if (savedWidths && typeof savedWidths === 'object') {
+          Object.keys(savedWidths).forEach((id) => {
+            normalizedWidths[id] = normalizeWidgetWidth(savedWidths[id], DEFAULT_LAYOUT.widths[id] || '4/4');
           });
         }
 
@@ -342,20 +327,13 @@ export const ChartView: FC<ChartViewProps> = ({
         };
       }
     } catch {
-      /* ignore storage error */
+      /* fall back to defaults if the saved layout is malformed */
     }
     return DEFAULT_LAYOUT;
   });
 
-  // Save layout changes to localStorage
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    try {
-      localStorage.setItem(STORAGE_KEY_CHART_LAYOUT, JSON.stringify(layout));
-    } catch {
-      /* ignore storage error */
-    }
-  }, [layout]);
+  // Save layout changes to the user's account
+  useSyncSetting('chartLayout', layout as unknown as Record<string, unknown>);
 
   // Chart Filter state
   const [internalFilters, setInternalFilters] = useState<FilterState>(DEFAULT_EMPTY_FILTERS);
@@ -411,8 +389,8 @@ export const ChartView: FC<ChartViewProps> = ({
   );
 
   const fulfillmentData = useMemo(
-    () => computeFulfillmentData(filteredSales),
-    [filteredSales]
+    () => computeFulfillmentData(filteredSales, getOptionNames('order_status'), getOptionNames('payment_status')),
+    [filteredSales, getOptionNames]
   );
 
   const dayOfWeekData = useMemo(

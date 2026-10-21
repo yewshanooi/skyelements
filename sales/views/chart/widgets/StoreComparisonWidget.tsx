@@ -2,17 +2,20 @@
 
 import type { FC } from 'react';
 import type { StoreComparisonPoint } from '@/sales/lib/chartUtils';
+import { useOptionsStore } from '@/sales/context/OptionsContext';
+import { getTagColorHex } from '@/sales/lib/optionTypes';
 
 interface StoreComparisonWidgetProps {
   data: StoreComparisonPoint[];
 }
 
 export const StoreComparisonWidget: FC<StoreComparisonWidgetProps> = ({ data }) => {
+  const { getOptionColor } = useOptionsStore();
+
   return (
     <div className="space-y-3 min-w-0">
       {data.map((store) => {
-        const isShopee = store.name.toLowerCase().includes('shopee');
-        const accentColor = isShopee ? '#f97316' : '#ef4444';
+        const accentColor = getTagColorHex(getOptionColor('marketplace', store.name));
 
         return (
           <div

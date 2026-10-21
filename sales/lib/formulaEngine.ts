@@ -109,7 +109,7 @@ export const FORMULA_COLUMNS: FormulaColumnDef[] = [
     icon: '🏪',
     type: 'string',
     getValue: (item) => String(item?.marketplace ?? ''),
-    description: 'Sales channel or store (Shopee, Carousell)',
+    description: 'Sales channel or store',
   },
   {
     id: 'payment_method',
@@ -164,7 +164,14 @@ export const FORMULA_COLUMNS: FormulaColumnDef[] = [
 ];
 
 export const DEFAULT_FORMULA = 'round(# Subtotal (in MYR) - # Cost(s) , 2)';
-export const STORAGE_KEY_FORMULA = 'sales_dashboard_formula_v2';
+
+/**
+ * Normalizes a saved formula string (legacy spacing fixes, empty -> default).
+ */
+export function normalizeFormula(saved?: string | null): string {
+  if (!saved || saved === 'round( # Subtotal (in MYR) - # Cost(s) , 2)') return DEFAULT_FORMULA;
+  return saved.replace(/round\(\s+#/g, 'round(#');
+}
 
 export interface FormulaDetails {
   isValid: boolean;

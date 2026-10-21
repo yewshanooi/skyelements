@@ -503,18 +503,18 @@ const FormulaModalContent: FC<Omit<FormulaModalProps, 'isOpen'>> = ({
       sales.find((s) => s.id === selectedItemId) ||
       sales[0] || {
         id: 'preview',
-        item: 'Animal Kaiser - Ninja Trained Sig...',
-        customer: 'wenhui92',
+        item: 'Sample Order',
+        customer: 'Sample Customer',
         subtotal: 25.53,
         cost: 2.0,
         sales: 23.53,
         quantity: 1,
-        marketplace: 'Shopee',
-        category: 'Trading Card Games',
-        order_status: 'Delivered',
-        payment_status: 'Paid',
-        payment_method: 'Online Banking',
-        date: '2026-08-17',
+        marketplace: 'Sample Store',
+        category: 'Sample Category',
+        order_status: 'Sample Status',
+        payment_status: 'Sample Status',
+        payment_method: 'Sample Method',
+        date: new Date().toISOString().split('T')[0],
       }
     );
   }, [sales, selectedItemId]);

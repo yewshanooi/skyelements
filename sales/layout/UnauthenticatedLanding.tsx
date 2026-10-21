@@ -175,7 +175,7 @@ export const UnauthenticatedLanding: FC<UnauthenticatedLandingProps> = ({ onOpen
                     <CardTitle>Kanban Board</CardTitle>
                   </div>
                   <CardDescription>
-                    Drag-and-drop to organize sales across marketplaces including Shopee and Carousell.
+                    Drag-and-drop to organize sales across your own stores and marketplaces.
                   </CardDescription>
                 </div>
               </div>

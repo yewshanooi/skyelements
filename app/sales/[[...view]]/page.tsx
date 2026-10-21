@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { SalesClient } from "../sales-client";
 import type { ViewMode } from "@/sales/types";
 import { fetchSalesAction } from "@/sales/services/salesActions";
+import { fetchOptionsAction } from "@/sales/services/optionsActions";
+import { fetchSettingsAction } from "@/sales/services/settingsActions";
 
 const VALID_VIEWS: ViewMode[] = ["table", "board", "chart", "timeline", "map"];
 
@@ -50,7 +52,19 @@ export default async function SalesPage({
     redirect(`/?auth=login&redirectTo=/sales/${encodeURIComponent(activeView)}`);
   }
 
-  const initialSales = await fetchSalesAction();
+  const [initialSales, initialOptions, initialSettings] = await Promise.all([
+    fetchSalesAction(),
+    fetchOptionsAction(),
+    fetchSettingsAction(),
+  ]);
 
-  return <SalesClient activeView={activeView} initialUser={user} initialSales={initialSales} />;
+  return (
+    <SalesClient
+      activeView={activeView}
+      initialUser={user}
+      initialSales={initialSales}
+      initialOptions={initialOptions}
+      initialSettings={initialSettings}
+    />
+  );
 }

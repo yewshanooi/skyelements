@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useEffect } from 'react';
 import type { FC } from 'react';
-import { resolveOptionTagClass, getOptionColor } from '@/sales/services/optionsService';
+import { useOptionsStore } from '@/sales/context/OptionsContext';
 
 interface TagPillProps {
   text: string;
@@ -12,29 +11,15 @@ interface TagPillProps {
 }
 
 export const TagPill: FC<TagPillProps> = ({ text = '', type, color, className = '' }) => {
+  const { getOptionColor } = useOptionsStore();
   const safeText = typeof text === 'string' ? text : String(text || '');
-  const [customColor, setCustomColor] = useState<string | undefined>(() => getOptionColor(safeText, type));
-
-  useEffect(() => {
-    setCustomColor(getOptionColor(safeText, type));
-
-    const handleColorChange = () => {
-      setCustomColor(getOptionColor(safeText, type));
-    };
-
-    window.addEventListener('custom-colors-changed', handleColorChange);
-    window.addEventListener('custom-option-renamed', handleColorChange);
-    return () => {
-      window.removeEventListener('custom-colors-changed', handleColorChange);
-      window.removeEventListener('custom-option-renamed', handleColorChange);
-    };
-  }, [safeText, type]);
 
   if (!safeText.trim()) {
     return null;
   }
 
-  const resolvedClass = color || customColor || resolveOptionTagClass(safeText, type);
+  // Color comes from the user's saved option. Values that aren't saved options use the default color.
+  const resolvedClass = color || getOptionColor(type, safeText);
 
   return (
     <span

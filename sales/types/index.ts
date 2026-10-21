@@ -1,73 +1,23 @@
-export type OrderStatus = 'Processing' | 'Shipped' | 'Delivered';
-export const ORDER_STATUSES: OrderStatus[] = ['Processing', 'Shipped', 'Delivered'];
-
-export type PaymentStatus = 'On Hold' | 'Processing' | 'Paid';
-export const PAYMENT_STATUSES: PaymentStatus[] = ['On Hold', 'Processing', 'Paid'];
-
-export type StoreType = 'Shopee' | 'Carousell';
-export const STORE_TYPES: StoreType[] = ['Shopee', 'Carousell'];
-
-export type Category =
-  | 'Trading Card Games'
-  | 'Gift Cards'
-  | 'Virtual Items'
-  | 'Virtual Services'
-  | 'Collectibles'
-  | 'Miniatures'
-  | 'Books'
-  | 'Electronics';
-
-export const CATEGORIES: Category[] = [
-  'Trading Card Games',
-  'Gift Cards',
-  'Virtual Items',
-  'Virtual Services',
-  'Collectibles',
-  'Miniatures',
-  'Books',
-  'Electronics',
-];
-
-export type PaymentMethod =
-  | 'Online Banking'
-  | 'E-Wallet'
-  | 'E-Wallet - Business'
-  | 'Shopee - ShopeePay Balance'
-  | 'Shopee - Online Banking'
-  | 'Shopee - Apple Pay'
-  | 'Shopee - Credit / Debit Card'
-  | 'Shopee - Cash Payment at Physical Stores'
-  | 'Shopee - Cash on Delivery'
-  | 'Shopee - SPayLater';
-
-export const PAYMENT_METHODS: PaymentMethod[] = [
-  'Online Banking',
-  'E-Wallet',
-  'E-Wallet - Business',
-  'Shopee - ShopeePay Balance',
-  'Shopee - Online Banking',
-  'Shopee - Apple Pay',
-  'Shopee - Credit / Debit Card',
-  'Shopee - Cash Payment at Physical Stores',
-  'Shopee - Cash on Delivery',
-  'Shopee - SPayLater',
-];
-
+/**
+ * Category, Store (marketplace), Payment Method, Order Status and Payment Status are
+ * user-defined options stored per account (see `sales_options`), so sales rows hold
+ * them as plain text. An empty string means "not set".
+ */
 export interface SaleItem {
   id: string;
   user_id?: string;
   quantity: number;
   item: string;
-  category: Category | string;
-  marketplace: StoreType | string;
-  payment_method: PaymentMethod | string;
+  category: string;
+  marketplace: string;
+  payment_method: string;
   customer: string;
   date: string; // YYYY-MM-DD
   subtotal: number;
   cost: number;
   sales: number; // Subtotal - Cost
-  order_status: OrderStatus | string;
-  payment_status: PaymentStatus | string;
+  order_status: string;
+  payment_status: string;
   invoice_url?: string | null;
   invoice_name?: string | null;
   location?: string;

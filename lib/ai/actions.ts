@@ -9,6 +9,7 @@ import {
 } from '@/lib/models';
 import { getAuthenticatedClient } from '@/lib/supabase/server';
 import { AI_TOOLS, executeAiTool } from './tools';
+import { loadUserSalesOptions } from '@/sales/lib/optionLookup';
 import {
   buildOptimizedAiHistory,
   buildAiSystemInstruction,
@@ -167,7 +168,8 @@ export async function generateAiResponse(
   // 5. System instruction with profile context & calendar anchors
   const displayName = typeof user.user_metadata?.display_name === 'string' ? user.user_metadata.display_name.trim() : '';
   const customInstruction = typeof user.user_metadata?.system_instruction === 'string' ? user.user_metadata.system_instruction.trim() : '';
-  const systemInstruction = buildAiSystemInstruction(displayName, customInstruction);
+  const salesOptions = await loadUserSalesOptions(supabase, user.id);
+  const systemInstruction = buildAiSystemInstruction(displayName, customInstruction, salesOptions);
   const thinkingConfig = buildThinkingConfig(model, effort);
 
   const toolResultsAccumulator: AiToolResult[] = [];

@@ -2,9 +2,8 @@
 
 import { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
-import type { FC, DragEvent } from 'react';
+import type { FC } from 'react';
 import {
-  GripVertical,
   X,
   Check,
   Search,
@@ -14,14 +13,12 @@ import {
   ArrowLeft,
 } from 'lucide-react';
 import { TagPill } from '@/sales/views/table/TagPill';
+import { useOptions, useOptionsStore } from '@/sales/context/OptionsContext';
 import {
-  useOptions,
-  type OptionType,
-  normalizeOptionType,
   NOTION_COLORS,
-  resolveOptionTagClass,
-  setOptionColor,
-} from '@/sales/services/optionsService';
+  MAX_OPTION_NAME_LENGTH,
+  type OptionType,
+} from '@/sales/lib/optionTypes';
 
 interface TableOptionPickerProps {
   type: OptionType;
@@ -36,18 +33,13 @@ export const TableOptionPicker: FC<TableOptionPickerProps> = ({
   onSelect,
   onClose,
 }) => {
-  const { options, reorderOptions, addOption, removeOption, renameOption } = useOptions(type);
-  const normalizedType = normalizeOptionType(type);
+  const { options, addOption, removeOption, renameOption, setOptionColor } = useOptions(type);
+  const { getOptionColor } = useOptionsStore();
   const [search, setSearch] = useState('');
   const [editingOption, setEditingOption] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
-  const [, setTriggerRefresh] = useState(0);
-
-  // Drag and drop state
-  const [draggedItem, setDraggedItem] = useState<string | null>(null);
-  const [dragOverItem, setDragOverItem] = useState<string | null>(null);
-  const [dropPosition, setDropPosition] = useState<'before' | 'after' | null>(null);
-  const isDraggingRef = useRef(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const isRenamingRef = useRef(false);
 
   const anchorRef = useRef<HTMLSpanElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
@@ -144,102 +136,68 @@ export const TableOptionPicker: FC<TableOptionPickerProps> = ({
     };
   }, [onClose]);
 
-  const filteredOptions = options.filter((opt) =>
-    opt.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredOptions = options
+    .map((o) => o.name)
+    .filter((name) => name.toLowerCase().includes(search.toLowerCase()));
 
-  const exactMatch = options.some((opt) => opt.toLowerCase() === search.trim().toLowerCase());
+  const exactMatch = options.some((o) => o.name.toLowerCase() === search.trim().toLowerCase());
 
-  const handleDragStart = (e: DragEvent<HTMLDivElement>, opt: string) => {
-    isDraggingRef.current = true;
-    setDraggedItem(opt);
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', opt);
-  };
-
-  const handleDragOver = (e: DragEvent<HTMLDivElement>, opt: string) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    if (!draggedItem || draggedItem === opt) return;
-
-    const rect = e.currentTarget.getBoundingClientRect();
-    const midY = rect.top + rect.height / 2;
-    const pos = e.clientY < midY ? 'before' : 'after';
-
-    setDragOverItem(opt);
-    setDropPosition(pos);
-  };
-
-  const handleDragLeave = (e: DragEvent<HTMLDivElement>) => {
-    const related = e.relatedTarget as Node | null;
-    if (related && e.currentTarget.contains(related)) return;
-  };
-
-  const handleDrop = (e: DragEvent<HTMLDivElement>, targetOpt: string) => {
-    e.preventDefault();
-    if (!draggedItem || draggedItem === targetOpt) {
-      handleDragEnd();
-      return;
-    }
-
-    const fromIndex = options.indexOf(draggedItem);
-    const toIndex = options.indexOf(targetOpt);
-
-    if (fromIndex !== -1 && toIndex !== -1) {
-      const calculatedIndex =
-        dropPosition === 'after'
-          ? fromIndex < toIndex
-            ? toIndex
-            : toIndex + 1
-          : fromIndex < toIndex
-          ? toIndex - 1
-          : toIndex;
-
-      const targetIndex = Math.max(0, Math.min(calculatedIndex, options.length - 1));
-      reorderOptions(fromIndex, targetIndex);
-    }
-
-    handleDragEnd();
-  };
-
-  const handleDragEnd = () => {
-    setDraggedItem(null);
-    setDragOverItem(null);
-    setDropPosition(null);
-    setTimeout(() => {
-      isDraggingRef.current = false;
-    }, 120);
-  };
-
-  const handleCreateNew = () => {
+  const handleCreateNew = async () => {
     const trimmed = search.trim();
     if (!trimmed) return;
-    addOption(trimmed);
+    setErrorMessage('');
+    const error = await addOption(trimmed);
+    if (error) {
+      setErrorMessage(error);
+      return;
+    }
     onSelect(trimmed);
     onClose();
   };
 
-  const handleSaveRename = () => {
-    if (!editingOption) return;
+  const handleSaveRename = async () => {
+    if (!editingOption || isRenamingRef.current) return;
     const trimmed = editName.trim();
     if (!trimmed || trimmed === editingOption) {
       setEditName(editingOption);
       return;
     }
-    renameOption(editingOption, trimmed);
-    if (currentValue === editingOption) {
-      onSelect(trimmed);
+    isRenamingRef.current = true;
+    setErrorMessage('');
+    const previousName = editingOption;
+    try {
+      // Renames the option and every sale that uses it.
+      const error = await renameOption(previousName, trimmed);
+      if (error) {
+        setErrorMessage(error);
+        setEditName(previousName);
+        return;
+      }
+      if (currentValue === previousName) {
+        onSelect(trimmed);
+      }
+      setEditingOption(trimmed);
+    } finally {
+      isRenamingRef.current = false;
     }
-    setEditingOption(trimmed);
   };
 
-  const handleDeleteOption = () => {
+  const handleDeleteOption = async () => {
     if (!editingOption) return;
-    removeOption(editingOption);
-    if (currentValue === editingOption) {
-      onSelect('');
+    setErrorMessage('');
+    const error = await removeOption(editingOption);
+    if (error) {
+      setErrorMessage(error);
+      return;
     }
     setEditingOption(null);
+  };
+
+  const handleSetColor = async (tagClass: string) => {
+    if (!editingOption) return;
+    setErrorMessage('');
+    const error = await setOptionColor(editingOption, tagClass);
+    if (error) setErrorMessage(error);
   };
 
   return (
@@ -281,6 +239,7 @@ export const TableOptionPicker: FC<TableOptionPickerProps> = ({
             type="text"
             value={editName}
             onChange={(e) => setEditName(e.target.value)}
+            maxLength={MAX_OPTION_NAME_LENGTH}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 e.preventDefault();
@@ -304,6 +263,12 @@ export const TableOptionPicker: FC<TableOptionPickerProps> = ({
             <span>Delete</span>
           </button>
 
+          {errorMessage && (
+            <p role="alert" className="px-1 text-[11px] text-red-600 dark:text-red-400">
+              {errorMessage}
+            </p>
+          )}
+
           <div className="border-t border-neutral-100 dark:border-neutral-800" />
 
           <div className="space-y-1">
@@ -312,17 +277,14 @@ export const TableOptionPicker: FC<TableOptionPickerProps> = ({
             </div>
             <div className="space-y-0.5 max-h-48 overflow-y-auto pr-0.5 scrollbar-thin">
               {NOTION_COLORS.map((c) => {
-                const activeColor = resolveOptionTagClass(editingOption, type);
+                const activeColor = getOptionColor(type, editingOption);
                 const isSelected = activeColor === c.tagClass;
 
                 return (
                   <button
                     key={c.id}
                     type="button"
-                    onClick={() => {
-                      setOptionColor(editingOption, c.tagClass, normalizedType);
-                      setTriggerRefresh((n) => n + 1);
-                    }}
+                    onClick={() => handleSetColor(c.tagClass)}
                     className="w-full flex items-center justify-between px-2 py-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-xs text-neutral-800 dark:text-neutral-200 transition-colors cursor-pointer text-left"
                   >
                     <div className="flex items-center gap-2.5">
@@ -344,7 +306,7 @@ export const TableOptionPicker: FC<TableOptionPickerProps> = ({
         <>
           {currentValue ? (
             <div className="flex items-center justify-between p-1.5 bg-neutral-100/90 dark:bg-[#2c2c2c] rounded-lg border border-neutral-200 dark:border-neutral-700 min-w-0">
-              <TagPill text={currentValue} type={normalizedType} className="min-w-0" />
+              <TagPill text={currentValue} type={type} className="min-w-0" />
               <button
                 onClick={() => {
                   onSelect('');
@@ -364,7 +326,11 @@ export const TableOptionPicker: FC<TableOptionPickerProps> = ({
               type="text"
               placeholder="Search..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setErrorMessage('');
+              }}
+              maxLength={MAX_OPTION_NAME_LENGTH}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && search.trim() && !exactMatch) {
                   e.preventDefault();
@@ -383,40 +349,24 @@ export const TableOptionPicker: FC<TableOptionPickerProps> = ({
           <div className="max-h-56 overflow-y-auto overflow-x-hidden space-y-1 pr-0.5 scrollbar-thin">
             {filteredOptions.length === 0 && !search.trim() ? (
               <div className="text-center py-4 text-xs text-neutral-400 italic">
-                No options found
+                {options.length === 0
+                  ? 'No options yet. Type a name above to create one.'
+                  : 'No options found'}
               </div>
             ) : (
               filteredOptions.map((opt) => {
                 const isSelected = opt === currentValue;
-                const isBeingDragged = draggedItem === opt;
-                const isTargetOver = dragOverItem === opt && draggedItem !== opt;
                 const isEditing = editingOption === opt;
 
                 return (
-                  <div
-                    key={opt}
-                    draggable
-                    onDragStart={(e) => handleDragStart(e, opt)}
-                    onDragOver={(e) => handleDragOver(e, opt)}
-                    onDragLeave={handleDragLeave}
-                    onDrop={(e) => handleDrop(e, opt)}
-                    onDragEnd={handleDragEnd}
-                    className="relative group/opt"
-                  >
-                    {isTargetOver && dropPosition === 'before' && (
-                      <div className="absolute -top-1 left-0 right-0 h-0.5 bg-blue-500 rounded-full z-10 shadow-xs shadow-blue-500/50 animate-pulse pointer-events-none" />
-                    )}
-
+                  <div key={opt} className="relative group/opt">
                     <div
                       onClick={() => {
-                        if (isDraggingRef.current) return;
                         onSelect(opt);
                         onClose();
                       }}
                       className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-xs transition-all text-left cursor-pointer select-none ${
-                        isBeingDragged
-                          ? 'opacity-30 bg-blue-50/50 dark:bg-blue-950/20 border border-dashed border-blue-400/60 scale-[0.98]'
-                          : isEditing
+                        isEditing
                           ? 'bg-neutral-100 dark:bg-[#2e2e2e] ring-1 ring-neutral-300 dark:ring-neutral-600'
                           : isSelected
                           ? 'bg-neutral-100 dark:bg-[#2e2e2e] font-medium shadow-2xs'
@@ -424,14 +374,7 @@ export const TableOptionPicker: FC<TableOptionPickerProps> = ({
                       }`}
                     >
                       <div className="flex items-center gap-1.5 flex-1 min-w-0 pr-1">
-                        <div
-                          className="cursor-grab active:cursor-grabbing p-0.5 -ml-1 text-neutral-400 hover:text-neutral-700 dark:text-neutral-500 dark:hover:text-neutral-300 transition-colors shrink-0"
-                          title="Drag to reorder"
-                          onMouseDown={(e) => e.stopPropagation()}
-                        >
-                          <GripVertical className="w-3.5 h-3.5 opacity-70 group-hover/opt:opacity-100" />
-                        </div>
-                        <TagPill text={opt} type={normalizedType} className="min-w-0" />
+                        <TagPill text={opt} type={type} className="min-w-0" />
                       </div>
 
                       <div className="flex items-center shrink-0">
@@ -450,12 +393,15 @@ export const TableOptionPicker: FC<TableOptionPickerProps> = ({
                       </div>
                     </div>
 
-                    {isTargetOver && dropPosition === 'after' && (
-                      <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-blue-500 rounded-full z-10 shadow-xs shadow-blue-500/50 animate-pulse pointer-events-none" />
-                    )}
                   </div>
                 );
               })
+            )}
+
+            {errorMessage && (
+              <p role="alert" className="px-1 pt-1 text-[11px] text-red-600 dark:text-red-400">
+                {errorMessage}
+              </p>
             )}
 
             {search.trim() && !exactMatch && (

@@ -11,7 +11,7 @@ import { AuthDialog } from '@/components/auth/AuthDialog';
 import { InvoiceViewerModal } from '@/sales/modals/InvoiceViewerModal';
 import { UnauthenticatedLanding } from '@/sales/layout/UnauthenticatedLanding';
 import { ErrorBoundary } from '@/sales/layout/ErrorBoundary';
-import type { SaleItem, ViewMode, StoreType, SortField, SortOrder } from '@/sales/types';
+import type { SaleItem, ViewMode, SortField, SortOrder } from '@/sales/types';
 import {
   fetchSalesAction,
   createSaleAction,
@@ -20,16 +20,18 @@ import {
   batchDeleteSalesAction,
 } from '@/sales/services/salesActions';
 import { normalizeCoordinates } from '@/sales/lib/locationParser';
-import { evaluateSalesFormula, STORAGE_KEY_FORMULA, DEFAULT_FORMULA } from '@/sales/lib/formulaEngine';
+import { evaluateSalesFormula } from '@/sales/lib/formulaEngine';
 import {
   filterSales,
   parseFiltersFromSearchParams,
   buildSearchParamsFromFilters,
   hasActiveFilters,
-  saveFiltersToStorage,
-  loadFiltersFromStorage,
   type FilterState,
 } from '@/sales/lib/filterUtils';
+import type { SalesOption, OptionType } from '@/sales/lib/optionTypes';
+import type { SalesSettings } from '@/sales/lib/salesSettings';
+import { OptionsProvider, useOptionsStore } from '@/sales/context/OptionsContext';
+import { SettingsProvider, useFormulaSetting } from '@/sales/context/SettingsContext';
 import { generateSalesPdfReport } from '@/sales/services/exportPdfService';
 import { useSalesModals } from '@/sales/hooks/useSalesModals';
 
@@ -62,6 +64,14 @@ const KanbanBoardView = dynamic(
   { ssr: false, loading: () => <ViewLoading /> }
 );
 
+const FILTER_KEY_BY_OPTION_TYPE = {
+  category: 'categories',
+  marketplace: 'stores',
+  order_status: 'orderStatuses',
+  payment_status: 'paymentStatuses',
+  payment_method: 'paymentMethods',
+} as const satisfies Record<OptionType, keyof FilterState>;
+
 interface DashboardContentProps {
   initialSales?: SaleItem[];
   activeView: ViewMode;
@@ -80,17 +90,11 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const hasInitializedInitialSalesRef = useRef(Boolean(initialSales !== undefined));
 
+  const [customFormula] = useFormulaSetting();
+  const { onOptionRenamed, getOptionColor } = useOptionsStore();
+
   useEffect(() => {
     setIsClientReady(true);
-    // Restore saved filters from localStorage if none provided in URL search parameters
-    const parsed = parseFiltersFromSearchParams(searchParams);
-    if (!hasActiveFilters(parsed.filters)) {
-      const stored = loadFiltersFromStorage();
-      if (stored && hasActiveFilters(stored)) {
-        setFilters(stored);
-        syncFiltersToUrl(stored);
-      }
-    }
   }, []);
 
   // Sync currentView if activeView prop changes
@@ -119,9 +123,6 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
   useEffect(() => {
     const parsed = parseFiltersFromSearchParams(searchParams);
     setFilters(parsed.filters);
-    if (hasActiveFilters(parsed.filters)) {
-      saveFiltersToStorage(parsed.filters);
-    }
     if (parsed.sortField) setSortField(parsed.sortField);
     if (parsed.sortOrder) setSortOrder(parsed.sortOrder);
     if (parsed.year) setTimelineYear(parsed.year);
@@ -153,7 +154,6 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
   const handleFiltersChange = useCallback(
     (newFilters: FilterState) => {
       setFilters(newFilters);
-      saveFiltersToStorage(newFilters);
       syncFiltersToUrl(newFilters);
     },
     [syncFiltersToUrl]
@@ -183,7 +183,6 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
     (query: string) => {
       const updated = { ...filters, search: query };
       setFilters(updated);
-      saveFiltersToStorage(updated);
 
       if (debounceSearchTimerRef.current) {
         clearTimeout(debounceSearchTimerRef.current);
@@ -228,7 +227,6 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
       const currentParams = new URLSearchParams(window.location.search);
       const parsed = parseFiltersFromSearchParams(currentParams);
       setFilters(parsed.filters);
-      saveFiltersToStorage(parsed.filters);
       if (parsed.sortField) setSortField(parsed.sortField);
       if (parsed.sortOrder) setSortOrder(parsed.sortOrder);
       if (parsed.year) setTimelineYear(parsed.year);
@@ -324,7 +322,7 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
     }
   }, [selectedIds]);
 
-  const handleUpdateStore = useCallback(async (saleId: string, newStore: StoreType | string) => {
+  const handleUpdateStore = useCallback(async (saleId: string, newStore: string) => {
     try {
       const updated = await updateSaleAction(saleId, { marketplace: newStore });
       setSales((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
@@ -351,9 +349,9 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
     setIsSaleModalOpen(true);
   }, []);
 
-  const handleOpenNew = useCallback(() => {
+  const handleOpenNew = useCallback((defaultStore?: string) => {
     setEditingSale(null);
-    setDefaultStoreForNewSale('');
+    setDefaultStoreForNewSale(defaultStore ?? '');
     setIsSaleModalOpen(true);
   }, []);
 
@@ -390,14 +388,16 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
 
     setIsExportingPdf(true);
     try {
-      await generateSalesPdfReport(itemsToExport, filters);
+      await generateSalesPdfReport(itemsToExport, filters, {
+        getOptionTagClass: (type, name) => getOptionColor(type, name),
+      });
     } catch (err) {
       console.error('Failed to generate sales PDF report:', err);
       alert('An error occurred while generating the PDF report. Please try again.');
     } finally {
       setIsExportingPdf(false);
     }
-  }, [sales, filteredSales, filters]);
+  }, [sales, filteredSales, filters, getOptionColor]);
 
   const handleUpdateSaleInline = useCallback(async (saleId: string, updates: Partial<SaleItem>) => {
     try {
@@ -407,8 +407,7 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
 
       if ('subtotal' in updates || 'cost' in updates || 'quantity' in updates) {
         if (!('sales' in updates)) {
-          const formula = localStorage.getItem(STORAGE_KEY_FORMULA) || DEFAULT_FORMULA;
-          updatedItem.sales = evaluateSalesFormula(formula, updatedItem);
+          updatedItem.sales = evaluateSalesFormula(customFormula, updatedItem);
         }
       }
 
@@ -419,7 +418,23 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
     } catch (err) {
       console.error('Failed to update sale inline:', err);
     }
-  }, [sales, handleSaveSale]);
+  }, [sales, handleSaveSale, customFormula]);
+
+  // When an option is renamed, the database updates every matching sale row.
+  // Mirror that in memory (sales + active filters) so the UI stays consistent.
+  useEffect(() => {
+    return onOptionRenamed((type: OptionType, oldName: string, newName: string) => {
+      setSales((prev) =>
+        prev.map((s) => (s[type] === oldName ? { ...s, [type]: newName } : s))
+      );
+      const key = FILTER_KEY_BY_OPTION_TYPE[type];
+      if (filters[key].includes(oldName)) {
+        const next = { ...filters, [key]: filters[key].map((v) => (v === oldName ? newName : v)) };
+        setFilters(next);
+        syncFiltersToUrl(next);
+      }
+    });
+  }, [onOptionRenamed, filters, syncFiltersToUrl]);
 
   useEffect(() => {
     if (!user && pathname && pathname !== '/sales') {
@@ -556,18 +571,47 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
   );
 }
 
+/**
+ * Mounts the per-user, database-backed stores (dropdown options + settings).
+ * Keyed by user id so nothing leaks between accounts in the same browser.
+ */
+function DashboardProviders({
+  initialOptions,
+  initialSettings,
+  children,
+}: {
+  initialOptions: SalesOption[];
+  initialSettings: SalesSettings;
+  children: React.ReactNode;
+}) {
+  const { user } = useAuth();
+  return (
+    <OptionsProvider key={`options-${user?.id ?? 'anon'}`} userId={user?.id} initialOptions={initialOptions}>
+      <SettingsProvider key={`settings-${user?.id ?? 'anon'}`} initialSettings={initialSettings}>
+        {children}
+      </SettingsProvider>
+    </OptionsProvider>
+  );
+}
+
 export function SalesClient({
   initialUser,
   initialSales,
+  initialOptions = [],
+  initialSettings = {},
   activeView = 'table',
 }: {
   initialUser?: User | null;
   initialSales?: SaleItem[];
+  initialOptions?: SalesOption[];
+  initialSettings?: SalesSettings;
   activeView?: ViewMode;
 }) {
   return (
     <AuthProvider initialUser={initialUser}>
-      <DashboardContent initialSales={initialSales} activeView={activeView} />
+      <DashboardProviders initialOptions={initialOptions} initialSettings={initialSettings}>
+        <DashboardContent initialSales={initialSales} activeView={activeView} />
+      </DashboardProviders>
     </AuthProvider>
   );
 }

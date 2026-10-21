@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useLayoutEffect, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import type { FC, DragEvent } from 'react';
+import type { FC } from 'react';
 import {
   ArrowDown,
   ArrowUp,
@@ -18,19 +18,14 @@ import {
   CreditCard,
   Building2,
   Trash2,
-  GripVertical,
   RotateCcw,
 } from 'lucide-react';
 import type { SortField, SortOrder } from '@/sales/types';
 import { TagPill } from '@/sales/views/table/TagPill';
 import { NotionDatePicker } from './NotionDatePicker';
 import { formatDateDisplay } from '@/sales/lib/dateUtils';
-import {
-  getOptions,
-  reorderOptions,
-  subscribeToOptions,
-  type OptionType,
-} from '@/sales/services/optionsService';
+import { useOptionsStore } from '@/sales/context/OptionsContext';
+import type { OptionType } from '@/sales/lib/optionTypes';
 import type { FilterState, PropertyType } from '@/sales/lib/filterUtils';
 export type { FilterState, PropertyType } from '@/sales/lib/filterUtils';
 
@@ -90,11 +85,6 @@ export const NotionFilterBar: FC<NotionFilterBarProps> = ({
   const [isAddFilterOpen, setIsAddFilterOpen] = useState(false);
   const [filterSearchQuery, setFilterSearchQuery] = useState('');
 
-  // Reordering inside filter dropdown state
-  const [filterDraggedItem, setFilterDraggedItem] = useState<string | null>(null);
-  const [filterDragOverItem, setFilterDragOverItem] = useState<string | null>(null);
-  const [filterDropPosition, setFilterDropPosition] = useState<'before' | 'after' | null>(null);
-
   // Trigger button refs for smart popover viewport positioning
   const sortButtonRef = useRef<HTMLButtonElement>(null);
   const filterButtonRefs = useRef<Map<PropertyType, HTMLButtonElement>>(new Map());
@@ -108,13 +98,8 @@ export const NotionFilterBar: FC<NotionFilterBarProps> = ({
     placement: 'bottom' | 'top';
   } | null>(null);
 
-  // Subscribe to live option changes across views/tabs
-  const [, setOptionsVersion] = useState(0);
-  useEffect(() => {
-    return subscribeToOptions(() => {
-      setOptionsVersion((v) => v + 1);
-    });
-  }, []);
+  // Option lists are database-backed and live-synced via the options store
+  const { getOptionNames } = useOptionsStore();
 
   // Active filter pills visible on toolbar (defaults to none selected / empty)
   const [visibleFilterProps, setVisibleFilterProps] = useState<PropertyType[]>(() => [
@@ -158,8 +143,8 @@ export const NotionFilterBar: FC<NotionFilterBarProps> = ({
 
   const activeOptionsList: string[] = useMemo(() => {
     if (!activeFilterPopover || activeFilterPopover === 'date') return [];
-    return getOptions(activeOptType);
-  }, [activeFilterPopover, activeOptType]);
+    return getOptionNames(activeOptType);
+  }, [activeFilterPopover, activeOptType, getOptionNames]);
 
   const activeSelectedList: string[] = useMemo(() => {
     if (!activeFilterPopover) return [];
@@ -436,44 +421,6 @@ export const NotionFilterBar: FC<NotionFilterBarProps> = ({
     }
   };
 
-  const handleFilterDragStart = (e: DragEvent<HTMLDivElement>, opt: string) => {
-    setFilterDraggedItem(opt);
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', opt);
-  };
-
-  const handleFilterDragOver = (e: DragEvent<HTMLDivElement>, opt: string) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    if (!filterDraggedItem || filterDraggedItem === opt) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const midY = rect.top + rect.height / 2;
-    setFilterDragOverItem(opt);
-    setFilterDropPosition(e.clientY < midY ? 'before' : 'after');
-  };
-
-  const handleFilterDrop = (e: DragEvent<HTMLDivElement>, targetOpt: string) => {
-    e.preventDefault();
-    if (!filterDraggedItem || filterDraggedItem === targetOpt) {
-      setFilterDraggedItem(null);
-      setFilterDragOverItem(null);
-      setFilterDropPosition(null);
-      return;
-    }
-    const fromIdx = activeOptionsList.indexOf(filterDraggedItem);
-    const toIdx = activeOptionsList.indexOf(targetOpt);
-    if (fromIdx !== -1 && toIdx !== -1) {
-      const targetIdx = filterDropPosition === 'after'
-        ? (fromIdx < toIdx ? toIdx : toIdx + 1)
-        : (fromIdx < toIdx ? toIdx - 1 : toIdx);
-      const clampedIdx = Math.max(0, Math.min(targetIdx, activeOptionsList.length - 1));
-      reorderOptions(activeOptType, fromIdx, clampedIdx);
-    }
-    setFilterDraggedItem(null);
-    setFilterDragOverItem(null);
-    setFilterDropPosition(null);
-  };
-
   return (
     <div className="space-y-2 select-none w-full max-w-full">
       {/* Notion Filter & Sort Bar */}
@@ -714,49 +661,24 @@ export const NotionFilterBar: FC<NotionFilterBarProps> = ({
                 <div className="max-h-52 overflow-y-auto space-y-1 pr-0.5 scrollbar-thin">
                   {activeFilteredOptions.length === 0 ? (
                     <div className="text-center py-4 text-xs text-neutral-400 italic">
-                      No matching options
+                      {activeOptionsList.length === 0
+                        ? 'No options yet. Create them from any Category, Store or Status cell in the table.'
+                        : 'No matching options'}
                     </div>
                   ) : (
                     activeFilteredOptions.map((opt) => {
                       const isSelected = activeSelectedList.includes(opt);
-                      const isBeingDragged = filterDraggedItem === opt;
-                      const isTargetOver = filterDragOverItem === opt && filterDraggedItem !== opt;
 
                       return (
-                        <div
-                          key={opt}
-                          draggable
-                          onDragStart={(e) => handleFilterDragStart(e, opt)}
-                          onDragOver={(e) => handleFilterDragOver(e, opt)}
-                          onDrop={(e) => handleFilterDrop(e, opt)}
-                          onDragEnd={() => {
-                            setFilterDraggedItem(null);
-                            setFilterDragOverItem(null);
-                            setFilterDropPosition(null);
-                          }}
-                          className="relative group/filteropt"
-                        >
-                          {isTargetOver && filterDropPosition === 'before' && (
-                            <div className="absolute -top-1 left-0 right-0 h-0.5 bg-blue-500 rounded-full z-10 animate-pulse pointer-events-none" />
-                          )}
-
+                        <div key={opt} className="relative">
                           <div
                             onClick={() => toggleFilterItem(activeFilterPopover, opt)}
-                            className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-xs transition-colors text-left cursor-pointer ${isBeingDragged
-                                ? 'opacity-30 bg-blue-50/50 dark:bg-blue-950/20 border border-dashed border-blue-400/60 scale-[0.98]'
-                                : isSelected
-                                  ? 'bg-neutral-100 dark:bg-neutral-800/80 font-medium'
-                                  : 'hover:bg-neutral-50 dark:hover:bg-[#2c2c2c]'
+                            className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-xs transition-colors text-left cursor-pointer ${isSelected
+                                ? 'bg-neutral-100 dark:bg-neutral-800/80 font-medium'
+                                : 'hover:bg-neutral-50 dark:hover:bg-[#2c2c2c]'
                               }`}
                           >
                             <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                              <div
-                                className="cursor-grab active:cursor-grabbing p-0.5 -ml-1 text-neutral-400 hover:text-neutral-700 dark:text-neutral-500 dark:hover:text-neutral-300 transition-colors hidden sm:block"
-                                title="Drag to reorder"
-                                onMouseDown={(e) => e.stopPropagation()}
-                              >
-                                <GripVertical className="w-3 h-3 opacity-60 group-hover/filteropt:opacity-100" />
-                              </div>
                               <div
                                 className={`w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0 transition-colors ${isSelected
                                     ? 'bg-[#2383e2] border-[#2383e2] text-white'
@@ -771,10 +693,6 @@ export const NotionFilterBar: FC<NotionFilterBarProps> = ({
                               />
                             </div>
                           </div>
-
-                          {isTargetOver && filterDropPosition === 'after' && (
-                            <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-blue-500 rounded-full z-10 animate-pulse pointer-events-none" />
-                          )}
                         </div>
                       );
                     })

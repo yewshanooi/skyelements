@@ -33,8 +33,6 @@ interface MapViewProps {
   selectedSalePin?: SaleItem | null;
 }
 
-const STORAGE_KEY_MAP_VIEWPORT = 'sales_dashboard_map_viewport_v1';
-
 const escapeHtml = (str?: string | number | null): string => {
   if (str === undefined || str === null) return '';
   return String(str)
@@ -77,39 +75,6 @@ function computeSalesBounds(sales: SaleItem[]): LngLatBounds | null {
   }
   return count > 0 ? bounds : null;
 }
-
-interface MapViewport {
-  center: [number, number];
-  zoom: number;
-}
-
-const getSavedViewport = (): MapViewport | null => {
-  if (typeof window === 'undefined') return null;
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY_MAP_VIEWPORT);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      if (
-        Array.isArray(parsed?.center) &&
-        parsed.center.length === 2 &&
-        typeof parsed.center[0] === 'number' &&
-        typeof parsed.center[1] === 'number' &&
-        typeof parsed.zoom === 'number' &&
-        !isNaN(parsed.center[0]) &&
-        !isNaN(parsed.center[1]) &&
-        !isNaN(parsed.zoom)
-      ) {
-        return {
-          center: [parsed.center[0], parsed.center[1]],
-          zoom: parsed.zoom,
-        };
-      }
-    }
-  } catch {
-    /* ignore storage error */
-  }
-  return null;
-};
 
 
 export const MapView: FC<MapViewProps> = ({
@@ -183,38 +148,20 @@ export const MapView: FC<MapViewProps> = ({
     if (!mapContainerRef.current) return;
 
     if (!mapInstanceRef.current) {
-      const savedViewport = getSavedViewport();
       const defaultCenter: [number, number] = [108.5, 3.8]; // Central Malaysia / Borneo overview
       const defaultZoom = 5.2;
 
+      // The viewport is intentionally not persisted: it depends on the device's screen,
+      // so the map auto-fits to the user's located sales on each visit instead.
       const map = new Map({
         container: mapContainerRef.current,
         style: MAP_STYLE,
-        center: savedViewport ? savedViewport.center : defaultCenter,
-        zoom: savedViewport ? savedViewport.zoom : defaultZoom,
+        center: defaultCenter,
+        zoom: defaultZoom,
         attributionControl: false,
       });
 
       map.addControl(new NavigationControl({ showCompass: true }), 'top-right');
-
-      // Save user's viewport on pan/zoom
-      const handleMoveEnd = () => {
-        try {
-          const center = map.getCenter();
-          const zoom = map.getZoom();
-          localStorage.setItem(
-            STORAGE_KEY_MAP_VIEWPORT,
-            JSON.stringify({
-              center: [center.lng, center.lat],
-              zoom,
-            })
-          );
-        } catch {
-          /* ignore storage error */
-        }
-      };
-
-      map.on('moveend', handleMoveEnd);
 
       mapInstanceRef.current = map;
     }
@@ -323,9 +270,8 @@ export const MapView: FC<MapViewProps> = ({
       }
     });
 
-    // Auto-fit bounds ONLY on initial load if user has NO saved viewport and no specific pin is forced
-    const savedViewport = getSavedViewport();
-    if (!savedViewport && !hasInitializedBoundsRef.current && locatedSales.length > 0 && !selectedSalePin) {
+    // Auto-fit bounds ONLY on initial load and when no specific pin is forced
+    if (!hasInitializedBoundsRef.current && locatedSales.length > 0 && !selectedSalePin) {
       hasInitializedBoundsRef.current = true;
       const bounds = computeSalesBounds(locatedSales);
       if (bounds) {

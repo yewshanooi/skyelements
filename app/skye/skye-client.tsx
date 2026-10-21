@@ -380,6 +380,7 @@ const TOOL_LABELS: Record<string, { label: string; tooltip: string; icon: Lucide
   ai_search_sales: { label: 'Searching sales', tooltip: 'Skye searched sales records', icon: SearchIcon },
   ai_query_sales_metrics: { label: 'Searching sales', tooltip: 'Skye queried sales metrics', icon: BarChart3 },
   ai_create_sale: { label: 'Creating sale', tooltip: 'Skye recorded a new sale', icon: ShoppingCart },
+  ai_create_sales_option: { label: 'Creating option', tooltip: 'Skye created a sales option', icon: ShoppingCart },
 };
 
 function getAiToolMarkers(toolResults: AiToolResult[]): ToolMarkerItem[] {
