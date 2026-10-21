@@ -352,7 +352,7 @@ export const Header: FC<HeaderProps> = ({
           </div>
 
           {/* Center: Search Bar */}
-          <div className="flex items-center justify-center flex-1 min-w-0 max-w-sm mx-auto">
+          <div className="flex items-center justify-center flex-1 min-w-0 max-w-[256px] mx-auto">
             <div className="relative flex items-center w-full">
               <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none" />
               <input

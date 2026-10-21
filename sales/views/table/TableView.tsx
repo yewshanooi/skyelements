@@ -942,11 +942,10 @@ export const TableView: FC<TableViewProps> = ({
                               <span>Uploading...</span>
                             </div>
                           ) : sale.invoice_name || sale.invoice_url ? (
-                            <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 group/inv max-w-full min-w-0">
+                            <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium tracking-tight bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 group/inv max-w-full min-w-0">
                               <button
                                 onClick={() => onViewInvoice(sale)}
-                                className="flex items-center gap-1 hover:text-blue-600 dark:hover:text-blue-400 font-mono text-[11px] truncate cursor-pointer min-w-0"
-                                title="View Invoice"
+                                className="flex items-center gap-1 hover:text-blue-600 dark:hover:text-blue-400 truncate cursor-pointer min-w-0"
                               >
                                 <FileText className="w-3 h-3 text-neutral-400 shrink-0" />
                                 <span className="truncate">{sale.invoice_name || 'receipt.pdf'}</span>
@@ -1033,7 +1032,7 @@ export const TableView: FC<TableViewProps> = ({
                           <button
                             onClick={() => onEditSale(sale)}
                             className="p-1 text-neutral-400 hover:text-blue-600 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded transition-colors cursor-pointer"
-                            title="Edit full modal"
+                            title="Edit"
                           >
                             <Edit2 className="w-3.5 h-3.5" />
                           </button>

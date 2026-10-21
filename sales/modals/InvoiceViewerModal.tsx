@@ -130,6 +130,18 @@ export const InvoiceViewerModal: FC<InvoiceViewerModalProps> = ({ sale, onClose 
     };
   }, [invoiceUrl]);
 
+  // Keyboard Escape listener to close viewer
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
+  }, [onClose]);
+
   if (!sale) return null;
 
   const invoiceName = sale.invoice_name || (sale.invoice_url ? 'Attachment Invoice' : 'Invoice');
@@ -146,14 +158,18 @@ export const InvoiceViewerModal: FC<InvoiceViewerModalProps> = ({ sale, onClose 
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200 invoice-modal-overlay overscroll-none"
+      onClick={onClose}
+      className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200 invoice-modal-overlay select-none overscroll-none"
       onTouchMove={(e) => {
         if (e.target === e.currentTarget) {
           e.preventDefault();
         }
       }}
     >
-      <div className="bg-white dark:bg-[#202020] rounded-xl sm:rounded-2xl shadow-2xl border border-neutral-200 dark:border-neutral-800 w-full max-w-2xl overflow-hidden flex flex-col max-h-[76dvh] sm:max-h-[88vh] invoice-modal-dialog overscroll-contain my-auto">
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white dark:bg-[#202020] rounded-xl sm:rounded-2xl shadow-2xl border border-neutral-200 dark:border-neutral-800 w-full max-w-2xl overflow-hidden flex flex-col max-h-[76dvh] sm:max-h-[88vh] invoice-modal-dialog select-text overscroll-contain my-auto"
+      >
         {/* Header */}
         <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between bg-neutral-50/50 dark:bg-neutral-900/50 invoice-modal-header no-print">
           <div className="flex items-center gap-2 min-w-0">

@@ -26,6 +26,7 @@ import { TableLocationPicker } from '@/sales/views/table/TableLocationPicker';
 import { normalizeCoordinates } from '@/sales/lib/locationParser';
 import { formatDateDisplay } from '@/sales/lib/dateUtils';
 import { FormulaModal } from '@/sales/modals/FormulaModal';
+import { InvoiceViewerModal } from '@/sales/modals/InvoiceViewerModal';
 import { evaluateSalesFormula } from '@/sales/lib/formulaEngine';
 import { useFormulaSetting } from '@/sales/context/SettingsContext';
 import { useAuth } from '@/sales/context/AuthContext';
@@ -161,6 +162,7 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [isLocationPickerOpen, setIsLocationPickerOpen] = useState(false);
   const [isFormulaModalOpen, setIsFormulaModalOpen] = useState(false);
+  const [isInvoiceViewerOpen, setIsInvoiceViewerOpen] = useState(false);
   const [isUploadingInvoice, setIsUploadingInvoice] = useState(false);
   const { user } = useAuth();
 
@@ -178,7 +180,9 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        if (activeOptionPicker) {
+        if (isInvoiceViewerOpen) {
+          setIsInvoiceViewerOpen(false);
+        } else if (activeOptionPicker) {
           setActiveOptionPicker(null);
         } else if (isDatePickerOpen) {
           setIsDatePickerOpen(false);
@@ -193,7 +197,7 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeOptionPicker, isDatePickerOpen, isLocationPickerOpen, isFormulaModalOpen, onClose]);
+  }, [activeOptionPicker, isDatePickerOpen, isLocationPickerOpen, isFormulaModalOpen, isInvoiceViewerOpen, onClose]);
 
   const calculatedSales = useMemo(() => {
     return evaluateSalesFormula(
@@ -465,15 +469,21 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
                     <span>Uploading...</span>
                   </div>
                 ) : formData.invoice_name || formData.invoice_url ? (
-                  <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium bg-neutral-100 dark:bg-neutral-800/90 border border-neutral-200/70 dark:border-neutral-700/70 text-neutral-800 dark:text-neutral-200 group/inv max-w-sm select-none">
-                    <FileText className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
-                    <span className="truncate" title={formData.invoice_name || undefined}>
-                      {formData.invoice_name || 'receipt.pdf'}
-                    </span>
+                  <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium tracking-tight bg-neutral-100 dark:bg-neutral-800/90 border border-neutral-200/70 dark:border-neutral-700/70 text-neutral-800 dark:text-neutral-200 group/inv max-w-sm select-none">
+                    <button
+                      type="button"
+                      onClick={() => setIsInvoiceViewerOpen(true)}
+                      className="flex items-center gap-1.5 hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer truncate min-w-0"
+                    >
+                      <FileText className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+                      <span className="truncate" title={formData.invoice_name || undefined}>
+                        {formData.invoice_name || 'receipt.pdf'}
+                      </span>
+                    </button>
                     <button
                       type="button"
                       onClick={handleRemoveInvoice}
-                      className="p-0.5 text-neutral-400 hover:text-red-500 dark:hover:text-red-400 transition-colors cursor-pointer rounded"
+                      className="p-0.5 text-neutral-400 hover:text-red-500 dark:hover:text-red-400 transition-colors cursor-pointer rounded shrink-0"
                       title="Remove invoice"
                     >
                       <X className="w-3.5 h-3.5" />
@@ -809,7 +819,7 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
               onClick={handleSubmit}
               className="px-4 py-1.5 text-xs font-semibold text-white bg-[#2383e2] hover:bg-[#1a6ebd] disabled:opacity-50 rounded-lg shadow-2xs hover:shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
             >
-              {isSubmitting ? 'Saving...' : initialData ? 'Save Changes' : 'Create Order'}
+              {isSubmitting ? 'Saving...' : 'Save Order'}
             </button>
           </div>
         </div>
@@ -825,6 +835,14 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
           onSaveFormula={(newFormula) => {
             setCustomFormula(newFormula);
           }}
+        />
+      )}
+
+      {/* Invoice Viewer Modal overlay */}
+      {isInvoiceViewerOpen && (
+        <InvoiceViewerModal
+          sale={toSaleItem(formData, calculatedSales, initialData?.id || 'temp')}
+          onClose={() => setIsInvoiceViewerOpen(false)}
         />
       )}
     </div>
