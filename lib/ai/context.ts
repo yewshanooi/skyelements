@@ -163,34 +163,35 @@ export function buildAiSystemInstruction(
   salesOptions: SalesOption[] = []
 ): string {
   const pad = (n: number) => String(n).padStart(2, '0');
-  const formatDate = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const formatDate = (d: Date) =>
+    `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
 
   const now = new Date();
-  const todayStr = formatDate(now);
-  const currentYear = now.getFullYear();
-  const currentMonthNum = now.getMonth() + 1;
+  const todayStr = now.toISOString().split('T')[0];
+  const currentYear = now.getUTCFullYear();
+  const currentMonthNum = now.getUTCMonth() + 1;
   const currentYearMonth = `${currentYear}-${pad(currentMonthNum)}`;
   const monthStartDate = `${currentYearMonth}-01`;
 
-  const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+  const yesterday = new Date(Date.UTC(currentYear, now.getUTCMonth(), now.getUTCDate() - 1));
   const yesterdayStr = formatDate(yesterday);
 
-  const lastMonth = new Date(currentYear, now.getMonth() - 1, 1);
-  const lastMonthYear = lastMonth.getFullYear();
-  const lastMonthNum = lastMonth.getMonth() + 1;
+  const lastMonth = new Date(Date.UTC(currentYear, now.getUTCMonth() - 1, 1));
+  const lastMonthYear = lastMonth.getUTCFullYear();
+  const lastMonthNum = lastMonth.getUTCMonth() + 1;
   const lastMonthYearMonth = `${lastMonthYear}-${pad(lastMonthNum)}`;
   const lastMonthStartDate = `${lastMonthYearMonth}-01`;
-  const lastDayOfLastMonth = new Date(currentYear, now.getMonth(), 0).getDate();
+  const lastDayOfLastMonth = new Date(Date.UTC(currentYear, now.getUTCMonth(), 0)).getUTCDate();
   const lastMonthEndDate = `${lastMonthYearMonth}-${pad(lastDayOfLastMonth)}`;
 
-  const currentMonthName = now.toLocaleString('en-US', { month: 'long' });
-  const lastMonthName = lastMonth.toLocaleString('en-US', { month: 'long' });
+  const currentMonthName = now.toLocaleString('en-US', { month: 'long', timeZone: 'UTC' });
+  const lastMonthName = lastMonth.toLocaleString('en-US', { month: 'long', timeZone: 'UTC' });
 
   const lines = [
     `You are Skye, an AI assistant integrated into SkyElements. You have direct, live access to all user data across the SkyElements ecosystem, including Notes and Sales Dashboard.`,
     
     `### CALENDAR ANCHOR (PRE-COMPUTED EXACT DATES):
-- Today: ${todayStr} (${currentMonthName} ${now.getDate()}, ${currentYear})
+- Today: ${todayStr} (${currentMonthName} ${now.getUTCDate()}, ${currentYear})
 - Yesterday: ${yesterdayStr}
 - Current Month: ${currentYearMonth} (${currentMonthName} ${currentYear}, starts ${monthStartDate})
 - Last Month: ${lastMonthYearMonth} (${lastMonthName} ${lastMonthYear}, range: ${lastMonthStartDate} to ${lastMonthEndDate})

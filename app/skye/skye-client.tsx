@@ -902,6 +902,9 @@ export function SkyeClient({ user, initialThinkingEffort }: SkyeClientProps) {
   const loadingRef = useRef(loading);
   const pendingAttachmentsRef = useRef(pendingAttachments);
   const chatScrollContainerRef = useRef<HTMLDivElement>(null);
+  const messageScrollTargetRef = useRef<HTMLDivElement>(null);
+  const scrollToMessageIdRef = useRef<string | null>(null);
+  const animateMessageScrollRef = useRef(false);
   const isCreatingNewChatRef = useRef(false);
   const dragCounterRef = useRef(0);
 
@@ -963,6 +966,9 @@ export function SkyeClient({ user, initialThinkingEffort }: SkyeClientProps) {
             fileMimeType: a.file_mime_type,
           })),
         }));
+        scrollToMessageIdRef.current =
+          displayMsgs.slice().reverse().find((msg) => msg.role === "user")?.id ?? null;
+        animateMessageScrollRef.current = false;
         setMessages(displayMsgs);
       })
       .catch((err) => {
@@ -973,9 +979,32 @@ export function SkyeClient({ user, initialThinkingEffort }: SkyeClientProps) {
       });
   }, [activeChatId]);
 
+  useEffect(() => {
+    const targetId = scrollToMessageIdRef.current;
+    const target = messageScrollTargetRef.current;
+    const container = chatScrollContainerRef.current;
+    if (!targetId || !target || !container) return;
+
+    const top =
+      target.getBoundingClientRect().top -
+      container.getBoundingClientRect().top +
+      container.scrollTop;
+    if (animateMessageScrollRef.current) {
+      container.scrollTo({ top, behavior: "smooth" });
+    } else {
+      container.scrollTop = top;
+    }
+    if (!loading) {
+      scrollToMessageIdRef.current = null;
+      animateMessageScrollRef.current = false;
+    }
+  }, [messages, loading, loadingMessages]);
+
   // --- Handlers ---
 
   const handleNewChat = useCallback(() => {
+    scrollToMessageIdRef.current = null;
+    animateMessageScrollRef.current = false;
     setActiveChatId(null);
     setMessages([]);
     setPrompt("");
@@ -996,6 +1025,8 @@ export function SkyeClient({ user, initialThinkingEffort }: SkyeClientProps) {
 
   const handleSelectChat = useCallback((chatId: string) => {
     if (chatId === activeChatId) return;
+    scrollToMessageIdRef.current = null;
+    animateMessageScrollRef.current = false;
     if (chatScrollContainerRef.current) {
       chatScrollContainerRef.current.scrollTop = 0;
     }
@@ -1336,6 +1367,8 @@ export function SkyeClient({ user, initialThinkingEffort }: SkyeClientProps) {
         attachments: displayAttachments,
       };
 
+      scrollToMessageIdRef.current = optimisticUserMsg.id;
+      animateMessageScrollRef.current = true;
       setMessages((prev) => [...prev, optimisticUserMsg]);
 
       // Save user message in DB
@@ -1509,7 +1542,11 @@ export function SkyeClient({ user, initialThinkingEffort }: SkyeClientProps) {
                               : [];
 
                           return (
-                            <div key={msg.id} className="flex flex-col gap-3">
+                            <div
+                              key={msg.id}
+                              ref={msg.id === scrollToMessageIdRef.current ? messageScrollTargetRef : undefined}
+                              className="flex flex-col gap-3"
+                            >
                               <MessageItem msg={msg} />
                               {msg.role === 'user' && msg.attachments.length > 0 && (
                                 <Marker>

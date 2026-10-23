@@ -2,13 +2,15 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { LoadingBar } from "@/components/ui/loading-bar";
-import { SerializedEditorState } from "lexical";
+import { createEditor, type SerializedEditorState } from "lexical";
+import { $convertFromMarkdownString, TRANSFORMERS } from "@lexical/markdown";
 import {
   getNote,
   updateNote,
   type Note,
 } from "./note-actions";
 import { Editor } from "@/components/blocks/editor-00/editor";
+import { nodes } from "@/components/blocks/editor-00/nodes";
 
 interface NoteClientProps {
   noteId?: string | null;
@@ -26,25 +28,12 @@ function parseNoteContent(content?: string): SerializedEditorState | undefined {
     // AI-created notes may contain markdown/plain text instead of editor JSON.
   }
 
-  return {
-    root: {
-      children: content.split(/\r?\n/).map((text) => ({
-        children: text
-          ? [{ detail: 0, format: 0, mode: "normal", style: "", text, type: "text", version: 1 }]
-          : [],
-        direction: "ltr",
-        format: "",
-        indent: 0,
-        type: "paragraph",
-        version: 1,
-      })),
-      direction: "ltr",
-      format: "",
-      indent: 0,
-      type: "root",
-      version: 1,
-    },
-  } as SerializedEditorState;
+  const editor = createEditor({ namespace: "NoteMarkdownParser", nodes });
+  editor.update(() => {
+    $convertFromMarkdownString(content, TRANSFORMERS);
+  }, { discrete: true });
+
+  return editor.getEditorState().toJSON();
 }
 
 export function NoteClient({ noteId, initialNote, onNoteActivity }: NoteClientProps) {
