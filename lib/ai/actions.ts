@@ -8,6 +8,7 @@ import {
   type ThinkingEffort,
 } from '@/lib/models';
 import { getAuthenticatedClient } from '@/lib/supabase/server';
+import { AI_DAILY_REQUEST_LIMITS, type AiDailyUsage, type AiModelId } from './limits';
 import { AI_TOOLS, executeAiTool } from './tools';
 import { loadUserSalesOptions } from '@/sales/lib/optionLookup';
 import {
@@ -66,6 +67,77 @@ function getAIClient(): GoogleGenAI {
   if (!key) throw new Error('GOOGLE_API_KEY is not configured in environment variables');
   if (!_aiClient) _aiClient = new GoogleGenAI({ apiKey: key });
   return _aiClient;
+}
+
+type AiDailyLimitReason = 'user_limit' | 'global_limit';
+
+class AiDailyLimitError extends Error {
+  constructor(readonly reason: AiDailyLimitReason) {
+    super(reason);
+  }
+}
+
+class AiUsageUnavailableError extends Error {}
+
+async function reserveAiRequest(
+  supabase: Awaited<ReturnType<typeof getAuthenticatedClient>>['supabase'],
+  model: string,
+) {
+  const { data, error } = await supabase.rpc('reserve_ai_daily_request', { p_model_id: model });
+  if (error) {
+    console.error('[AI Actions] Failed to reserve daily AI usage:', error);
+    throw new AiUsageUnavailableError();
+  }
+
+  const reservation = data as { allowed?: unknown; reason?: unknown } | null;
+  if (!reservation || typeof reservation.allowed !== 'boolean') {
+    console.error('[AI Actions] Invalid response from daily AI usage reservation');
+    throw new AiUsageUnavailableError();
+  }
+  if (!reservation.allowed) {
+    if (reservation.reason === 'user_limit' || reservation.reason === 'global_limit') {
+      throw new AiDailyLimitError(reservation.reason);
+    }
+    throw new AiUsageUnavailableError();
+  }
+}
+
+function getAiLimitMessage(reason: AiDailyLimitReason, model: string): string {
+  const limits = AI_DAILY_REQUEST_LIMITS[model as AiModelId];
+  if (reason === 'user_limit') {
+    return `⚠️ **Daily limit reached**\n\nYour account has used its ${limits.user} ${limits.label} model requests for today. Your limit resets at midnight Pacific Time (PT).`;
+  }
+  return `⚠️ **Daily capacity reached**\n\n${limits.label} is at capacity for today. Please try again after midnight Pacific Time (PT).`;
+}
+
+export async function getAiDailyUsage(): Promise<AiDailyUsage | null> {
+  try {
+    const { supabase } = await getAuthenticatedClient();
+    const { data, error } = await supabase.rpc('get_ai_daily_usage');
+    if (error) {
+      console.error('[AI Actions] Failed to fetch daily AI usage:', error);
+      return null;
+    }
+    if (!data || typeof data !== 'object' || Array.isArray(data)) return null;
+
+    const rawUsage = data as Record<string, unknown>;
+    const usage: AiDailyUsage = {};
+    for (const modelId of Object.keys(AI_DAILY_REQUEST_LIMITS) as AiModelId[]) {
+      const entry = rawUsage[modelId];
+      if (!entry || typeof entry !== 'object' || Array.isArray(entry)) continue;
+
+      const counts = entry as Record<string, unknown>;
+      if (
+        typeof counts.user_count === 'number' && Number.isInteger(counts.user_count) && counts.user_count >= 0
+      ) {
+        usage[modelId] = { userCount: counts.user_count };
+      }
+    }
+    return usage;
+  } catch (error) {
+    console.error('[AI Actions] Could not fetch daily AI usage:', error);
+    return null;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -175,15 +247,19 @@ export async function generateAiResponse(
   const toolResultsAccumulator: AiToolResult[] = [];
   const maxToolRounds = 5;
 
-  const generateResponse = () => ai.models.generateContent({
-    model,
-    contents,
-    config: {
-      ...(thinkingConfig ? { thinkingConfig } : {}),
-      systemInstruction,
-      tools: [{ functionDeclarations: AI_TOOLS as any }],
-    },
-  });
+  const generateResponse = (quotaReserved = false) => {
+    const request = () => ai.models.generateContent({
+      model,
+      contents,
+      config: {
+        ...(thinkingConfig ? { thinkingConfig } : {}),
+        systemInstruction,
+        tools: [{ functionDeclarations: AI_TOOLS as any }],
+      },
+    });
+
+    return quotaReserved ? request() : reserveAiRequest(supabase, model).then(request);
+  };
 
   try {
     let response = await generateResponse();
@@ -200,6 +276,9 @@ export async function generateAiResponse(
           toolResults: toolResultsAccumulator,
         };
       }
+
+      // Reserve the next model call before running tools, since tools can mutate user data.
+      await reserveAiRequest(supabase, model);
 
       const toolExecutions = await Promise.all(
         functionCalls.map(async (call: any) => {
@@ -234,7 +313,7 @@ export async function generateAiResponse(
 
       // Keep tools enabled so the model can complete dependent workflows such
       // as finding a note, reading it, and then updating it.
-      response = await generateResponse();
+      response = await generateResponse(true);
     }
 
     const lastOutput = toolResultsAccumulator.at(-1)?.output;
@@ -250,6 +329,15 @@ export async function generateAiResponse(
       toolResults: toolResultsAccumulator,
     };
   } catch (error: any) {
+    if (error instanceof AiDailyLimitError) {
+      return { text: getAiLimitMessage(error.reason, model) };
+    }
+    if (error instanceof AiUsageUnavailableError) {
+      return {
+        text: '⚠️ **Skye is temporarily unavailable**\n\nDaily usage limits could not be checked. Please try again shortly.',
+      };
+    }
+
     console.error('[AI Actions] Error generating content:', error);
 
     if (error?.status === 429) {

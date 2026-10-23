@@ -102,6 +102,7 @@ import {
   MAX_INPUT_CHARS,
 } from "@/lib/ai/context";
 import { createClient } from "@/lib/supabase/client";
+import { AI_USAGE_UPDATED_EVENT } from "@/lib/ai/limits";
 import {
   DEFAULT_THINKING_EFFORT,
   getThinkingOptions,
@@ -1387,7 +1388,9 @@ export function SkyeClient({ user, initialThinkingEffort }: SkyeClientProps) {
         history,
         attachmentRefs,
         effort
-      );
+      ).finally(() => {
+        window.dispatchEvent(new Event(AI_USAGE_UPDATED_EVENT));
+      });
 
       // Save AI message to DB
       await saveAiMessage(

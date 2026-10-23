@@ -6,6 +6,7 @@ import {
   Check,
   Copy,
   ExternalLink,
+  Gauge,
   LogOut,
   LoaderCircle,
   Trash2,
@@ -62,8 +63,14 @@ import { createClient } from "@/lib/supabase/client"
 import { deleteAccount, updateProfile } from "@/lib/actions/profile"
 import type { UserProfile } from "@/lib/profile"
 import { signout as authSignout } from "@/lib/actions/auth"
-import { deleteAllAiChats as apiDeleteAllChats } from "@/lib/ai/actions"
+import { deleteAllAiChats as apiDeleteAllChats, getAiDailyUsage as apiGetAiDailyUsage } from "@/lib/ai/actions"
 import { deleteAllNotes as apiDeleteAllNotes } from "@/app/notes/note-actions"
+import {
+  AI_DAILY_REQUEST_LIMITS,
+  AI_USAGE_UPDATED_EVENT,
+  type AiDailyUsage,
+  type AiModelId,
+} from "@/lib/ai/limits"
 
 interface SettingsDialogProps {
   open: boolean
@@ -142,6 +149,46 @@ async function deletePreviousAvatar(
   }
 }
 
+const PACIFIC_DATE_FORMATTER = new Intl.DateTimeFormat("en-US", {
+  timeZone: "America/Los_Angeles",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+})
+
+function getPacificDateKey(date: Date): string {
+  const parts = PACIFIC_DATE_FORMATTER.formatToParts(date)
+  const part = (type: string) => parts.find((value) => value.type === type)?.value ?? ""
+  return `${part("year")}-${part("month")}-${part("day")}`
+}
+
+function getNextPacificMidnight(from: Date): number {
+  const today = getPacificDateKey(from)
+  let lower = from.getTime()
+  let upper = lower + 36 * 60 * 60 * 1000
+
+  while (getPacificDateKey(new Date(upper)) === today) {
+    upper += 12 * 60 * 60 * 1000
+  }
+
+  while (upper - lower > 1) {
+    const middle = Math.floor((lower + upper) / 2)
+    if (getPacificDateKey(new Date(middle)) === today) lower = middle
+    else upper = middle
+  }
+
+  return upper
+}
+
+function formatResetCountdown(resetAt: number, now: number): string {
+  const totalMinutes = Math.max(0, Math.ceil((resetAt - now) / 60_000))
+  const hours = Math.floor(totalMinutes / 60)
+  const minutes = totalMinutes % 60
+  const hourLabel = hours === 1 ? "hour" : "hours"
+  const minuteLabel = minutes === 1 ? "minute" : "minutes"
+  return `Limit resets in ${hours} ${hourLabel} ${minutes} ${minuteLabel}.`
+}
+
 export function SettingsDialog({
   open,
   onOpenChange,
@@ -164,6 +211,8 @@ export function SettingsDialog({
     systemInstruction: user.systemInstruction,
   })
   const [saved, setSaved] = useState(form)
+  const [aiDailyUsage, setAiDailyUsage] = useState<AiDailyUsage | null>(null)
+  const [resetCountdown, setResetCountdown] = useState("")
 
   // Status state
   const [savingProfile, setSavingProfile] = useState(false)
@@ -197,6 +246,43 @@ export function SettingsDialog({
   useEffect(() => {
     syncProfile(user)
   }, [user])
+
+  useEffect(() => {
+    if (!open) return
+
+    let isActive = true
+    let isRefreshing = false
+    const refreshUsage = async () => {
+      if (isRefreshing) return
+      isRefreshing = true
+      try {
+        const usage = await apiGetAiDailyUsage()
+        if (isActive && usage) setAiDailyUsage(usage)
+      } catch (error) {
+        console.error("Failed to refresh Skye usage:", error)
+      } finally {
+        isRefreshing = false
+      }
+    }
+
+    void refreshUsage()
+    window.addEventListener(AI_USAGE_UPDATED_EVENT, refreshUsage)
+
+    let resetAt = getNextPacificMidnight(new Date())
+    const updateResetCountdown = () => {
+      const now = new Date()
+      if (now.getTime() >= resetAt) resetAt = getNextPacificMidnight(now)
+      setResetCountdown(formatResetCountdown(resetAt, now.getTime()))
+    }
+    updateResetCountdown()
+    const countdownInterval = window.setInterval(updateResetCountdown, 30_000)
+
+    return () => {
+      isActive = false
+      window.removeEventListener(AI_USAGE_UPDATED_EVENT, refreshUsage)
+      window.clearInterval(countdownInterval)
+    }
+  }, [open, user.id])
 
   const handleEditAvatarClick = () => {
     setProfileError(null)
@@ -593,6 +679,40 @@ export function SettingsDialog({
               ))}
             </div>
           </SettingsSection>
+        </>
+      ),
+    },
+    {
+      id: "usage",
+      label: "Usage limits",
+      icon: Gauge,
+      content: (
+        <>
+          <SettingsSection
+            title="Daily usage limits"
+            description="Tracked per account for Skye. Tool-using responses may use more requests."
+          >
+            {Object.entries(AI_DAILY_REQUEST_LIMITS).map(([modelId, { label, user }]) => {
+              const usage = aiDailyUsage?.[modelId as AiModelId]
+              const percentUsed = usage
+                ? Math.min(100, Math.round((usage.userCount / user) * 100))
+                : null
+              return (
+                <SettingsRow
+                  key={label}
+                  label={label}
+                  action={
+                    <span className="text-sm text-muted-foreground">
+                      {percentUsed === null ? "—" : `${percentUsed}% used`}
+                    </span>
+                  }
+                />
+              )
+            })}
+          </SettingsSection>
+          <p className="text-xs text-muted-foreground">
+            {resetCountdown}
+          </p>
         </>
       ),
     },
