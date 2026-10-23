@@ -172,16 +172,34 @@ export async function deleteOptionAction(
   if (!ctx) return { ok: false, error: 'You must be signed in.' };
   if (!isOptionType(type)) return { ok: false, error: 'Invalid option type.' };
 
-  const { error } = await ctx.supabase
+  const { data, error } = await ctx.supabase
     .from('sales_options')
     .delete()
     .eq('user_id', ctx.user.id)
     .eq('type', type)
-    .eq('name', name);
+    .eq('name', name)
+    .select('id');
 
   if (error) {
     console.error('[deleteOptionAction] DB delete error:', error);
     return { ok: false, error: 'Failed to delete option.' };
   }
+
+  if (!data?.length) {
+    // Treat an already-deleted option as success, but don't hide a failed delete.
+    const { data: remaining, error: checkError } = await ctx.supabase
+      .from('sales_options')
+      .select('id')
+      .eq('user_id', ctx.user.id)
+      .eq('type', type)
+      .eq('name', name)
+      .maybeSingle();
+
+    if (checkError || remaining) {
+      console.error('[deleteOptionAction] Delete matched no rows but option remains:', checkError);
+      return { ok: false, error: 'Failed to delete option.' };
+    }
+  }
+
   return { ok: true };
 }

@@ -70,6 +70,8 @@ export function OptionsProvider({
   children: ReactNode;
 }) {
   const [options, setOptions] = useState<SalesOption[]>(initialOptions);
+  const optionsRef = useRef<SalesOption[]>(initialOptions);
+  optionsRef.current = options;
   const renameListenersRef = useRef<Set<RenameListener>>(new Set());
   // Counts in-flight local mutations so a refetch never overwrites an optimistic state mid-write.
   const pendingMutationsRef = useRef(0);
@@ -101,6 +103,18 @@ export function OptionsProvider({
         'postgres_changes',
         { event: '*', schema: 'public', table: 'sales_options', filter: `user_id=eq.${userId}` },
         () => scheduleRefetch()
+      )
+      // Realtime can't filter DELETE events by user_id; only refresh when the deleted id
+      // belongs to an option currently loaded for this user.
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'sales_options' },
+        (payload) => {
+          const deletedId = (payload.old as { id?: string } | null)?.id;
+          if (deletedId && optionsRef.current.some((option) => option.id === deletedId)) {
+            scheduleRefetch();
+          }
+        }
       )
       .subscribe();
 
