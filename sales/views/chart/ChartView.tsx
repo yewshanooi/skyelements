@@ -20,6 +20,7 @@ import {
   Sliders,
   Check,
   Pencil,
+  Sparkles,
 } from 'lucide-react';
 import { NotionFilterBar } from '@/sales/filters/NotionFilterBar';
 import { filterSales, DEFAULT_EMPTY_FILTERS, type FilterState } from '@/sales/lib/filterUtils';
@@ -33,6 +34,7 @@ import type {
   OverviewKpiLayoutState,
   KpiCardId,
 } from '@/sales/types/chart';
+import type { SalesInsightData } from '@/sales/types/ai';
 import {
   ALL_WIDGET_WIDTHS,
   WIDTH_COL_SPAN_CLASS,
@@ -67,16 +69,28 @@ import { PaymentMethodsWidget } from './widgets/PaymentMethodsWidget';
 import { FulfillmentPipelineWidget } from './widgets/FulfillmentPipelineWidget';
 import { DayOfWeekWidget } from './widgets/DayOfWeekWidget';
 import { TopItemsWidget } from './widgets/TopItemsWidget';
+import { AIInsightButton, AIInsightWidget, useAIInsight } from './widgets/AIInsightWidget';
 
 interface ChartViewProps {
   sales: SaleItem[];
   filters: FilterState;
+  initialSalesInsight?: string | null;
   onFiltersChange: (filters: FilterState) => void;
   onResetSearch?: () => void;
 }
 
 // Widget registry definition
 const ALL_WIDGET_CONFIGS: WidgetConfig[] = [
+  {
+    id: 'ai_insights',
+    title: 'Sales Insight',
+    subtitle: 'A quick read of your current sales data',
+    category: 'overview',
+    description: 'AI-generated summary based on the current sales data.',
+    icon: Sparkles,
+    defaultWidth: '4/4',
+    allowedWidths: ALL_WIDGET_WIDTHS,
+  },
   {
     id: 'kpi_metrics',
     title: 'Overview',
@@ -202,6 +216,7 @@ const WIDGET_CONFIG_MAP = new Map(ALL_WIDGET_CONFIGS.map((w) => [w.id, w]));
 export const ChartView: FC<ChartViewProps> = ({
   sales,
   filters,
+  initialSalesInsight,
   onFiltersChange,
   onResetSearch,
 }) => {
@@ -394,6 +409,50 @@ export const ChartView: FC<ChartViewProps> = ({
     [filteredSales, kpiStats.totalSales]
   );
 
+  const aiInsightData = useMemo<SalesInsightData>(() => ({
+    totalOrders: kpiStats.totalOrders,
+    revenue: kpiStats.totalSubtotal,
+    cost: kpiStats.totalCost,
+    profit: kpiStats.totalSales,
+    profitMargin: Number(kpiStats.profitMargin),
+    averageOrderValue: kpiStats.avgOrderValue,
+    topCategories: [...categoryMatrixData]
+      .sort((a, b) => b.profit - a.profit)
+      .slice(0, 3)
+      .map(({ category, revenue, profit, margin, orders }) => ({
+        name: category,
+        revenue,
+        profit,
+        margin,
+        orders,
+      })),
+    topStores: [...storeComparisonData]
+      .sort((a, b) => b.profit - a.profit)
+      .slice(0, 3)
+      .map(({ name, revenue, profit, margin, orders }) => ({
+        name,
+        revenue,
+        profit,
+        margin,
+        orders,
+      })),
+    recentPeriods: trendData.slice(-6).map((point) => ({
+      period: point.label,
+      revenue: point.subtotal,
+      cost: point.cost,
+      profit: point.profit,
+      orders: point.orders,
+    })),
+  }), [categoryMatrixData, kpiStats, storeComparisonData, trendData]);
+
+  const {
+    insight: aiInsight,
+    error: aiInsightError,
+    isLoading: isGeneratingAiInsight,
+    isCheckingDailyInsight,
+    handleGenerateInsight,
+  } = useAIInsight(aiInsightData, !layout.hidden.ai_insights, initialSalesInsight);
+
   const handleResetFilters = () => {
     onFiltersChange(DEFAULT_EMPTY_FILTERS);
     onResetSearch?.();
@@ -564,6 +623,7 @@ export const ChartView: FC<ChartViewProps> = ({
           top_items: '2/4',
         },
         hidden: {
+          ai_insights: true,
           sales_donut: true,
           store_comparison: true,
           top_customers: true,
@@ -584,6 +644,7 @@ export const ChartView: FC<ChartViewProps> = ({
           day_of_week: '2/4',
         },
         hidden: {
+          ai_insights: true,
           revenue_trend: true,
           sales_donut: true,
           category_profitability: true,
@@ -603,6 +664,7 @@ export const ChartView: FC<ChartViewProps> = ({
           top_items: '2/4',
         },
         hidden: {
+          ai_insights: true,
           revenue_trend: true,
           category_profitability: true,
           store_comparison: true,
@@ -634,6 +696,16 @@ export const ChartView: FC<ChartViewProps> = ({
             currentWidth={currentWidth}
             onChangeLayout={setOverviewKpiLayout}
             onReset={() => setOverviewKpiLayout(DEFAULT_OVERVIEW_KPI_LAYOUT)}
+          />
+        );
+
+      case 'ai_insights':
+        return (
+          <AIInsightWidget
+            insight={aiInsight}
+            error={aiInsightError}
+            isLoading={isGeneratingAiInsight}
+            isCheckingDailyInsight={isCheckingDailyInsight}
           />
         );
 
@@ -883,13 +955,24 @@ export const ChartView: FC<ChartViewProps> = ({
       {/* Fullscreen Expand Chart Modal */}
       <ChartModal
         widget={expandedWidgetId ? WIDGET_CONFIG_MAP.get(expandedWidgetId) || null : null}
+        description={
+          expandedWidgetId === 'ai_insights'
+            ? 'AI-generated summary based on the current sales data.'
+            : undefined
+        }
         isOpen={Boolean(expandedWidgetId)}
         onClose={() => {
           setExpandedWidgetId(null);
           setIsCustomizingOverviewInModal(false);
         }}
         headerActions={
-          expandedWidgetId === 'kpi_metrics' ? (
+          expandedWidgetId === 'ai_insights' ? (
+            <AIInsightButton
+              isLoading={isGeneratingAiInsight}
+              disabled={isCheckingDailyInsight || aiInsightData.totalOrders === 0}
+              onClick={() => handleGenerateInsight(true)}
+            />
+          ) : expandedWidgetId === 'kpi_metrics' ? (
             <button
               type="button"
               onClick={() => setIsCustomizingOverviewInModal((prev) => !prev)}

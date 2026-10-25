@@ -6,6 +6,7 @@ import type { ViewMode } from "@/sales/types";
 import { fetchSalesAction } from "@/sales/services/salesActions";
 import { fetchOptionsAction } from "@/sales/services/optionsActions";
 import { fetchSettingsAction } from "@/sales/services/settingsActions";
+import { getPacificCalendarDate } from "@/sales/lib/dateUtils";
 
 const VALID_VIEWS: ViewMode[] = ["table", "board", "chart", "timeline", "map"];
 
@@ -52,10 +53,33 @@ export default async function SalesPage({
     redirect(`/?auth=login&redirectTo=/sales/${encodeURIComponent(activeView)}`);
   }
 
-  const [initialSales, initialOptions, initialSettings] = await Promise.all([
+  const savedInsightPromise = (async () => {
+    try {
+      const { data, error } = await supabase
+        .from('sales_ai_insights')
+        .select('summary')
+        .eq('user_id', user.id)
+        .eq('insight_date', getPacificCalendarDate())
+        .maybeSingle();
+
+      if (error) {
+        console.error('[Sales Page] Error loading daily sales insight:', error);
+        return null;
+      }
+      return typeof data?.summary === 'string' && data.summary.trim()
+        ? data.summary
+        : null;
+    } catch (error) {
+      console.error('[Sales Page] Error loading daily sales insight:', error);
+      return null;
+    }
+  })();
+
+  const [initialSales, initialOptions, initialSettings, initialSalesInsight] = await Promise.all([
     fetchSalesAction(),
     fetchOptionsAction(),
     fetchSettingsAction(),
+    savedInsightPromise,
   ]);
 
   return (
@@ -65,6 +89,7 @@ export default async function SalesPage({
       initialSales={initialSales}
       initialOptions={initialOptions}
       initialSettings={initialSettings}
+      initialSalesInsight={initialSalesInsight}
     />
   );
 }

@@ -36,6 +36,20 @@ export const MONTH_NAMES_SHORT = [
 
 export const DAYS_OF_WEEK = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
 
+export function getPacificCalendarDate(): string {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Los_Angeles',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date());
+  const year = parts.find((part) => part.type === 'year')?.value;
+  const month = parts.find((part) => part.type === 'month')?.value;
+  const day = parts.find((part) => part.type === 'day')?.value;
+  if (!year || !month || !day) throw new Error('Could not determine the daily insight date.');
+  return `${year}-${month}-${day}`;
+}
+
 /**
  * Checks if a given year, month (1-12), and day are a valid calendar date.
  */

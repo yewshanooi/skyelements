@@ -86,10 +86,11 @@ const FILTER_KEY_BY_OPTION_TYPE = {
 
 interface DashboardContentProps {
   initialSales?: SaleItem[];
+  initialSalesInsight?: string | null;
   activeView: ViewMode;
 }
 
-function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
+function DashboardContent({ initialSales, initialSalesInsight, activeView }: DashboardContentProps) {
   const { user } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
@@ -526,6 +527,7 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
                 <ChartView
                   sales={sales}
                   filters={filters}
+                  initialSalesInsight={initialSalesInsight}
                   onFiltersChange={handleFiltersChange}
                   onResetSearch={() => handleSearchChange('')}
                 />
@@ -655,18 +657,24 @@ export function SalesClient({
   initialSales,
   initialOptions = [],
   initialSettings = {},
+  initialSalesInsight = null,
   activeView = 'table',
 }: {
   initialUser?: User | null;
   initialSales?: SaleItem[];
   initialOptions?: SalesOption[];
   initialSettings?: SalesSettings;
+  initialSalesInsight?: string | null;
   activeView?: ViewMode;
 }) {
   return (
     <AuthProvider initialUser={initialUser}>
       <DashboardProviders initialOptions={initialOptions} initialSettings={initialSettings}>
-        <DashboardContent initialSales={initialSales} activeView={activeView} />
+        <DashboardContent
+          initialSales={initialSales}
+          initialSalesInsight={initialSalesInsight}
+          activeView={activeView}
+        />
       </DashboardProviders>
     </AuthProvider>
   );

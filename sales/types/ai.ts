@@ -66,3 +66,33 @@ export interface QueryMetricsResult {
   source: 'postgres_rpc' | 'snapshot_fallback';
 }
 
+export interface SalesInsightData {
+  totalOrders: number;
+  revenue: number;
+  cost: number;
+  profit: number;
+  profitMargin: number;
+  averageOrderValue: number;
+  topCategories: Array<{
+    name: string;
+    revenue: number;
+    profit: number;
+    margin: number;
+    orders: number;
+  }>;
+  topStores: Array<{
+    name: string;
+    revenue: number;
+    profit: number;
+    margin: number;
+    orders: number;
+  }>;
+  recentPeriods: Array<{
+    period: string;
+    revenue: number;
+    cost: number;
+    profit: number;
+    orders: number;
+  }>;
+}
+

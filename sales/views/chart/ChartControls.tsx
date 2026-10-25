@@ -5,7 +5,6 @@ import {
   GripVertical,
   Maximize2,
   X,
-  Sparkles,
   RotateCcw,
 } from 'lucide-react';
 import type { WidgetConfig } from '@/sales/types/chart';
@@ -81,6 +80,7 @@ export const WidgetHeader: FC<WidgetHeaderProps> = ({
   children,
 }) => {
   const Icon = widget.icon;
+  const isAiInsight = widget.id === 'ai_insights';
 
   return (
     <div className="flex items-center justify-between gap-2 sm:gap-3 pb-3 mb-3.5 sm:mb-4 border-b border-neutral-100 dark:border-neutral-800/80 select-none">
@@ -95,12 +95,18 @@ export const WidgetHeader: FC<WidgetHeaderProps> = ({
           <GripVertical className="w-4 h-4" />
         </div>
 
-        <div className="w-6.5 h-6.5 sm:w-7 sm:h-7 rounded-lg bg-neutral-100 dark:bg-neutral-800/80 flex items-center justify-center text-neutral-700 dark:text-neutral-300 shrink-0">
+        <div className={`w-6.5 h-6.5 sm:w-7 sm:h-7 rounded-lg flex items-center justify-center shrink-0 ${
+          isAiInsight
+            ? 'bg-violet-500/10 text-violet-600 dark:bg-violet-500/15 dark:text-violet-400'
+            : 'bg-neutral-100 dark:bg-neutral-800/80 text-neutral-700 dark:text-neutral-300'
+        }`}>
           <Icon className="w-3.5 h-3.5" />
         </div>
 
         <div className="min-w-0 flex-1">
-          <h3 className="font-semibold text-xs sm:text-sm text-neutral-900 dark:text-neutral-100 truncate" title={widget.title}>
+          <h3 className={`font-semibold text-xs sm:text-sm truncate ${
+            isAiInsight ? 'text-violet-700 dark:text-violet-300' : 'text-neutral-900 dark:text-neutral-100'
+          }`} title={widget.title}>
             {widget.title}
           </h3>
         </div>
@@ -129,6 +135,7 @@ export const WidgetHeader: FC<WidgetHeaderProps> = ({
 // =========================================================================
 interface ChartModalProps {
   widget: WidgetConfig | null;
+  description?: string;
   isOpen: boolean;
   onClose: () => void;
   headerActions?: ReactNode;
@@ -137,6 +144,7 @@ interface ChartModalProps {
 
 export const ChartModal: FC<ChartModalProps> = ({
   widget,
+  description,
   isOpen,
   onClose,
   headerActions,
@@ -147,6 +155,7 @@ export const ChartModal: FC<ChartModalProps> = ({
   if (!isOpen || !widget) return null;
 
   const Icon = widget.icon;
+  const isAiInsightWidget = widget.id === 'ai_insights';
 
   const isCompactListWidget = widget.id === 'top_items' || widget.id === 'top_customers';
   const isPaymentWidget = widget.id === 'payment_methods';
@@ -173,15 +182,23 @@ export const ChartModal: FC<ChartModalProps> = ({
       >
         <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-neutral-200/80 dark:border-neutral-800 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-neutral-100 dark:bg-neutral-800/80 text-neutral-700 dark:text-neutral-300 flex items-center justify-center shrink-0">
+            <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center shrink-0 ${
+              isAiInsightWidget
+                ? 'bg-violet-500/10 text-violet-600 dark:bg-violet-500/15 dark:text-violet-400'
+                : 'bg-neutral-100 dark:bg-neutral-800/80 text-neutral-700 dark:text-neutral-300'
+            }`}>
               <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div className="min-w-0">
-              <h2 className="text-sm sm:text-base font-semibold text-neutral-900 dark:text-neutral-100 truncate">
+              <h2 className={`text-sm sm:text-base font-semibold truncate ${
+                isAiInsightWidget ? 'text-violet-700 dark:text-violet-300' : 'text-neutral-900 dark:text-neutral-100'
+              }`}>
                 {widget.title}
               </h2>
-              <p className="text-[11px] sm:text-xs text-neutral-400 truncate">
-                {widget.description}
+              <p className={`text-[11px] sm:text-xs text-neutral-400 ${
+                isAiInsightWidget ? 'whitespace-normal wrap-break-word' : 'truncate'
+              }`}>
+                {description ?? widget.description}
               </p>
             </div>
           </div>
@@ -224,7 +241,7 @@ const PRESETS = [
   {
     key: 'all',
     name: 'Full Overview',
-    desc: 'Complete dashboard with all 11 cards.',
+    desc: 'Complete dashboard with all 12 cards.',
     badge: 'Default',
   },
   {
@@ -289,7 +306,7 @@ export const CustomizeWidgetsModal: FC<CustomizeWidgetsModalProps> = ({
           <div className="space-y-2.5">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" /> Layout Presets
+                Layout Presets
               </span>
               <button
                 type="button"
@@ -337,6 +354,7 @@ export const CustomizeWidgetsModal: FC<CustomizeWidgetsModalProps> = ({
               {allWidgets.map((w) => {
                 const Icon = w.icon;
                 const isVisible = !hiddenWidgets[w.id];
+                const isAiInsight = w.id === 'ai_insights';
 
                 return (
                   <div
@@ -352,7 +370,9 @@ export const CustomizeWidgetsModal: FC<CustomizeWidgetsModalProps> = ({
                       <div
                         className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
                           isVisible
-                            ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                            ? isAiInsight
+                              ? 'bg-violet-500/10 text-violet-600 dark:text-violet-400'
+                              : 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
                             : 'bg-neutral-200 dark:bg-neutral-800 text-neutral-400'
                         }`}
                       >
@@ -373,7 +393,11 @@ export const CustomizeWidgetsModal: FC<CustomizeWidgetsModalProps> = ({
                     <div className="shrink-0 flex items-center">
                       <div
                         className={`w-9 h-5 rounded-full transition-colors relative flex items-center p-0.5 ${
-                          isVisible ? 'bg-[#2383e2]' : 'bg-neutral-300 dark:bg-neutral-700'
+                          isVisible
+                            ? isAiInsight
+                              ? 'bg-violet-600'
+                              : 'bg-[#2383e2]'
+                            : 'bg-neutral-300 dark:bg-neutral-700'
                         }`}
                       >
                         <div
