@@ -56,7 +56,7 @@ type ColumnId =
 const DEFAULT_COLUMN_WIDTHS: Record<ColumnId, number> = {
   select: 38,
   quantity: 85,
-  item: 230,
+  item: 260,
   category: 160,
   marketplace: 130,
   payment_method: 180,
