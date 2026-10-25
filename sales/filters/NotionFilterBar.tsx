@@ -30,7 +30,6 @@ import type { FilterState, PropertyType } from '@/sales/lib/filterUtils';
 export type { FilterState, PropertyType } from '@/sales/lib/filterUtils';
 
 interface NotionFilterBarProps {
-  storageKeyPrefix?: string;
   showSort?: boolean;
   sortField?: SortField;
   sortOrder?: SortOrder;
@@ -66,7 +65,6 @@ const ALL_FILTER_PROPERTIES: { id: PropertyType; label: string }[] = [
 ];
 
 export const NotionFilterBar: FC<NotionFilterBarProps> = ({
-  storageKeyPrefix: _storageKeyPrefix = 'default',
   showSort = true,
   sortField = 'date',
   sortOrder = 'desc',

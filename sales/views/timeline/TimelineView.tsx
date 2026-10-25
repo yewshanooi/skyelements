@@ -291,7 +291,6 @@ export const TimelineView: FC<TimelineViewProps> = ({
     <div className="space-y-4 sm:space-y-6">
       {/* Notion Filter Toolbar for Timeline */}
       <NotionFilterBar
-        storageKeyPrefix="timeline"
         showSort={false}
         filters={filters}
         onFiltersChange={onFiltersChange}
@@ -317,6 +316,7 @@ export const TimelineView: FC<TimelineViewProps> = ({
               </PopoverTrigger>
               <PopoverContent
                 align="end"
+                collisionPadding={12}
                 className="w-67.5 sm:w-71.25 max-w-[calc(100vw-24px)] p-3 bg-white dark:bg-[#202020] border border-neutral-200 dark:border-neutral-700 rounded-xl shadow-xl gap-0 space-y-3 animate-in fade-in-50 zoom-in-95 duration-100 text-xs select-none"
               >
                 <div className="flex items-center justify-between pt-0.5 px-0.5">

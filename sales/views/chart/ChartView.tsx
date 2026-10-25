@@ -813,7 +813,6 @@ export const ChartView: FC<ChartViewProps> = ({
     <div className="space-y-4 sm:space-y-6">
       {/* Top Notion Filter Bar with Integrated Card Controls */}
       <NotionFilterBar
-        storageKeyPrefix="chart"
         showSort={false}
         filters={filters}
         onFiltersChange={onFiltersChange}

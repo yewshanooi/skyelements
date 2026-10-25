@@ -101,10 +101,11 @@ export const AIInsightButton = ({ isLoading, disabled = false, onClick }: AIInsi
     type="button"
     onClick={onClick}
     disabled={isLoading || disabled}
+    aria-label={isLoading ? 'Generating insight' : 'Refresh insight'}
     className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 shadow-2xs transition-all disabled:cursor-not-allowed disabled:opacity-60"
   >
     {isLoading ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-    <span>{isLoading ? 'Generating…' : 'Refresh'}</span>
+    <span className="hidden sm:inline">{isLoading ? 'Generating…' : 'Refresh'}</span>
   </button>
 );
 

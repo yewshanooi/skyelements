@@ -27,7 +27,12 @@ export interface SaleItem {
   created_at?: string;
 }
 
-export type ViewMode = 'table' | 'chart' | 'timeline' | 'map' | 'board';
+export const VIEW_MODES = ['table', 'chart', 'timeline', 'map', 'board'] as const;
+export type ViewMode = (typeof VIEW_MODES)[number];
+
+export function isViewMode(value: string): value is ViewMode {
+  return (VIEW_MODES as readonly string[]).includes(value);
+}
 
 export type SortField = 'date' | 'item' | 'quantity' | 'subtotal' | 'cost' | 'sales' | 'customer' | 'category' | 'marketplace';
 export type SortOrder = 'asc' | 'desc';

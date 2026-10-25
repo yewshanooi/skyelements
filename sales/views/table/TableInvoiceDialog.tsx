@@ -139,7 +139,7 @@ export const TableInvoiceDialog: FC<TableInvoiceDialogProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="inline-flex h-7 w-7 items-center justify-center rounded-md text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 cursor-pointer"
+                className="p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-md text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200 transition-colors cursor-pointer"
                 aria-label="Close invoice dialog"
               >
                 <X className="w-3.5 h-3.5" />
@@ -147,7 +147,7 @@ export const TableInvoiceDialog: FC<TableInvoiceDialogProps> = ({
             </div>
 
             {sale.invoice_name || sale.invoice_url ? (
-              <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900/60 min-w-0">
+              <div className="flex h-8 items-center gap-2 px-2.5 rounded-md border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900/60 min-w-0">
                 <button
                   type="button"
                   onClick={() => {
@@ -155,7 +155,7 @@ export const TableInvoiceDialog: FC<TableInvoiceDialogProps> = ({
                     onViewInvoice();
                   }}
                   disabled={!sale.invoice_url}
-                  className="flex items-center gap-2 min-w-0 flex-1 text-left text-neutral-700 dark:text-neutral-200 hover:text-blue-600 dark:hover:text-blue-400 disabled:cursor-default disabled:hover:text-neutral-700 dark:disabled:hover:text-neutral-200 cursor-pointer"
+                  className="flex items-center gap-2 min-w-0 flex-1 text-left text-neutral-600 dark:text-neutral-400 hover:text-blue-600 dark:hover:text-blue-400 disabled:cursor-default disabled:hover:text-neutral-600 dark:disabled:hover:text-neutral-400 cursor-pointer"
                   title={sale.invoice_url ? 'View invoice' : undefined}
                 >
                   <FileText className="w-3.5 h-3.5 shrink-0 text-neutral-400" />
@@ -191,7 +191,7 @@ export const TableInvoiceDialog: FC<TableInvoiceDialogProps> = ({
                   type="button"
                   onClick={() => inputRef.current?.click()}
                   disabled={isUploading}
-                  className="w-full inline-flex h-8 items-center justify-center gap-2 rounded-md bg-neutral-900 px-3 text-xs font-medium text-white hover:bg-neutral-700 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-white disabled:opacity-60 cursor-pointer"
+                  className="w-full inline-flex h-8 items-center justify-center gap-2 rounded-md border border-neutral-200 bg-neutral-50 px-2.5 text-xs font-medium text-neutral-700 transition-colors hover:bg-neutral-100 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-500/40 dark:border-neutral-700 dark:bg-neutral-900/60 dark:text-neutral-200 dark:hover:bg-neutral-800 disabled:opacity-60 cursor-pointer"
                 >
                   {isUploading ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />

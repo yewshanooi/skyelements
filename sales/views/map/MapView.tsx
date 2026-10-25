@@ -463,7 +463,6 @@ export const MapView: FC<MapViewProps> = ({
     <div className="space-y-4 sm:space-y-6">
       {/* Notion Filter Bar for Map */}
       <NotionFilterBar
-        storageKeyPrefix="map"
         showSort={false}
         filters={filters}
         onFiltersChange={onFiltersChange}

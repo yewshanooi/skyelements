@@ -1,14 +1,13 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { SalesClient } from "../sales-client";
-import type { ViewMode } from "@/sales/types";
+import { SalesClient } from "@/sales/layout/SalesClient";
+import { isViewMode } from "@/sales/types";
 import { fetchSalesAction } from "@/sales/services/salesActions";
 import { fetchOptionsAction } from "@/sales/services/optionsActions";
 import { fetchSettingsAction } from "@/sales/services/settingsActions";
 import { getPacificCalendarDate } from "@/sales/lib/dateUtils";
 
-const VALID_VIEWS: ViewMode[] = ["table", "board", "chart", "timeline", "map"];
 
 export const metadata: Metadata = {
   title: "Sales Dashboard",
@@ -38,11 +37,11 @@ export default async function SalesPage({
 
   // Case 2: Multi-segment or invalid view -> Default back to /sales/table
   const rawView = view[0];
-  if (view.length > 1 || !VALID_VIEWS.includes(rawView as ViewMode)) {
+  if (view.length > 1 || !isViewMode(rawView)) {
     redirect("/sales/table");
   }
 
-  const activeView = rawView as ViewMode;
+  const activeView = rawView;
 
   const supabase = await createClient();
   const {

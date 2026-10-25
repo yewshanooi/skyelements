@@ -12,7 +12,7 @@ import { AuthDialog } from '@/components/auth/AuthDialog';
 import { InvoiceViewerModal } from '@/sales/modals/InvoiceViewerModal';
 import { UnauthenticatedLanding } from '@/sales/layout/UnauthenticatedLanding';
 import { ErrorBoundary } from '@/sales/layout/ErrorBoundary';
-import type { SaleItem, ViewMode, SortField, SortOrder } from '@/sales/types';
+import { isViewMode, type SaleItem, type ViewMode, type SortField, type SortOrder } from '@/sales/types';
 import {
   fetchSalesAction,
   createSaleAction,
@@ -233,10 +233,8 @@ function DashboardContent({ initialSales, initialSalesInsight, activeView }: Das
   // Handle browser back/forward buttons seamlessly
   useEffect(() => {
     const handlePopState = () => {
-      const pathParts = window.location.pathname.split('/');
-      const viewCandidate = (pathParts[2] as ViewMode) || 'table';
-      const validViews: ViewMode[] = ['table', 'board', 'chart', 'timeline', 'map'];
-      if (validViews.includes(viewCandidate)) {
+      const viewCandidate = window.location.pathname.split('/')[2] || 'table';
+      if (isViewMode(viewCandidate)) {
         setCurrentView(viewCandidate);
       }
       const currentParams = new URLSearchParams(window.location.search);
@@ -497,10 +495,7 @@ function DashboardContent({ initialSales, initialSalesInsight, activeView }: Das
 
       <main className={`flex-1 min-h-0 min-w-0 overflow-y-auto overflow-x-hidden px-2.5 sm:px-4 md:px-6 py-3 sm:py-4 pb-28 sm:pb-32 md:pb-6 w-full max-w-full ${currentView === 'table' ? 'flex flex-col' : ''}`}>
         {isLoading || !isClientReady ? (
-          <div className="flex flex-col items-center justify-center py-24 space-y-3">
-            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-            <p className="text-sm text-muted-foreground font-medium">Loading...</p>
-          </div>
+          <ViewLoading />
         ) : (
           <ErrorBoundary fallbackTitle="Dashboard View Error">
             <Suspense fallback={<ViewLoading />}>

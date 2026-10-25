@@ -195,9 +195,7 @@ export const ChartModal: FC<ChartModalProps> = ({
               }`}>
                 {widget.title}
               </h2>
-              <p className={`text-[11px] sm:text-xs text-neutral-400 ${
-                isAiInsightWidget ? 'whitespace-normal wrap-break-word' : 'truncate'
-              }`}>
+              <p className="text-[11px] sm:text-xs text-neutral-400 truncate">
                 {description ?? widget.description}
               </p>
             </div>

@@ -56,7 +56,7 @@ type ColumnId =
 const DEFAULT_COLUMN_WIDTHS: Record<ColumnId, number> = {
   select: 38,
   quantity: 85,
-  item: 260,
+  item: 230,
   category: 160,
   marketplace: 130,
   payment_method: 180,
@@ -747,8 +747,8 @@ export const TableView: FC<TableViewProps> = ({
                             className="w-full px-1.5 py-0.5 bg-white dark:bg-neutral-900 border border-blue-500 ring-2 ring-blue-500/20 rounded outline-hidden text-xs"
                           />
                         ) : (
-                          <div className="flex items-center justify-between gap-1.5 min-w-0 min-h-[22px] w-full">
-                            <span className="truncate block font-medium" title={sale.item}>
+                          <div className="relative flex min-w-0 min-h-[22px] w-full items-center">
+                            <span className="block w-full truncate pr-16 sm:pr-0 sm:group-hover/itemcell:pr-16 sm:group-focus-within/itemcell:pr-16 font-medium transition-[padding]" title={sale.item}>
                               {sale.item}
                             </span>
                             <button
@@ -757,7 +757,7 @@ export const TableView: FC<TableViewProps> = ({
                                 e.stopPropagation();
                                 onEditSale(sale);
                               }}
-                              className="shrink-0 opacity-100 sm:opacity-0 sm:group-hover/itemcell:opacity-100 sm:group-hover:opacity-100 transition-opacity flex items-center gap-1 px-1.5 py-0.5 bg-white dark:bg-[#252525] hover:bg-neutral-100 dark:hover:bg-[#303030] border border-neutral-200/80 dark:border-neutral-700 rounded-md shadow-2xs text-[10px] font-semibold tracking-wider text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100 cursor-pointer select-none"
+                              className="absolute right-0 top-1/2 -translate-y-1/2 shrink-0 opacity-100 sm:opacity-0 sm:group-hover/itemcell:opacity-100 sm:group-focus-within/itemcell:opacity-100 transition-opacity flex items-center gap-1 px-1.5 py-0.5 bg-white dark:bg-[#252525] hover:bg-neutral-100 dark:hover:bg-[#303030] border border-neutral-200/80 dark:border-neutral-700 rounded-md shadow-2xs text-[10px] font-semibold tracking-wider text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100 cursor-pointer select-none"
                             >
                               <svg
                                 className="w-3.5 h-3.5 text-neutral-500 dark:text-neutral-400"
@@ -919,7 +919,7 @@ export const TableView: FC<TableViewProps> = ({
                             <button
                               type="button"
                               onClick={() => setActiveInvoiceDialogSaleId(sale.id)}
-                              className="inline-flex min-h-[22px] items-center gap-1 text-xs text-neutral-700 dark:text-neutral-300 cursor-pointer max-w-full min-w-0"
+                              className="inline-flex min-h-[22px] items-center gap-1 text-xs text-neutral-600 dark:text-neutral-400 focus:outline-hidden cursor-pointer max-w-full min-w-0"
                               title="Manage invoice"
                               aria-label={`Manage invoice ${sale.invoice_name || 'receipt.pdf'}`}
                             >
@@ -933,7 +933,7 @@ export const TableView: FC<TableViewProps> = ({
                                 event.stopPropagation();
                                 setActiveInvoiceDialogSaleId(sale.id);
                               }}
-                              className="h-[22px] w-full rounded focus-visible:outline-2 focus-visible:outline-blue-500 cursor-pointer"
+                              className="h-[22px] w-full rounded focus-visible:outline-hidden cursor-pointer"
                               aria-label="Add invoice"
                             >
                               <span className="sr-only">Add invoice</span>
