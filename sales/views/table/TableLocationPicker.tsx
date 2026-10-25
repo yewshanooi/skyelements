@@ -19,7 +19,7 @@ import { geocodeAddress, type LocationSuggestion } from '@/sales/lib/geocoder';
 import { photonReverse } from '@/sales/lib/photon';
 import { useLocationSearch } from '@/sales/hooks/useLocationSearch';
 import { normalizeCoordinates, extractEmbeddedCoordinates } from '@/sales/lib/locationParser';
-import { MAP_STYLE, createPinElement } from '@/sales/lib/mapShared';
+import { MAPLIBRE_WORKER_URL, MAP_STYLE, createPinElement } from '@/sales/lib/mapShared';
 import type { SaleItem } from '@/sales/types';
 
 interface TableLocationPickerProps {
@@ -175,8 +175,9 @@ export const TableLocationPicker: FC<TableLocationPickerProps> = ({
     let map: MapLibreMap | null = null;
     let observer: ResizeObserver | null = null;
 
-    import('maplibre-gl').then(({ Map, Marker }) => {
+    import('maplibre-gl').then(({ Map, Marker, setWorkerUrl }) => {
       if (disposed) return;
+      setWorkerUrl(MAPLIBRE_WORKER_URL);
       map = new Map({
         container,
         style: MAP_STYLE,
@@ -303,14 +304,14 @@ export const TableLocationPicker: FC<TableLocationPickerProps> = ({
               left: `${position.left}px`,
               zIndex: 99999,
             }}
-            className="w-72 sm:w-80 max-w-[calc(100vw-24px)] bg-white dark:bg-[#202020] border border-neutral-200 dark:border-neutral-700 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in-50 zoom-in-95 duration-100 text-xs select-none"
+            className="w-72 sm:w-80 max-w-[calc(100vw-24px)] bg-white dark:bg-[#202020] border border-neutral-200 dark:border-neutral-700 rounded-xl shadow-xl overflow-hidden animate-in fade-in-50 zoom-in-95 duration-100 text-xs select-none"
           >
             {viewMode === 'preview' ? (
               /* Preview Mini-Map Card */
-              <div className="p-4 space-y-3">
+              <div className="p-3 space-y-3">
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <h3 className="font-bold text-sm text-neutral-900 dark:text-neutral-100 leading-snug">
+                    <h3 className="text-xs font-semibold text-neutral-900 dark:text-neutral-100 leading-snug">
                       {sale.location?.split(',')[0] || sale.location || 'Pinned Location'}
                     </h3>
                     <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5 line-clamp-2">
@@ -351,7 +352,7 @@ export const TableLocationPicker: FC<TableLocationPickerProps> = ({
                     onClick={() => setViewMode('search')}
                     className="text-blue-600 dark:text-blue-400 hover:underline font-medium cursor-pointer"
                   >
-                    Change location
+                    Change
                   </button>
                   <button
                     onClick={() => {
@@ -360,13 +361,13 @@ export const TableLocationPicker: FC<TableLocationPickerProps> = ({
                     }}
                     className="text-red-500 hover:text-red-700 transition-colors cursor-pointer"
                   >
-                    Remove pin
+                    Remove
                   </button>
                 </div>
               </div>
             ) : (
               /* Search Location Popover */
-              <div className="p-2.5 space-y-2">
+              <div className="p-3 space-y-2">
                 <div className="relative">
                   {isSearching || isLoading ? (
                     <Loader2 className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-blue-500 animate-spin" />
@@ -380,11 +381,11 @@ export const TableLocationPicker: FC<TableLocationPickerProps> = ({
                     aria-controls="location-suggestions"
                     aria-activedescendant={highlighted >= 0 ? `location-option-${highlighted}` : undefined}
                     aria-autocomplete="list"
-                    placeholder="Search for a location..."
+                    placeholder="Search..."
                     value={searchQuery}
                     onChange={(e) => handleQueryChange(e.target.value)}
                     onKeyDown={handleInputKeyDown}
-                    className="w-full pl-8 pr-7 py-1.5 text-xs bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 focus:outline-hidden focus:ring-1 focus:ring-blue-500/40"
+                    className="w-full h-8 pl-8 pr-7 text-xs bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 focus:outline-hidden focus:ring-1 focus:ring-blue-500/40"
                     autoFocus={typeof window !== 'undefined' ? window.innerWidth >= 768 : false}
                   />
                   {searchQuery && (
@@ -411,7 +412,7 @@ export const TableLocationPicker: FC<TableLocationPickerProps> = ({
                         <div className="flex items-center gap-2 px-2.5 py-2 text-neutral-400">
                           {isLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                           <span className="text-[11px]">
-                            {isLoading ? 'Searching locations...' : 'No matches. Press Enter to use it as typed.'}
+                            {isLoading ? 'Searching locations...' : 'No matches. Press Enter to save it as is.'}
                           </span>
                         </div>
                       ) : (

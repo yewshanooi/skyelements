@@ -197,7 +197,7 @@ export const KanbanBoardView: FC<KanbanBoardViewProps> = ({
               onDragOver={(e) => handleDragOver(e, col.key)}
               onDragLeave={handleDragLeave}
               onDrop={(e) => handleDrop(e, col)}
-              className={`flex flex-col min-w-0 rounded-xl bg-neutral-100/60 dark:bg-[#1f1f1f]/80 border transition-all duration-200 p-3 sm:p-4 min-h-[300px] md:min-h-[500px] max-h-[75vh] md:max-h-[700px] shadow-xs ${
+              className={`flex flex-col min-w-0 rounded-xl bg-neutral-100/60 dark:bg-[#1f1f1f]/80 border transition-all duration-200 p-3 sm:p-4 h-[72vh] min-h-120 max-h-135 md:min-h-130 shadow-xs ${
                 isOver
                   ? 'border-blue-500/80 ring-2 ring-blue-500/20 bg-blue-50/20 dark:bg-blue-950/20'
                   : 'border-neutral-200/80 dark:border-neutral-800'

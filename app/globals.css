@@ -145,6 +145,7 @@
   html {
     @apply font-sans;
     scrollbar-gutter: stable;
+    overflow-x: clip;
   }
   button:not(:disabled), [role="button"]:not(:disabled) {
     cursor: pointer;
@@ -536,4 +537,4 @@ body[data-scroll-locked] {
 .touch-scroll-x {
   -webkit-overflow-scrolling: touch;
   scroll-behavior: smooth;
-}
+}

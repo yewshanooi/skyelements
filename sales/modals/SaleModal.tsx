@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from 'react';
-import type { FC, ChangeEvent, SyntheticEvent } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import type { FC, SyntheticEvent } from 'react';
 import {
   X,
   MapPin,
@@ -27,6 +27,7 @@ import { normalizeCoordinates } from '@/sales/lib/locationParser';
 import { formatDateDisplay } from '@/sales/lib/dateUtils';
 import { FormulaModal } from '@/sales/modals/FormulaModal';
 import { InvoiceViewerModal } from '@/sales/modals/InvoiceViewerModal';
+import { TableInvoiceDialog } from '@/sales/views/table/TableInvoiceDialog';
 import { evaluateSalesFormula } from '@/sales/lib/formulaEngine';
 import { useFormulaSetting } from '@/sales/context/SettingsContext';
 import { useAuth } from '@/sales/context/AuthContext';
@@ -93,10 +94,7 @@ function getInitialFormData(
   if (initialData) {
     const coords = normalizeCoordinates(initialData.latitude, initialData.longitude);
     return {
-      quantity:
-        initialData.quantity !== undefined && initialData.quantity !== null
-          ? initialData.quantity
-          : '',
+      quantity: initialData.quantity > 0 ? initialData.quantity : '',
       item: initialData.item || '',
       category: initialData.category || '',
       cost:
@@ -106,7 +104,7 @@ function getInitialFormData(
             : Number(initialData.cost).toFixed(2)
           : '',
       customer: initialData.customer || '',
-      date: initialData.date || new Date().toISOString().split('T')[0],
+      date: initialData.date || '',
       invoice_name: initialData.invoice_name || null,
       invoice_url: initialData.invoice_url || null,
       location: initialData.location || '',
@@ -133,7 +131,7 @@ function getInitialFormData(
     category: '',
     cost: '',
     customer: '',
-    date: new Date().toISOString().split('T')[0],
+    date: '',
     invoice_name: null,
     invoice_url: null,
     location: '',
@@ -149,6 +147,13 @@ function getInitialFormData(
   };
 }
 
+const MODAL_ACTION_CONTROL_CLASS =
+  'inline-flex h-8 w-full min-w-0 items-center gap-2 rounded-md border border-neutral-200 bg-neutral-50 px-2.5 text-left text-xs font-medium text-neutral-700 transition-colors hover:bg-neutral-100 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-500/40 dark:border-neutral-700 dark:bg-neutral-900/60 dark:text-neutral-200 dark:hover:bg-neutral-800';
+
+const MODAL_ACTION_ICON_CLASS = 'w-3.5 h-3.5 shrink-0 text-neutral-400';
+const MODAL_INPUT_CONTROL_CLASS =
+  'h-8 w-full min-w-0 rounded-md border border-neutral-200 bg-neutral-50 px-2.5 text-xs text-neutral-900 outline-hidden transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-neutral-700 dark:bg-neutral-900/60 dark:text-neutral-100';
+
 const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
   onClose,
   onSave,
@@ -162,6 +167,7 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [isLocationPickerOpen, setIsLocationPickerOpen] = useState(false);
   const [isFormulaModalOpen, setIsFormulaModalOpen] = useState(false);
+  const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
   const [isInvoiceViewerOpen, setIsInvoiceViewerOpen] = useState(false);
   const [isUploadingInvoice, setIsUploadingInvoice] = useState(false);
   const { user } = useAuth();
@@ -174,7 +180,6 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Keyboard Escape listener to close popup
   useEffect(() => {
@@ -182,6 +187,8 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
       if (e.key === 'Escape') {
         if (isInvoiceViewerOpen) {
           setIsInvoiceViewerOpen(false);
+        } else if (isInvoiceDialogOpen) {
+          setIsInvoiceDialogOpen(false);
         } else if (activeOptionPicker) {
           setActiveOptionPicker(null);
         } else if (isDatePickerOpen) {
@@ -197,7 +204,7 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeOptionPicker, isDatePickerOpen, isLocationPickerOpen, isFormulaModalOpen, isInvoiceViewerOpen, onClose]);
+  }, [activeOptionPicker, isDatePickerOpen, isLocationPickerOpen, isFormulaModalOpen, isInvoiceDialogOpen, isInvoiceViewerOpen, onClose]);
 
   const calculatedSales = useMemo(() => {
     return evaluateSalesFormula(
@@ -206,9 +213,7 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
     );
   }, [customFormula, formData, initialData?.id]);
 
-  const handleFileUpload = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleFileUpload = async (file: File) => {
 
     if (!user?.id) {
       setErrorMsg('Please sign in to upload invoices to Supabase Storage.');
@@ -236,27 +241,26 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
     }
   };
 
-  const handleRemoveInvoice = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (formData.invoice_url || initialData?.id) {
-      await deleteInvoiceFileAction(formData.invoice_url, initialData?.id);
-    }
-    setFormData((prev) => ({
-      ...prev,
-      invoice_name: '',
-      invoice_url: null,
-    }));
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+  const handleRemoveInvoice = async (e?: React.MouseEvent): Promise<boolean> => {
+    e?.stopPropagation();
+    try {
+      if (formData.invoice_url || initialData?.id) {
+        await deleteInvoiceFileAction(formData.invoice_url, initialData?.id);
+      }
+      setFormData((prev) => ({
+        ...prev,
+        invoice_name: '',
+        invoice_url: null,
+      }));
+      return true;
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : 'Failed to remove invoice.');
+      return false;
     }
   };
 
   const handleSubmit = async (e?: SyntheticEvent) => {
     if (e) e.preventDefault();
-    if (!formData.item.trim()) {
-      setErrorMsg('Order name is required');
-      return;
-    }
 
     setIsSubmitting(true);
     setErrorMsg('');
@@ -294,14 +298,14 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
           e.preventDefault();
         }
       }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150 select-none overscroll-none"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150 select-none overscroll-none"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-white dark:bg-[#202020] text-[#37352f] dark:text-[#d4d4d4] rounded-xl sm:rounded-2xl shadow-2xl border border-neutral-200/90 dark:border-neutral-700 w-full max-w-2xl max-h-[75dvh] sm:max-h-[85vh] flex flex-col overflow-hidden select-text overscroll-contain my-auto"
+        className="bg-white dark:bg-[#202020] text-neutral-800 dark:text-neutral-200 rounded-2xl shadow-2xl border border-neutral-200/90 dark:border-neutral-700 w-full max-w-2xl max-h-[76dvh] sm:max-h-[85vh] flex flex-col overflow-hidden select-text overscroll-contain my-auto"
       >
         {/* Top Notion Actions Bar */}
-        <div className="px-4 sm:px-6 py-3 sm:py-3.5 flex items-center justify-between border-b border-neutral-200/70 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/50 text-neutral-400">
+        <div className="px-4 sm:px-6 py-3 flex items-center justify-between border-b border-neutral-200/70 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/50 text-neutral-400">
           <div className="flex items-center gap-2 text-xs font-semibold text-neutral-600 dark:text-neutral-300">
             <span>{initialData ? 'Edit Order' : 'New Order'}</span>
           </div>
@@ -319,7 +323,7 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
         </div>
 
         {/* Scrollable Form Content */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto overscroll-contain px-4 sm:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto overscroll-contain px-4 sm:px-6 py-4 space-y-4">
           {errorMsg && (
             <div className="p-3 text-xs bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 rounded-lg">
               {errorMsg}
@@ -330,11 +334,11 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
           <div className="space-y-1">
             <input
               type="text"
-              required
+
               placeholder="Untitled Order"
               value={formData.item}
               onChange={(e) => setFormData({ ...formData, item: e.target.value })}
-              className="w-full text-xl sm:text-3xl font-semibold tracking-tight bg-transparent border-none outline-hidden text-neutral-900 dark:text-neutral-100 placeholder-neutral-300 dark:placeholder-neutral-600 focus:ring-0 p-0 overflow-y-hidden leading-normal"
+              className="w-full text-xl sm:text-2xl font-semibold tracking-tight bg-transparent border-none outline-hidden text-neutral-900 dark:text-neutral-100 placeholder-neutral-300 dark:placeholder-neutral-600 focus:ring-0 p-0 overflow-y-hidden leading-tight"
             />
           </div>
 
@@ -396,7 +400,7 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
                       }));
                     }
                   }}
-                  className="w-full px-2.5 py-1 text-xs bg-transparent hover:bg-neutral-100/70 dark:hover:bg-neutral-800/70 focus:bg-white dark:focus:bg-[#282828] border border-neutral-200/80 dark:border-neutral-700/80 focus:border-blue-500 rounded font-mono text-neutral-900 dark:text-neutral-100 outline-hidden transition-colors"
+                  className={`${MODAL_INPUT_CONTROL_CLASS} font-mono`}
                 />
               </div>
             </div>
@@ -412,7 +416,7 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
                   type="text"
                   value={formData.customer}
                   onChange={(e) => setFormData((prev) => ({ ...prev, customer: e.target.value }))}
-                  className="w-full px-2.5 py-1 text-xs bg-transparent hover:bg-neutral-100/70 dark:hover:bg-neutral-800/70 focus:bg-white dark:focus:bg-[#282828] border border-neutral-200/80 dark:border-neutral-700/80 focus:border-blue-500 rounded text-neutral-900 dark:text-neutral-100 outline-hidden transition-colors"
+                  className={MODAL_INPUT_CONTROL_CLASS}
                 />
               </div>
             </div>
@@ -424,17 +428,21 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
                 <span>Date</span>
               </div>
               <div className="flex-1 relative min-w-0 flex items-center">
-                <div
+                <button
+                  type="button"
+                  aria-expanded={isDatePickerOpen}
                   onClick={() => {
                     setActiveOptionPicker(null);
                     setIsLocationPickerOpen(false);
                     setIsDatePickerOpen(!isDatePickerOpen);
                   }}
-                  className="cursor-pointer inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium text-neutral-800 dark:text-neutral-200 bg-neutral-100 dark:bg-neutral-800/80 border border-neutral-200/70 dark:border-neutral-700/70 hover:bg-neutral-200/70 dark:hover:bg-neutral-700/70 transition-colors select-none"
+                  className={`${MODAL_ACTION_CONTROL_CLASS} cursor-pointer`}
                 >
-                  <Calendar className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
-                  <span>{formatDateDisplay(formData.date) || 'Select date'}</span>
-                </div>
+                  <Calendar className={MODAL_ACTION_ICON_CLASS} />
+                  <span className={formData.date ? 'truncate' : 'truncate text-neutral-400 dark:text-neutral-500'}>
+                    {formatDateDisplay(formData.date) || 'Select date'}
+                  </span>
+                </button>
                 {isDatePickerOpen && (
                   <TableDatePicker
                     currentDate={formData.date}
@@ -454,50 +462,43 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
                 <FileText className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
                 <span>Invoice</span>
               </div>
-              <div className="flex-1 flex items-center gap-2 min-w-0">
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileUpload}
-                  className="hidden"
-                  accept="image/*,.pdf"
-                />
-
+              <div className="flex-1 flex items-center min-w-0">
                 {isUploadingInvoice ? (
-                  <div className="inline-flex items-center gap-1.5 px-2 py-0.5 text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 rounded">
-                    <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-                    <span>Uploading...</span>
+                  <div className={`${MODAL_ACTION_CONTROL_CLASS} cursor-wait`} role="status">
+                    <div className="w-3.5 h-3.5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin shrink-0" />
+                    <span className="truncate text-neutral-500 dark:text-neutral-400">Uploading...</span>
                   </div>
                 ) : formData.invoice_name || formData.invoice_url ? (
-                  <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium tracking-tight bg-neutral-100 dark:bg-neutral-800/90 border border-neutral-200/70 dark:border-neutral-700/70 text-neutral-800 dark:text-neutral-200 group/inv max-w-sm select-none">
-                    <button
-                      type="button"
-                      onClick={() => setIsInvoiceViewerOpen(true)}
-                      className="flex items-center gap-1.5 hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer truncate min-w-0"
-                    >
-                      <FileText className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
-                      <span className="truncate" title={formData.invoice_name || undefined}>
-                        {formData.invoice_name || 'receipt.pdf'}
-                      </span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleRemoveInvoice}
-                      className="p-0.5 text-neutral-400 hover:text-red-500 dark:hover:text-red-400 transition-colors cursor-pointer rounded shrink-0"
-                      title="Remove invoice"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsInvoiceDialogOpen(true)}
+                    aria-label={`Manage invoice ${formData.invoice_name || 'receipt.pdf'}`}
+                    className={`${MODAL_ACTION_CONTROL_CLASS} cursor-pointer`}
+                  >
+                    <FileText className={MODAL_ACTION_ICON_CLASS} />
+                    <span className="truncate" title={formData.invoice_name || undefined}>
+                      {formData.invoice_name || 'receipt.pdf'}
+                    </span>
+                  </button>
                 ) : (
                   <button
                     type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="inline-flex items-center gap-1.5 px-2 py-0.5 text-xs font-medium text-neutral-500 dark:text-neutral-400 hover:text-blue-600 dark:hover:text-blue-400 bg-transparent hover:bg-neutral-100 dark:hover:bg-neutral-800/80 rounded transition-colors cursor-pointer border border-dashed border-neutral-300 dark:border-neutral-700 hover:border-blue-400 select-none"
+                    onClick={() => setIsInvoiceDialogOpen(true)}
+                    className={`${MODAL_ACTION_CONTROL_CLASS} cursor-pointer`}
                   >
-                    <Upload className="w-3.5 h-3.5" />
-                    <span>Upload</span>
+                    <Upload className={MODAL_ACTION_ICON_CLASS} />
+                    <span className="text-neutral-400 dark:text-neutral-500">Upload invoice</span>
                   </button>
+                )}
+                {isInvoiceDialogOpen && (
+                  <TableInvoiceDialog
+                    sale={toSaleItem(formData, calculatedSales, initialData?.id || 'temp')}
+                    isUploading={isUploadingInvoice}
+                    onUploadFile={handleFileUpload}
+                    onViewInvoice={() => setIsInvoiceViewerOpen(true)}
+                    onRemoveInvoice={handleRemoveInvoice}
+                    onClose={() => setIsInvoiceDialogOpen(false)}
+                  />
                 )}
               </div>
             </div>
@@ -509,25 +510,24 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
                 <span>Location</span>
               </div>
               <div className="flex-1 relative min-w-0 flex items-center">
-                <div
+                <button
+                  type="button"
+                  aria-expanded={isLocationPickerOpen}
                   onClick={() => {
                     setActiveOptionPicker(null);
                     setIsDatePickerOpen(false);
                     setIsLocationPickerOpen(!isLocationPickerOpen);
                   }}
-                  className={`cursor-pointer inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium transition-colors max-w-full select-none ${formData.location
-                      ? 'bg-neutral-100 dark:bg-neutral-800/80 border border-neutral-200/70 dark:border-neutral-700/70 text-neutral-800 dark:text-neutral-200 hover:bg-neutral-200/70 dark:hover:bg-neutral-700/70'
-                      : 'text-neutral-400 dark:text-neutral-500 italic hover:bg-neutral-100 dark:hover:bg-neutral-800/80 border border-transparent'
-                    }`}
+                  className={`${MODAL_ACTION_CONTROL_CLASS} cursor-pointer`}
                 >
-                  <MapPin
-                    className={`w-3.5 h-3.5 shrink-0 ${formData.location ? 'text-red-500' : 'text-neutral-400'
-                      }`}
-                  />
-                  <span className="truncate pr-1" title={formData.location || 'Empty'}>
-                    {formData.location || 'Empty'}
+                  <MapPin className={`${MODAL_ACTION_ICON_CLASS} ${formData.location ? 'text-red-500' : ''}`} />
+                  <span
+                    className={`truncate ${formData.location ? '' : 'text-neutral-400 dark:text-neutral-500'}`}
+                    title={formData.location || 'Add location'}
+                  >
+                    {formData.location || 'Add location'}
                   </span>
-                </div>
+                </button>
                 {isLocationPickerOpen && (
                   <TableLocationPicker
                     sale={toSaleItem(formData, calculatedSales, initialData?.id || 'temp')}
@@ -690,7 +690,7 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
             <div className={`flex items-center min-h-[34px] py-0.5 ${activeOptionPicker === 'payment_status' ? 'relative z-30' : 'relative'}`}>
               <div className="w-28 sm:w-44 shrink-0 flex items-center gap-2 text-neutral-500 dark:text-neutral-400 font-medium">
                 <Building2 className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
-                <span>Payment Status</span>
+                <span>Payment<span className="hidden sm:inline"> </span><span className="block sm:inline">Status</span></span>
               </div>
               <div
                 onClick={() => {
@@ -739,7 +739,7 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
                   step="1"
                   value={formData.quantity}
                   onChange={(e) => setFormData((prev) => ({ ...prev, quantity: e.target.value }))}
-                  className="w-full px-2.5 py-1 text-xs bg-transparent hover:bg-neutral-100/70 dark:hover:bg-neutral-800/70 focus:bg-white dark:focus:bg-[#282828] border border-neutral-200/80 dark:border-neutral-700/80 focus:border-blue-500 rounded font-mono text-neutral-900 dark:text-neutral-100 outline-hidden transition-colors"
+                  className={`${MODAL_INPUT_CONTROL_CLASS} font-mono`}
                 />
               </div>
             </div>
@@ -782,7 +782,7 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
                       }));
                     }
                   }}
-                  className="w-full px-2.5 py-1 text-xs bg-transparent hover:bg-neutral-100/70 dark:hover:bg-neutral-800/70 focus:bg-white dark:focus:bg-[#282828] border border-neutral-200/80 dark:border-neutral-700/80 focus:border-blue-500 rounded font-mono font-medium text-neutral-900 dark:text-neutral-100 outline-hidden transition-colors"
+                  className={`${MODAL_INPUT_CONTROL_CLASS} font-mono font-medium`}
                 />
               </div>
             </div>
@@ -798,13 +798,13 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
               placeholder="Add some notes..."
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              className="w-full p-3 text-xs bg-neutral-50/70 dark:bg-neutral-900/50 hover:bg-neutral-100/70 dark:hover:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 outline-hidden focus:ring-1 focus:ring-blue-500 transition-colors min-h-[80px] resize-y"
+              className="w-full min-h-[80px] resize-y rounded-md border border-neutral-200 bg-neutral-50 p-3 text-xs text-neutral-900 outline-hidden transition-colors placeholder:text-neutral-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-neutral-700 dark:bg-neutral-900/60 dark:text-neutral-100 dark:placeholder:text-neutral-500"
             />
           </div>
         </form>
 
         {/* Footer Actions */}
-        <div className="px-4 sm:px-6 py-3 sm:py-3.5 border-t border-neutral-200/70 dark:border-neutral-800 bg-neutral-50/70 dark:bg-neutral-900/50 flex items-center justify-end">
+        <div className="px-4 sm:px-6 py-3 border-t border-neutral-200/70 dark:border-neutral-800 bg-neutral-50/70 dark:bg-neutral-900/50 flex items-center justify-end">
           <div className="flex items-center gap-2">
             <button
               type="button"

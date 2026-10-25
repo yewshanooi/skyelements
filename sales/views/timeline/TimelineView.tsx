@@ -5,6 +5,7 @@ import type { FC } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Calendar,
   FileText,
   RotateCcw,
@@ -13,6 +14,7 @@ import type { SaleItem } from '@/sales/types';
 import { formatIsoDate, parseDateString, formatDateDisplay } from '@/sales/lib/dateUtils';
 import { NotionFilterBar } from '@/sales/filters/NotionFilterBar';
 import { filterSales, DEFAULT_EMPTY_FILTERS, hasActiveFilters, type FilterState } from '@/sales/lib/filterUtils';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 interface TimelineViewProps {
   sales: SaleItem[];
@@ -50,6 +52,8 @@ export const TimelineView: FC<TimelineViewProps> = ({
   onSelectSale,
 }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [monthPickerOpen, setMonthPickerOpen] = useState(false);
+  const [monthPickerYear, setMonthPickerYear] = useState(currentYear);
 
   const today = useMemo(() => new Date(), []);
   const todayDateStr = useMemo(() => formatIsoDate(today), [today]);
@@ -293,10 +297,84 @@ export const TimelineView: FC<TimelineViewProps> = ({
         onFiltersChange={onFiltersChange}
         extraRightActions={
           <div className="flex items-center gap-1.5 sm:gap-2">
-            <div className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-md text-xs font-medium bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 border border-neutral-200/80 dark:border-neutral-700/80 shadow-2xs shrink-0">
-              <Calendar className="w-3.5 h-3.5 text-neutral-500 dark:text-neutral-400" />
-              <span>{MONTH_NAMES[currentMonth]} {currentYear}</span>
-            </div>
+            <Popover
+              open={monthPickerOpen}
+              onOpenChange={(open) => {
+                if (open) setMonthPickerYear(currentYear);
+                setMonthPickerOpen(open);
+              }}
+            >
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  aria-label={`Choose month, ${MONTH_NAMES[currentMonth]} ${currentYear}`}
+                  className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-md text-xs font-medium bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 border border-neutral-200/80 dark:border-neutral-700/80 shadow-2xs shrink-0 hover:bg-neutral-200/70 dark:hover:bg-neutral-700 transition-colors cursor-pointer"
+                >
+                  <Calendar className="w-3.5 h-3.5 text-neutral-500 dark:text-neutral-400" />
+                  <span>{MONTH_NAMES[currentMonth]} {currentYear}</span>
+                  <ChevronDown className="w-3 h-3 text-neutral-500 dark:text-neutral-400" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent
+                align="end"
+                className="w-67.5 sm:w-71.25 max-w-[calc(100vw-24px)] p-3 bg-white dark:bg-[#202020] border border-neutral-200 dark:border-neutral-700 rounded-xl shadow-xl gap-0 space-y-3 animate-in fade-in-50 zoom-in-95 duration-100 text-xs select-none"
+              >
+                <div className="flex items-center justify-between pt-0.5 px-0.5">
+                  <span className="font-bold text-xs text-neutral-900 dark:text-neutral-100">
+                    Month
+                  </span>
+                  <div className="flex items-center gap-1.5 text-neutral-500 dark:text-neutral-400">
+                    <button
+                      type="button"
+                      onClick={() => setMonthPickerYear((year) => year - 1)}
+                      className="p-1 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
+                      aria-label="Previous year"
+                    >
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                    </button>
+                    <span className="min-w-10 text-center text-xs font-bold tabular-nums text-neutral-900 dark:text-neutral-100">
+                      {monthPickerYear}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setMonthPickerYear((year) => year + 1)}
+                      className="p-1 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
+                      aria-label="Next year"
+                    >
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-y-1 gap-x-0.5 text-center text-xs">
+                  {MONTH_NAMES.map((monthName, monthIndex) => {
+                    const isSelected = monthPickerYear === currentYear && monthIndex === currentMonth;
+                    const isCurrentMonth =
+                      monthPickerYear === today.getFullYear() && monthIndex === today.getMonth();
+                    return (
+                      <button
+                        key={monthName}
+                        type="button"
+                        aria-label={`${monthName} ${monthPickerYear}`}
+                        aria-pressed={isSelected}
+                        onClick={() => {
+                          setYearMonth(monthPickerYear, monthIndex);
+                          setMonthPickerOpen(false);
+                        }}
+                        className={`h-8 w-full rounded-lg flex items-center justify-center text-xs transition-all cursor-pointer relative ${
+                          isSelected
+                            ? 'bg-[#2383e2] text-white font-bold shadow-xs'
+                            : isCurrentMonth
+                              ? 'bg-[#ea5d50] text-white font-bold shadow-xs'
+                              : 'text-neutral-800 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 font-medium'
+                        }`}
+                      >
+                        {monthName.slice(0, 3)}
+                      </button>
+                    );
+                  })}
+                </div>
+              </PopoverContent>
+            </Popover>
             <div className="inline-flex items-center rounded-md border border-neutral-200/80 dark:border-neutral-700/80 bg-white dark:bg-neutral-800 text-xs font-medium text-neutral-600 dark:text-neutral-400 shadow-2xs overflow-hidden">
               <button
                 type="button"

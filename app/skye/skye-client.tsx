@@ -746,7 +746,7 @@ const InputArea = memo(function InputArea({
                 <ChevronDown className="shrink-0" />
               </InputGroupButton>
             </DropdownMenuTrigger>
-            <DropdownMenuContent side="bottom" align="start" className="scrollbar-thin">
+            <DropdownMenuContent side="bottom" align="start" className="w-50 scrollbar-thin">
               <DropdownMenuLabel>Models</DropdownMenuLabel>
 
               {MODELS.map((model) => (

@@ -102,12 +102,11 @@ async function reserveAiRequest(
   }
 }
 
-function getAiLimitMessage(reason: AiDailyLimitReason, model: string): string {
-  const limits = AI_DAILY_REQUEST_LIMITS[model as AiModelId];
+function getAiLimitMessage(reason: AiDailyLimitReason): string {
   if (reason === 'user_limit') {
-    return `⚠️ **Daily limit reached**\n\nYour account has used its ${limits.user} ${limits.label} model requests for today. Your limit resets at midnight Pacific Time (PT).`;
+    return '⚠️ **Usage limit reached**\n\nYou’ve reached your daily usage limit for this Skye AI model. Please try again later.';
   }
-  return `⚠️ **Daily capacity reached**\n\n${limits.label} is at capacity for today. Please try again after midnight Pacific Time (PT).`;
+  return '⚠️ **Usage limit reached**\n\nThe shared daily usage limit for this model has been reached. Please try again later.';
 }
 
 export async function getAiDailyUsage(): Promise<AiDailyUsage | null> {
@@ -330,7 +329,7 @@ export async function generateAiResponse(
     };
   } catch (error: any) {
     if (error instanceof AiDailyLimitError) {
-      return { text: getAiLimitMessage(error.reason, model) };
+      return { text: getAiLimitMessage(error.reason) };
     }
     if (error instanceof AiUsageUnavailableError) {
       return {

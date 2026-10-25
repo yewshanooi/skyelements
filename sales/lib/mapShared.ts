@@ -1,5 +1,10 @@
 import type { StyleSpecification } from 'maplibre-gl';
 
+export const MAPLIBRE_WORKER_URL = new URL(
+  'maplibre-gl/dist/maplibre-gl-worker.mjs',
+  import.meta.url,
+).toString();
+
 /** Raster OSM style shared by the full map and the table mini-map. */
 export const MAP_STYLE: StyleSpecification = {
   version: 8,
@@ -8,6 +13,7 @@ export const MAP_STYLE: StyleSpecification = {
       type: 'raster',
       tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
       tileSize: 256,
+      maxzoom: 19,
     },
   },
   layers: [
@@ -16,7 +22,6 @@ export const MAP_STYLE: StyleSpecification = {
       type: 'raster',
       source: 'osm-tiles',
       minzoom: 0,
-      maxzoom: 19,
     },
   ],
 };

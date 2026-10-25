@@ -603,29 +603,7 @@ export function SettingsDialog({
         </>
       ),
     },
-    {
-      id: "security",
-      label: "Security",
-      icon: Shield,
-      content: (
-        <SettingsSection title="Security" description="Manage your SkyElements account.">
-          <ExternalLinkRow label="Reset password" href="/reset-password" />
-          <SettingsRow
-            label="Delete account"
-            action={
-              <ActionButton
-                label="Delete"
-                icon={Trash2}
-                onClick={() => {
-                  setAccountError(null)
-                  setConfirmDialog("account")
-                }}
-              />
-            }
-          />
-        </SettingsSection>
-      ),
-    },
+
     {
       id: "personalization",
       label: "Personalization",
@@ -689,8 +667,8 @@ export function SettingsDialog({
       content: (
         <>
           <SettingsSection
-            title="Daily usage limits"
-            description="Tracked per account for Skye. Tool-using responses may use more requests."
+            title="Daily limits"
+            description="Tracked per account for Skye. Tool-using responses uses more requests."
           >
             {Object.entries(AI_DAILY_REQUEST_LIMITS).map(([modelId, { label, user }]) => {
               const usage = aiDailyUsage?.[modelId as AiModelId]
@@ -753,6 +731,29 @@ export function SettingsDialog({
             <ExternalLinkRow label="Privacy policy" href="/policies" />
           </SettingsSection>
         </>
+      ),
+    },
+    {
+      id: "security",
+      label: "Security",
+      icon: Shield,
+      content: (
+        <SettingsSection title="Security" description="Manage your SkyElements account.">
+          <ExternalLinkRow label="Reset password" href="/reset-password" />
+          <SettingsRow
+            label="Delete account"
+            action={
+              <ActionButton
+                label="Delete"
+                icon={Trash2}
+                onClick={() => {
+                  setAccountError(null)
+                  setConfirmDialog("account")
+                }}
+              />
+            }
+          />
+        </SettingsSection>
       ),
     },
   ]

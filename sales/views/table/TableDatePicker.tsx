@@ -270,7 +270,7 @@ export const TableDatePicker: FC<TableDatePickerProps> = ({
               left: `${coords.left}px`,
               zIndex: 99999,
             }}
-            className="w-[270px] sm:w-[285px] max-w-[calc(100vw-24px)] p-3.5 bg-white dark:bg-[#202020] border border-neutral-200 dark:border-neutral-700 rounded-2xl shadow-2xl space-y-3 animate-in fade-in-50 zoom-in-95 duration-100 text-xs select-none"
+            className="w-[270px] sm:w-[285px] max-w-[calc(100vw-24px)] p-3 bg-white dark:bg-[#202020] border border-neutral-200 dark:border-neutral-700 rounded-xl shadow-xl space-y-3 animate-in fade-in-50 zoom-in-95 duration-100 text-xs select-none"
           >
             {/* Top Input displaying formatted date & manual typing */}
             <div className="relative flex items-center px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-neutral-50/80 dark:bg-neutral-900/80 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all">
@@ -296,7 +296,7 @@ export const TableDatePicker: FC<TableDatePickerProps> = ({
                   className="p-0.5 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 rounded cursor-pointer transition-colors"
                   title="Clear input"
                 >
-                  <X className="w-3 h-3" />
+                  <X className="w-3.5 h-3.5" />
                 </button>
               )}
             </div>
@@ -368,7 +368,7 @@ export const TableDatePicker: FC<TableDatePickerProps> = ({
               </div>
             </div>
 
-            {/* Clear action */}
+            {/* Clear date action */}
             <div className="pt-2 border-t border-neutral-100 dark:border-neutral-800">
               <button
                 type="button"
@@ -376,7 +376,7 @@ export const TableDatePicker: FC<TableDatePickerProps> = ({
                   onSelectDate('');
                   onClose();
                 }}
-                className="w-full text-left py-1 px-1 text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100 transition-colors cursor-pointer text-xs"
+                className="py-1 px-1 text-[11px] text-red-500 hover:text-red-700 transition-colors cursor-pointer"
               >
                 Clear
               </button>

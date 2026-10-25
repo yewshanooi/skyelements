@@ -706,7 +706,13 @@ export const ChartView: FC<ChartViewProps> = ({
         );
 
       case 'fulfillment_pipeline':
-        return <FulfillmentPipelineWidget data={fulfillmentData} />;
+        return (
+          <FulfillmentPipelineWidget
+            data={fulfillmentData}
+            currentWidth={currentWidth}
+            isModal={isModal}
+          />
+        );
 
       case 'day_of_week':
         return (

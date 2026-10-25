@@ -64,7 +64,7 @@ export function mapRowToSaleItem(row: any): SaleItem {
     marketplace: row.marketplace || '',
     payment_method: row.payment_method || '',
     customer: row.customer || '',
-    date: row.date,
+    date: row.date || '',
     subtotal,
     cost,
     sales,

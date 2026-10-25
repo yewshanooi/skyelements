@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from 'react';
-import type { FC, ChangeEvent } from 'react';
+import type { FC } from 'react';
 import {
   FileText,
   MapPin,
@@ -12,8 +12,6 @@ import {
   Edit2,
   CheckSquare,
   Square,
-  Upload,
-  X,
   Table as TableIcon,
   RotateCcw,
 } from 'lucide-react';
@@ -32,6 +30,7 @@ import {
   useSyncSetting,
 } from '@/sales/context/SettingsContext';
 import { TableLocationPicker } from '@/sales/views/table/TableLocationPicker';
+import { TableInvoiceDialog } from '@/sales/views/table/TableInvoiceDialog';
 import { useAuth } from '@/sales/context/AuthContext';
 import { uploadInvoiceFile } from '@/sales/services/salesService';
 import { deleteInvoiceFileAction } from '@/sales/services/salesActions';
@@ -164,6 +163,7 @@ export const TableView: FC<TableViewProps> = ({
   const [activeDatePickerSaleId, setActiveDatePickerSaleId] = useState<string | null>(null);
   const [activeLocationPickerSaleId, setActiveLocationPickerSaleId] = useState<string | null>(null);
   const [isFormulaModalOpen, setIsFormulaModalOpen] = useState(false);
+  const [activeInvoiceDialogSaleId, setActiveInvoiceDialogSaleId] = useState<string | null>(null);
   const [uploadingSaleId, setUploadingSaleId] = useState<string | null>(null);
   const { user } = useAuth();
 
@@ -172,7 +172,6 @@ export const TableView: FC<TableViewProps> = ({
   const { getSettings } = useSalesSettings();
   const [settings] = useState(getSettings); // snapshot of saved settings used to seed local state
 
-  const fileInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
 
   // Column Resizing state & persistence (saved to the user's account)
   const [columnWidths, setColumnWidths] = useState<Record<ColumnId, number>>(() => ({
@@ -412,8 +411,7 @@ export const TableView: FC<TableViewProps> = ({
   };
 
   // Handle invoice file upload directly to Supabase Storage
-  const handleUploadInvoiceFile = async (e: ChangeEvent<HTMLInputElement>, sale: SaleItem) => {
-    const file = e.target.files?.[0];
+  const handleUploadInvoiceFile = async (file: File, sale: SaleItem) => {
     if (!file || !onUpdateSale) return;
 
     if (!user?.id) {
@@ -438,14 +436,10 @@ export const TableView: FC<TableViewProps> = ({
       alert(`Invoice upload error: ${msg}`);
     } finally {
       setUploadingSaleId(null);
-      if (fileInputRefs.current[sale.id]) {
-        fileInputRefs.current[sale.id]!.value = '';
-      }
     }
   };
 
-  const handleRemoveInvoice = async (e: React.MouseEvent, sale: SaleItem) => {
-    e.stopPropagation();
+  const handleRemoveInvoice = async (sale: SaleItem): Promise<boolean> => {
     try {
       if (sale.invoice_url || sale.id) {
         await deleteInvoiceFileAction(sale.invoice_url, sale.id);
@@ -456,8 +450,10 @@ export const TableView: FC<TableViewProps> = ({
           invoice_url: null,
         });
       }
+      return true;
     } catch (err) {
       console.error('Failed to remove invoice:', err);
+      return false;
     }
   };
 
@@ -543,7 +539,7 @@ export const TableView: FC<TableViewProps> = ({
   };
 
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="flex min-w-0 w-full flex-col space-y-4 sm:space-y-6">
       {/* Notion Filter & Sort Toolbar */}
       <NotionFilterBar
         sortField={sortField}
@@ -556,8 +552,8 @@ export const TableView: FC<TableViewProps> = ({
       />
 
       {/* Notion-style Data Table with Excel-like Inline Editing & Resizable Columns */}
-      <div className="border border-neutral-200/80 dark:border-neutral-800 rounded-xl bg-white dark:bg-[#191919] shadow-2xs overflow-hidden">
-        <div ref={scrollContainerRef} className="overflow-x-auto rounded-xl touch-scroll-x">
+      <div className="flex min-w-0 w-full flex-col overflow-hidden rounded-xl border border-neutral-200/80 bg-white shadow-2xs dark:border-neutral-800 dark:bg-[#191919]">
+        <div ref={scrollContainerRef} className="min-w-0 w-full max-w-full overflow-auto rounded-xl scrollbar-thin touch-scroll-x">
           <table
             className="text-left text-xs border-collapse select-text table-fixed"
             style={{ width: `${totalTableWidth}px`, minWidth: '100%' }}
@@ -705,7 +701,7 @@ export const TableView: FC<TableViewProps> = ({
                       <td
                         onClick={() => {
                           setEditingCell({ saleId: sale.id, field: 'quantity' });
-                          setTempValue(sale.quantity > 0 ? String(sale.quantity) : '');
+                          setTempValue(sale.quantity != null ? String(sale.quantity) : '');
                         }}
                         className="px-3 py-2 font-mono text-right border-r border-neutral-200/60 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300 cursor-text hover:bg-neutral-100/60 dark:hover:bg-neutral-800/40 transition-colors"
                       >
@@ -724,7 +720,7 @@ export const TableView: FC<TableViewProps> = ({
                           />
                         ) : (
                           <div className="w-full flex items-center justify-end min-h-[22px] min-w-0">
-                            <span className="truncate">{sale.quantity > 0 ? sale.quantity : '-'}</span>
+                            <span className="truncate">{sale.quantity ?? 0}</span>
                           </div>
                         )}
                       </td>
@@ -821,7 +817,7 @@ export const TableView: FC<TableViewProps> = ({
                           }`}
                       >
                         <div className="flex items-center min-h-[22px] w-full min-w-0">
-                          <span className="truncate">{formatDateDisplay(sale.date) || '-'}</span>
+                          <span className="truncate">{formatDateDisplay(sale.date)}</span>
                         </div>
                         {activeDatePickerSaleId === sale.id && (
                           <TableDatePicker
@@ -839,7 +835,7 @@ export const TableView: FC<TableViewProps> = ({
                       <td
                         onClick={() => {
                           setEditingCell({ saleId: sale.id, field: 'subtotal' });
-                          setTempValue(sale.subtotal > 0 ? sale.subtotal.toFixed(2) : '');
+                          setTempValue(sale.subtotal != null ? sale.subtotal.toFixed(2) : '');
                         }}
                         className="px-3 py-2 border-r border-neutral-200/60 dark:border-neutral-800 font-mono text-right text-neutral-800 dark:text-neutral-200 cursor-text hover:bg-neutral-100/60 dark:hover:bg-neutral-800/40 transition-colors"
                       >
@@ -859,7 +855,7 @@ export const TableView: FC<TableViewProps> = ({
                           />
                         ) : (
                           <div className="w-full flex items-center justify-end min-h-[22px] min-w-0">
-                            <span className="truncate">{sale.subtotal > 0 ? sale.subtotal.toFixed(2) : '-'}</span>
+                            <span className="truncate">{(sale.subtotal ?? 0).toFixed(2)}</span>
                           </div>
                         )}
                       </td>
@@ -868,7 +864,7 @@ export const TableView: FC<TableViewProps> = ({
                       <td
                         onClick={() => {
                           setEditingCell({ saleId: sale.id, field: 'cost' });
-                          setTempValue(sale.cost > 0 ? sale.cost.toFixed(2) : '');
+                          setTempValue(sale.cost != null ? sale.cost.toFixed(2) : '');
                         }}
                         className="px-3 py-2 border-r border-neutral-200/60 dark:border-neutral-800 font-mono text-right text-neutral-500 dark:text-neutral-400 cursor-text hover:bg-neutral-100/60 dark:hover:bg-neutral-800/40 transition-colors"
                       >
@@ -888,7 +884,7 @@ export const TableView: FC<TableViewProps> = ({
                           />
                         ) : (
                           <div className="w-full flex items-center justify-end min-h-[22px] min-w-0">
-                            <span className="truncate">{sale.cost > 0 ? sale.cost.toFixed(2) : '-'}</span>
+                            <span className="truncate">{(sale.cost ?? 0).toFixed(2)}</span>
                           </div>
                         )}
                       </td>
@@ -900,7 +896,7 @@ export const TableView: FC<TableViewProps> = ({
                         title="Click to view or customize formula"
                       >
                         <div className="w-full flex items-center justify-end min-h-[22px] min-w-0">
-                          <span className="truncate">{displaySales > 0 ? displaySales.toFixed(2) : '-'}</span>
+                          <span className="truncate">{displaySales.toFixed(2)}</span>
                         </div>
                       </td>
 
@@ -908,56 +904,52 @@ export const TableView: FC<TableViewProps> = ({
                       {renderOptionPickerCell(sale, 'order_status')}
                       {renderOptionPickerCell(sale, 'payment_status')}
 
-                      {/* Invoice (In-Place File Upload & Remove) */}
-                      <td className="px-3 py-2 border-r border-neutral-200/60 dark:border-neutral-800">
-                        <div className="flex items-center min-h-[22px] max-w-full">
+                      {/* Invoice */}
+                      <td
+                        onClick={() => setActiveInvoiceDialogSaleId(sale.id)}
+                        className="px-3 py-2 border-r border-neutral-200/60 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 cursor-pointer hover:bg-neutral-100/60 dark:hover:bg-neutral-800/40 transition-colors"
+                      >
+                        <div className="flex items-center min-h-[22px] max-w-full w-full">
                           {uploadingSaleId === sale.id ? (
                             <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40">
                               <div className="w-2.5 h-2.5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
                               <span>Uploading...</span>
                             </div>
                           ) : sale.invoice_name || sale.invoice_url ? (
-                            <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium tracking-tight bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 group/inv max-w-full min-w-0">
-                              <button
-                                onClick={() => onViewInvoice(sale)}
-                                className="flex items-center gap-1 hover:text-blue-600 dark:hover:text-blue-400 truncate cursor-pointer min-w-0"
-                              >
-                                <FileText className="w-3 h-3 text-neutral-400 shrink-0" />
-                                <span className="truncate">{sale.invoice_name || 'receipt.pdf'}</span>
-                              </button>
-                              <button
-                                onClick={(e) => handleRemoveInvoice(e, sale)}
-                                className="p-0.5 hover:text-red-500 text-neutral-400 opacity-60 group-hover/inv:opacity-100 transition-opacity cursor-pointer shrink-0"
-                                title="Remove invoice"
-                              >
-                                <X className="w-3 h-3" />
-                              </button>
-                            </div>
-                          ) : (
-                            <div
-                              onClick={() => fileInputRefs.current[sale.id]?.click()}
-                              className="cursor-pointer hover:bg-neutral-100/60 dark:hover:bg-neutral-800/40 rounded transition-colors -mx-1 px-1 py-0.5 inline-flex items-center min-w-0 max-w-full"
+                            <button
+                              type="button"
+                              onClick={() => setActiveInvoiceDialogSaleId(sale.id)}
+                              className="inline-flex min-h-[22px] items-center gap-1 text-xs text-neutral-700 dark:text-neutral-300 cursor-pointer max-w-full min-w-0"
+                              title="Manage invoice"
+                              aria-label={`Manage invoice ${sale.invoice_name || 'receipt.pdf'}`}
                             >
-                              <input
-                                type="file"
-                                ref={(el) => {
-                                  fileInputRefs.current[sale.id] = el;
-                                }}
-                                onChange={(e) => handleUploadInvoiceFile(e, sale)}
-                                className="hidden"
-                                accept="image/*,.pdf"
-                              />
-                              <button
-                                type="button"
-                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] text-neutral-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer min-w-0"
-                                title="Upload invoice"
-                              >
-                                <Upload className="w-3 h-3 shrink-0" />
-                                <span className="truncate">Upload</span>
-                              </button>
-                            </div>
+                              <FileText className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+                              <span className="truncate">{sale.invoice_name || 'receipt.pdf'}</span>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setActiveInvoiceDialogSaleId(sale.id);
+                              }}
+                              className="h-[22px] w-full rounded focus-visible:outline-2 focus-visible:outline-blue-500 cursor-pointer"
+                              aria-label="Add invoice"
+                            >
+                              <span className="sr-only">Add invoice</span>
+                            </button>
                           )}
                         </div>
+                        {activeInvoiceDialogSaleId === sale.id && (
+                          <TableInvoiceDialog
+                            sale={sale}
+                            isUploading={uploadingSaleId === sale.id}
+                            onUploadFile={(file) => handleUploadInvoiceFile(file, sale)}
+                            onViewInvoice={() => onViewInvoice(sale)}
+                            onRemoveInvoice={() => handleRemoveInvoice(sale)}
+                            onClose={() => setActiveInvoiceDialogSaleId(null)}
+                          />
+                        )}
                       </td>
 
                       {/* Location (Mini-Map & Search Picker) */}
@@ -971,13 +963,14 @@ export const TableView: FC<TableViewProps> = ({
                           }`}
                       >
                         <div className="flex items-center gap-1 max-w-full min-w-0 min-h-[22px] w-full">
-                          <MapPin
-                            className={`w-3.5 h-3.5 shrink-0 ${sale.location ? 'text-red-500' : 'text-neutral-400'
-                              }`}
-                          />
-                          <span className="truncate text-xs" title={sale.location || 'Pin location'}>
-                            {sale.location || '-'}
-                          </span>
+                          {sale.location && (
+                            <>
+                              <MapPin className="w-3.5 h-3.5 shrink-0 text-red-500" />
+                              <span className="truncate text-xs" title={sale.location}>
+                                {sale.location}
+                              </span>
+                            </>
+                          )}
                         </div>
                         {activeLocationPickerSaleId === sale.id && (
                           <TableLocationPicker
@@ -1012,11 +1005,7 @@ export const TableView: FC<TableViewProps> = ({
                             <Edit2 className="w-3.5 h-3.5" />
                           </button>
                           <button
-                            onClick={() => {
-                              if (window.confirm(`Delete "${sale.item}"?`)) {
-                                onDeleteSale(sale.id);
-                              }
-                            }}
+                            onClick={() => onDeleteSale(sale.id)}
                             className="p-1 text-neutral-400 hover:text-red-600 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded transition-colors cursor-pointer"
                             title="Delete"
                           >

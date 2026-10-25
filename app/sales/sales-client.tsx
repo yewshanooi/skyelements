@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useRef, useCallback, Suspense } from 'rea
 import dynamic from 'next/dynamic';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import type { User } from '@supabase/supabase-js';
+import { LoaderCircle, Trash2 } from 'lucide-react';
 import { AuthProvider, useAuth } from '@/sales/context/AuthContext';
 import { Header } from '@/sales/layout/Header';
 import { SaleModal } from '@/sales/modals/SaleModal';
@@ -34,6 +35,17 @@ import { OptionsProvider, useOptionsStore } from '@/sales/context/OptionsContext
 import { SettingsProvider, useFormulaSetting } from '@/sales/context/SettingsContext';
 import { generateSalesPdfReport } from '@/sales/services/exportPdfService';
 import { useSalesModals } from '@/sales/hooks/useSalesModals';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 const ViewLoading = () => (
   <div className="flex flex-col items-center justify-center py-24 space-y-3">
@@ -88,6 +100,8 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
   const [isLoading, setIsLoading] = useState<boolean>(!initialSales && Boolean(user?.id));
   const [isClientReady, setIsClientReady] = useState(false);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [pendingDeleteIds, setPendingDeleteIds] = useState<string[] | null>(null);
+  const [isDeletingOrders, setIsDeletingOrders] = useState(false);
   const hasInitializedInitialSalesRef = useRef(Boolean(initialSales !== undefined));
 
   const [customFormula] = useFormulaSetting();
@@ -298,29 +312,36 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
     }
   }, []);
 
-  const handleDelete = useCallback(async (id: string) => {
-    try {
-      await deleteSaleAction(id);
-      setSales((prev) => prev.filter((s) => s.id !== id));
-      setSelectedIds((prev) => prev.filter((i) => i !== id));
-    } catch (err) {
-      console.error('Delete sale failed:', err);
-    }
+  const handleDelete = useCallback((id: string) => {
+    setPendingDeleteIds([id]);
   }, []);
 
-  const handleBatchDelete = useCallback(async () => {
-    if (selectedIds.length === 0) return;
-    const count = selectedIds.length;
-    if (window.confirm(`Are you sure you want to delete ${count} selected order${count > 1 ? 's' : ''}?`)) {
-      try {
-        await batchDeleteSalesAction(selectedIds);
-        setSales((prev) => prev.filter((s) => !selectedIds.includes(s.id)));
-        setSelectedIds([]);
-      } catch (err) {
-        console.error('Batch delete failed:', err);
-      }
+  const handleBatchDelete = useCallback(() => {
+    if (selectedIds.length > 0) {
+      setPendingDeleteIds([...selectedIds]);
     }
   }, [selectedIds]);
+
+  const confirmDeleteOrders = useCallback(async () => {
+    if (!pendingDeleteIds?.length) return;
+
+    const idsToDelete = pendingDeleteIds;
+    setIsDeletingOrders(true);
+    try {
+      if (idsToDelete.length === 1) {
+        await deleteSaleAction(idsToDelete[0]);
+      } else {
+        await batchDeleteSalesAction(idsToDelete);
+      }
+      setSales((prev) => prev.filter((sale) => !idsToDelete.includes(sale.id)));
+      setSelectedIds((prev) => prev.filter((id) => !idsToDelete.includes(id)));
+      setPendingDeleteIds(null);
+    } catch (err) {
+      console.error('Delete sale failed:', err);
+    } finally {
+      setIsDeletingOrders(false);
+    }
+  }, [pendingDeleteIds]);
 
   const handleUpdateStore = useCallback(async (saleId: string, newStore: string) => {
     try {
@@ -457,7 +478,7 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
   }
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col h-full w-full overflow-hidden">
+    <div className="relative flex-1 min-h-0 min-w-0 flex flex-col h-full w-full overflow-hidden">
       <Header
         activeView={currentView}
         onSelectView={handleSelectView}
@@ -473,7 +494,7 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
         onDeselectAll={() => setSelectedIds([])}
       />
 
-      <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-2.5 sm:px-4 md:px-6 py-3 sm:py-4 pb-28 sm:pb-32 md:pb-6 w-full max-w-full">
+      <main className={`flex-1 min-h-0 min-w-0 overflow-y-auto overflow-x-hidden px-2.5 sm:px-4 md:px-6 py-3 sm:py-4 pb-28 sm:pb-32 md:pb-6 w-full max-w-full ${currentView === 'table' ? 'flex flex-col' : ''}`}>
         {isLoading || !isClientReady ? (
           <div className="flex flex-col items-center justify-center py-24 space-y-3">
             <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
@@ -566,6 +587,42 @@ function DashboardContent({ initialSales, activeView }: DashboardContentProps) {
         sale={invoiceSale}
         onClose={() => setInvoiceSale(null)}
       />
+
+      <AlertDialog
+        open={pendingDeleteIds !== null}
+        onOpenChange={(open) => {
+          if (!open && !isDeletingOrders) setPendingDeleteIds(null);
+        }}
+      >
+        {pendingDeleteIds && (
+          <AlertDialogContent size="sm">
+            <AlertDialogHeader>
+              <AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive">
+                <Trash2 />
+              </AlertDialogMedia>
+              <AlertDialogTitle>
+                Delete order{pendingDeleteIds.length > 1 ? 's' : ''}?
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete {pendingDeleteIds.length} order{pendingDeleteIds.length > 1 ? 's' : ''}? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isDeletingOrders}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                variant="destructive"
+                disabled={isDeletingOrders}
+                onClick={(event) => {
+                  event.preventDefault();
+                  void confirmDeleteOrders();
+                }}
+              >
+                {isDeletingOrders ? <LoaderCircle className="size-4 animate-spin" /> : 'Delete'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        )}
+      </AlertDialog>
     </div>
   );
 }

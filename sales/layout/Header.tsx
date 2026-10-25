@@ -102,14 +102,14 @@ const MobileFloatingNav: FC<MobileFloatingNavProps> = ({
       {/* Tap-to-dismiss backdrop for More Popover */}
       {isMoreMenuOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/20 dark:bg-black/40 backdrop-blur-2xs pointer-events-auto md:hidden animate-in fade-in duration-150 touch-manipulation"
+          className="absolute inset-0 z-40 bg-black/20 dark:bg-black/40 backdrop-blur-2xs pointer-events-auto md:hidden animate-in fade-in duration-150 touch-manipulation"
           onClick={() => setIsMoreMenuOpen(false)}
           aria-hidden="true"
         />
       )}
 
       <div
-        className="fixed inset-x-0 z-40 flex items-center justify-center px-2.5 sm:px-3 pointer-events-none select-none md:hidden transform-gpu will-change-transform"
+        className="absolute inset-x-0 z-40 flex items-center justify-center px-2.5 sm:px-3 pointer-events-none select-none md:hidden transform-gpu will-change-transform"
         style={{ bottom: 'max(0.75rem, env(safe-area-inset-bottom, 0.75rem))' }}
       >
         {/* Natural container holding the base nav row + (...) more options bubble */}
@@ -331,7 +331,7 @@ export const Header: FC<HeaderProps> = ({
         {/* Notion-style View Tabs, Centered Actions (Ask AI, Export, Search), and Action Controls */}
         <div className="px-6 py-2.5 flex items-center justify-between gap-4">
           {/* Left: View Tabs */}
-          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar touch-scroll-x py-0.5 shrink-0">
+          <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto no-scrollbar touch-scroll-x py-0.5">
             {VIEWS.map((v) => {
               const isActive = activeView === v.id;
               const TabIcon = v.Icon;

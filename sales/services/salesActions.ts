@@ -160,9 +160,6 @@ export async function createSaleAction(sale: Omit<SaleItem, 'id'>): Promise<Sale
   const user = await getAuthUser(supabase, 'You must be signed in to create sales records.');
 
   const rawItem = String(sale.item || '').trim();
-  if (!rawItem) {
-    throw new Error('Order item name is required.');
-  }
 
   const { lat, lng } = await resolveCoordinates(sale.location, sale.latitude, sale.longitude);
 
@@ -176,7 +173,7 @@ export async function createSaleAction(sale: Omit<SaleItem, 'id'>): Promise<Sale
       marketplace: String(sale.marketplace || '').slice(0, 100),
       payment_method: String(sale.payment_method || '').slice(0, 100),
       customer: String(sale.customer || '').slice(0, 500),
-      date: sale.date || new Date().toISOString().split('T')[0],
+      date: sale.date?.trim() || null,
       subtotal: Math.max(0, Number(sale.subtotal) || 0),
       cost: Math.max(0, Number(sale.cost) || 0),
       order_status: String(sale.order_status || '').slice(0, 100),
@@ -218,12 +215,12 @@ export async function updateSaleAction(
 
   if (typeof dbPayload.item === 'string') {
     dbPayload.item = dbPayload.item.trim().slice(0, 500);
-    if (!dbPayload.item) {
-      throw new Error('Order item name cannot be empty.');
-    }
   }
   if (typeof dbPayload.notes === 'string') {
     dbPayload.notes = dbPayload.notes.slice(0, 5000);
+  }
+  if (typeof dbPayload.date === 'string' && !dbPayload.date.trim()) {
+    dbPayload.date = null;
   }
   if (typeof dbPayload.location === 'string') {
     dbPayload.location = dbPayload.location.slice(0, 1000);
@@ -235,8 +232,16 @@ export async function updateSaleAction(
       updates.latitude,
       updates.longitude
     );
-    if (lat !== null || updates.latitude !== undefined) dbPayload.latitude = lat;
-    if (lng !== null || updates.longitude !== undefined) dbPayload.longitude = lng;
+
+    if (updates.location !== undefined) {
+      // A location change invalidates old coordinates when the location is cleared
+      // or cannot be resolved, otherwise the map can keep showing a stale pin.
+      dbPayload.latitude = lat;
+      dbPayload.longitude = lng;
+    } else {
+      if (lat !== null || updates.latitude !== undefined) dbPayload.latitude = lat;
+      if (lng !== null || updates.longitude !== undefined) dbPayload.longitude = lng;
+    }
   }
 
   // Explicitly ensure invoice removal or sanitized update is honored

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import type { FC } from 'react';
-import { Map as MapLibreMap, Marker, Popup, NavigationControl, LngLatBounds } from 'maplibre-gl';
+import { Map as MapLibreMap, Marker, Popup, NavigationControl, LngLatBounds, setWorkerUrl } from 'maplibre-gl';
 import {
   MapPin,
   Maximize2,
@@ -20,7 +20,7 @@ import type { SaleItem } from '@/sales/types';
 import { geocodeAddress } from '@/sales/lib/geocoder';
 import { useLocationSearch } from '@/sales/hooks/useLocationSearch';
 import { normalizeCoordinates, extractEmbeddedCoordinates } from '@/sales/lib/locationParser';
-import { MAP_STYLE, createPinElement } from '@/sales/lib/mapShared';
+import { MAPLIBRE_WORKER_URL, MAP_STYLE, createPinElement } from '@/sales/lib/mapShared';
 import { NotionFilterBar } from '@/sales/filters/NotionFilterBar';
 import { filterSales, type FilterState } from '@/sales/lib/filterUtils';
 import { formatDateDisplay } from '@/sales/lib/dateUtils';
@@ -174,6 +174,7 @@ export const MapView: FC<MapViewProps> = ({
 
       // The viewport is intentionally not persisted: it depends on the device's screen,
       // so the map auto-fits to the user's located sales on each visit instead.
+      setWorkerUrl(MAPLIBRE_WORKER_URL);
       const map = new MapLibreMap({
         container: mapContainerRef.current,
         style: MAP_STYLE,
