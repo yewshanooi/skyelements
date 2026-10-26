@@ -106,9 +106,9 @@ async function reserveAiRequest(
 
 function getAiLimitMessage(reason: AiDailyLimitReason): string {
   if (reason === 'user_limit') {
-    return '⚠️ **Usage limit reached**\n\nYou’ve reached your daily usage limit for this Skye AI model. Please try again later.';
+    return '⚠️ **Usage limit reached**\n\nYou’ve reached your daily usage limit for this AI model. Please try again later.';
   }
-  return '⚠️ **Usage limit reached**\n\nThe shared daily usage limit for this model has been reached. Please try again later.';
+  return '⚠️ **Usage limit reached**\n\nThe shared daily usage limit for this AI model has been reached. Please try again later.';
 }
 
 export async function getAiDailyUsage(): Promise<AiDailyUsage | null> {
@@ -856,4 +856,3 @@ export async function deleteAllAiChats(): Promise<void> {
     throw new Error('Failed to delete all chats.');
   }
 }
-

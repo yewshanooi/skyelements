@@ -715,8 +715,8 @@ export async function generateSalesPdfReport(
   // Section 1 Table (starts directly beneath KPI strip)
   autoTable(doc, {
     startY: 48,
-    margin: { left: marginX, right: marginX, bottom: 15, top: 14 },
-    showHead: 'firstPage',
+    margin: { left: marginX, right: marginX, bottom: 15, top: 31 },
+    showHead: 'everyPage',
     head: [[
       '#',
       'Date',
@@ -801,6 +801,16 @@ export async function generateSalesPdfReport(
       9: { cellWidth: 24, halign: 'right' },
       10: { cellWidth: 23, halign: 'center' },
       11: { cellWidth: 23, halign: 'center' },
+    },
+    didDrawPage: (data) => {
+      if (data.pageNumber === 1) return;
+
+      doc.setFillColor(15, 23, 42);
+      doc.rect(marginX, 12, pageWidth - marginX * 2, 14, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.text('SALES DASHBOARD | CONTINUED', marginX + 8, 20.8);
     },
     didParseCell: (data: any) => {
       // Ensure numeric cells in the total footer line are right aligned

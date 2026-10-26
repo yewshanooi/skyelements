@@ -668,7 +668,7 @@ export function SettingsDialog({
         <>
           <SettingsSection
             title="Daily limits"
-            description="Tracked per account for Skye. Tool-using responses uses more requests."
+            description="Your AI usage limit for Skye. Tool-using responses uses more requests."
           >
             {Object.entries(AI_DAILY_REQUEST_LIMITS).map(([modelId, { label, user }]) => {
               const usage = aiDailyUsage?.[modelId as AiModelId]
