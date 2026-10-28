@@ -27,6 +27,9 @@ interface TimelineViewProps {
 }
 
 const COLUMN_WIDTH = 48;
+const NEIGHBORING_MONTH_DAYS = 7;
+const SALE_ROW_HEIGHT = 42;
+const EMPTY_STATE_HEIGHT = 220;
 const WEEKDAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 
 const MONTH_NAMES = [
@@ -108,7 +111,7 @@ export const TimelineView: FC<TimelineViewProps> = ({
     return new Date(currentYear, currentMonth, 0).getDate();
   }, [currentYear, currentMonth]);
 
-  // Generate date columns (Previous month's tail ~12 days + Current month ~31 days + Next month head ~12 days)
+  // Generate date columns with a one-week buffer around the selected month.
   const timelineDays = useMemo(() => {
     const list: {
       day: number;
@@ -120,10 +123,14 @@ export const TimelineView: FC<TimelineViewProps> = ({
       dayOfWeek: number;
     }[] = [];
 
-    // Tail of previous month (last 12 days)
+    // Tail of previous month
     const prevM = currentMonth === 0 ? 11 : currentMonth - 1;
     const prevY = currentMonth === 0 ? currentYear - 1 : currentYear;
-    for (let d = Math.max(1, daysInPrevMonth - 11); d <= daysInPrevMonth; d++) {
+    for (
+      let d = Math.max(1, daysInPrevMonth - NEIGHBORING_MONTH_DAYS + 1);
+      d <= daysInPrevMonth;
+      d++
+    ) {
       const dayStr = String(d).padStart(2, '0');
       const monthStr = String(prevM + 1).padStart(2, '0');
       const dateObj = new Date(prevY, prevM, d);
@@ -156,10 +163,10 @@ export const TimelineView: FC<TimelineViewProps> = ({
       });
     }
 
-    // Head of next month (first 12 days for smooth overscroll & end-of-month pill visibility)
+    // Head of next month
     const nextM = currentMonth === 11 ? 0 : currentMonth + 1;
     const nextY = currentMonth === 11 ? currentYear + 1 : currentYear;
-    for (let d = 1; d <= 12; d++) {
+    for (let d = 1; d <= NEIGHBORING_MONTH_DAYS; d++) {
       const dayStr = String(d).padStart(2, '0');
       const monthStr = String(nextM + 1).padStart(2, '0');
       const dateObj = new Date(nextY, nextM, d);
@@ -198,12 +205,13 @@ export const TimelineView: FC<TimelineViewProps> = ({
     const firstDayIdx = timelineDays.findIndex((d) => d.isCurrentMonth);
     if (firstDayIdx === -1) return;
 
-    const targetScroll = firstDayIdx * COLUMN_WIDTH;
+    const targetScroll = Math.max(0, firstDayIdx * COLUMN_WIDTH);
 
-    container.scrollTo({
-      left: Math.max(0, targetScroll),
-      behavior: smooth ? 'smooth' : 'auto',
-    });
+    if (smooth) {
+      container.scrollTo({ left: targetScroll, behavior: 'smooth' });
+    } else {
+      container.scrollLeft = targetScroll;
+    }
   }, [timelineDays]);
 
   // Scroll to Today marker centered in view
@@ -251,10 +259,8 @@ export const TimelineView: FC<TimelineViewProps> = ({
     if (currentYear === nowYear && currentMonth === nowMonth) {
       scrollToToday(true);
     } else {
+      // The month-change effect will align the newly selected month at day one.
       setYearMonth(nowYear, nowMonth);
-      setTimeout(() => {
-        scrollToToday(true);
-      }, 70);
     }
   };
 
@@ -273,13 +279,19 @@ export const TimelineView: FC<TimelineViewProps> = ({
     return mapped.map((m) => m.sale);
   }, [sales, filters]);
 
-  // Sales falling within the active timeline window (prev tail + current month + next head)
+  // Include sales from adjacent-month columns for timeline context.
   const timelineSales = useMemo(() => {
-    return relevantSales.filter((sale) => {
-      const saleIso = normalizeDate(sale.date);
-      return dayIndexMap.has(saleIso);
-    });
+    return relevantSales.filter((sale) => dayIndexMap.has(normalizeDate(sale.date)));
   }, [relevantSales, dayIndexMap]);
+
+  // Only sales in the selected month count as activity for the empty state.
+  const currentMonthSales = useMemo(() => {
+    return timelineSales.filter((sale) => {
+      const dayIndex = dayIndexMap.get(normalizeDate(sale.date));
+      return dayIndex !== undefined && timelineDays[dayIndex].isCurrentMonth;
+    });
+  }, [timelineSales, dayIndexMap, timelineDays]);
+  const showEmptyState = currentMonthSales.length === 0;
 
   const isFilterActive = useMemo(() => hasActiveFilters(filters), [filters]);
 
@@ -288,7 +300,7 @@ export const TimelineView: FC<TimelineViewProps> = ({
   }, [onFiltersChange]);
 
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="w-full min-w-0 space-y-4 sm:space-y-6">
       {/* Notion Filter Toolbar for Timeline */}
       <NotionFilterBar
         showSort={false}
@@ -407,15 +419,16 @@ export const TimelineView: FC<TimelineViewProps> = ({
       />
 
       {/* Interactive Horizontal Gantt / Timeline Grid */}
-      <div className="border border-neutral-200/80 dark:border-neutral-800 rounded-xl bg-white dark:bg-[#191919] shadow-2xs overflow-hidden">
+      <div className="w-full min-w-0 border border-neutral-200/80 dark:border-neutral-800 rounded-xl bg-white dark:bg-[#191919] shadow-2xs overflow-hidden">
         <div
           ref={scrollContainerRef}
-          className="overflow-x-auto relative min-h-[380px] sm:min-h-[480px] scroll-smooth touch-scroll-x rounded-xl"
+          className="w-full min-w-0 overflow-x-auto relative min-h-[380px] sm:min-h-[480px] scroll-smooth touch-scroll-x rounded-xl"
+          style={{ scrollBehavior: 'auto' }}
         >
           {/* Synchronized full-width timeline canvas */}
           <div
-            style={{ width: `${totalGridWidth}px`, minWidth: `${totalGridWidth}px` }}
-            className="relative min-h-[480px]"
+            style={{ width: `${totalGridWidth}px`, minWidth: `${totalGridWidth}px`, flexShrink: 0 }}
+            className="relative w-max min-h-[480px]"
           >
             {/* Days Header Bar */}
             <div className="sticky top-0 z-20 flex w-full h-11 border-b border-neutral-200 dark:border-neutral-800 bg-[#fbfbfa] dark:bg-[#1e1e1e] text-[11px] font-mono text-neutral-500 shadow-2xs">
@@ -480,12 +493,21 @@ export const TimelineView: FC<TimelineViewProps> = ({
               })}
             </div>
 
-            {/* Sales Event Items positioned along the Timeline */}
-            <div className="relative z-10 w-full pt-4 pb-16 space-y-2.5">
-              {timelineSales.length === 0 ? (
+            {/* Empty state and events are laid out independently so events cannot extend the grid's scroll width. */}
+            <div
+              className="relative z-10 w-full pt-4 pb-16"
+              style={{
+                minHeight: `${16 + (showEmptyState ? EMPTY_STATE_HEIGHT : 0) + timelineSales.length * SALE_ROW_HEIGHT + 64}px`,
+              }}
+            >
+              {showEmptyState && (
                 <div
-                  className="sticky left-0 py-16 px-4 flex flex-col items-center justify-center space-y-3 text-center pointer-events-auto"
-                  style={{ width: containerWidth ? `${containerWidth}px` : '100%', maxWidth: '100vw' }}
+                  className="sticky left-0 flex flex-col items-center justify-center space-y-3 px-4 text-center"
+                  style={{
+                    height: `${EMPTY_STATE_HEIGHT}px`,
+                    width: containerWidth ? `${containerWidth}px` : '100%',
+                    maxWidth: '100vw',
+                  }}
                 >
                   <Calendar className="w-10 h-10 text-neutral-300 dark:text-neutral-600 mx-auto" />
                   <h3 className="text-sm font-semibold text-neutral-800 dark:text-neutral-200">
@@ -507,40 +529,44 @@ export const TimelineView: FC<TimelineViewProps> = ({
                     </button>
                   )}
                 </div>
-              ) : (
-                timelineSales.map((sale) => {
-                  const saleIso = normalizeDate(sale.date);
-                  const colIdx = dayIndexMap.get(saleIso) ?? -1;
-                  if (colIdx === -1) return null;
-
-                  // Align flush with the day column boundary
-                  const leftPos = colIdx * COLUMN_WIDTH;
-
-                  return (
-                    <div
-                      key={sale.id}
-                      style={{
-                        transform: `translateX(${leftPos}px)`,
-                      }}
-                      className="relative flex items-center transition-transform duration-200 hover:z-20"
-                    >
-                      <div
-                        onClick={() => onSelectSale(sale)}
-                        title={`${sale.item} • ${formatDateDisplay(sale.date)} • RM ${sale.sales.toFixed(2)}`}
-                        className="group cursor-pointer bg-white dark:bg-[#252525] hover:bg-blue-50 dark:hover:bg-[#1e2638] border border-neutral-200/90 dark:border-neutral-700/80 hover:border-blue-400 dark:hover:border-blue-500 rounded-lg px-3 py-1.5 shadow-2xs hover:shadow-md transition-all flex items-center gap-2 max-w-sm whitespace-nowrap"
-                      >
-                        <FileText className="w-3.5 h-3.5 text-neutral-400 group-hover:text-blue-500 shrink-0 transition-colors" />
-                        <span className="text-xs font-medium text-neutral-800 dark:text-neutral-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 truncate">
-                          {sale.item}
-                        </span>
-                        <span className="text-[11px] font-mono font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-1.5 py-0.5 rounded">
-                          RM {sale.sales.toFixed(2)}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })
               )}
+
+              {/* Sales Event Items positioned along the Timeline */}
+              {timelineSales.map((sale, index) => {
+                const saleIso = normalizeDate(sale.date);
+                const colIdx = dayIndexMap.get(saleIso) ?? -1;
+                if (colIdx === -1) return null;
+
+                const leftPos = colIdx * COLUMN_WIDTH;
+                const rowTop = 16 + (showEmptyState ? EMPTY_STATE_HEIGHT : 0) + index * SALE_ROW_HEIGHT;
+
+                return (
+                  <div
+                    key={sale.id}
+                    style={{
+                      position: 'absolute',
+                      left: `${leftPos}px`,
+                      top: `${rowTop}px`,
+                      maxWidth: `${totalGridWidth - leftPos}px`,
+                    }}
+                    className="flex items-center hover:z-20"
+                  >
+                    <div
+                      onClick={() => onSelectSale(sale)}
+                      title={`${sale.item} • ${formatDateDisplay(sale.date)} • RM ${sale.sales.toFixed(2)}`}
+                      className="group cursor-pointer bg-white dark:bg-[#252525] hover:bg-blue-50 dark:hover:bg-[#1e2638] border border-neutral-200/90 dark:border-neutral-700/80 hover:border-blue-400 dark:hover:border-blue-500 rounded-lg px-3 py-1.5 shadow-2xs hover:shadow-md transition-all flex items-center gap-2 max-w-sm whitespace-nowrap"
+                    >
+                      <FileText className="w-3.5 h-3.5 text-neutral-400 group-hover:text-blue-500 shrink-0 transition-colors" />
+                      <span className="text-xs font-medium text-neutral-800 dark:text-neutral-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 truncate">
+                        {sale.item}
+                      </span>
+                      <span className="text-[11px] font-mono font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-1.5 py-0.5 rounded">
+                        RM {sale.sales.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>

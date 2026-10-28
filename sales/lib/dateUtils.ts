@@ -91,6 +91,47 @@ export function formatDateDisplay(dateStr?: string): string {
   return dateStr;
 }
 
+/** Keeps deletion from getting stuck on an automatically inserted slash. */
+export function skipDateSeparatorOnDelete(input: HTMLInputElement, key: string): void {
+  const cursor = input.selectionStart;
+  if (cursor === null || cursor !== input.selectionEnd) return;
+
+  if (key === 'Backspace' && cursor > 0 && input.value[cursor - 1] === '/') {
+    input.setSelectionRange(cursor - 1, cursor - 1);
+  } else if (key === 'Delete' && input.value[cursor] === '/') {
+    input.setSelectionRange(cursor + 1, cursor + 1);
+  }
+}
+
+/** Adds separators as a user types a numeric date in DD/MM/YYYY format. */
+export function formatDateInput(
+  raw: string,
+  cursorPosition = raw.length
+): { value: string; cursorPosition: number } {
+  if (!/^[\d/.\s-]*$/.test(raw)) {
+    return { value: raw, cursorPosition };
+  }
+
+  const digits = raw.replace(/\D/g, '').slice(0, 8);
+  const digitsBeforeCursor = Math.min(
+    raw.slice(0, cursorPosition).replace(/\D/g, '').length,
+    digits.length
+  );
+
+  let value = digits.slice(0, 2);
+  if (digits.length >= 2) value += '/';
+  if (digits.length > 2) value += digits.slice(2, 4);
+  if (digits.length >= 4) value += '/';
+  if (digits.length > 4) value += digits.slice(4);
+
+  const formattedCursor =
+    digitsBeforeCursor +
+    (digitsBeforeCursor >= 2 ? 1 : 0) +
+    (digitsBeforeCursor >= 4 ? 1 : 0);
+
+  return { value, cursorPosition: formattedCursor };
+}
+
 /**
  * Formats YYYY-MM-DD into DD/MM for compact card badges.
  */

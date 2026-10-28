@@ -104,9 +104,7 @@ export const WidgetHeader: FC<WidgetHeaderProps> = ({
         </div>
 
         <div className="min-w-0 flex-1">
-          <h3 className={`font-semibold text-xs sm:text-sm truncate ${
-            isAiInsight ? 'text-violet-700 dark:text-violet-300' : 'text-neutral-900 dark:text-neutral-100'
-          }`} title={widget.title}>
+          <h3 className="font-semibold text-xs sm:text-sm truncate text-neutral-900 dark:text-neutral-100" title={widget.title}>
             {widget.title}
           </h3>
         </div>
@@ -190,9 +188,7 @@ export const ChartModal: FC<ChartModalProps> = ({
               <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div className="min-w-0">
-              <h2 className={`text-sm sm:text-base font-semibold truncate ${
-                isAiInsightWidget ? 'text-violet-700 dark:text-violet-300' : 'text-neutral-900 dark:text-neutral-100'
-              }`}>
+              <h2 className="text-sm sm:text-base font-semibold truncate text-neutral-900 dark:text-neutral-100">
                 {widget.title}
               </h2>
               <p className="text-[11px] sm:text-xs text-neutral-400 truncate">

@@ -512,7 +512,7 @@ export async function generateSalesInsight(
         user_id: user.id,
         insight_date: insightDate,
         summary,
-      }, { onConflict: 'user_id,insight_date' });
+      }, { onConflict: 'user_id' });
 
     if (saveError) {
       console.error('[AI Actions] Error saving daily sales insight:', saveError);

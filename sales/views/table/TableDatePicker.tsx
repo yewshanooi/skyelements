@@ -7,7 +7,9 @@ import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, X } from 'lucide-r
 import {
   parseDateString,
   formatDateDisplay,
+  formatDateInput,
   formatIsoDate,
+  skipDateSeparatorOnDelete,
   generateCalendarGrid,
   MONTH_NAMES_SHORT as MONTH_NAMES,
   DAYS_OF_WEEK,
@@ -39,10 +41,14 @@ export const TableDatePicker: FC<TableDatePickerProps> = ({
     return new Date();
   }, [currentDate]);
 
-  const [navYear, setNavYear] = useState<number>(initialDate.getFullYear() || 2026);
-  const [navMonth, setNavMonth] = useState<number>(
-    isNaN(initialDate.getMonth()) ? 7 : initialDate.getMonth()
-  );
+  const [navYear, setNavYear] = useState<number>(initialDate.getFullYear());
+  const [navMonth, setNavMonth] = useState<number>(initialDate.getMonth());
+
+  const navigateToDate = (dateStr: string) => {
+    const [year, month] = dateStr.split('-').map(Number);
+    setNavYear(year);
+    setNavMonth(month - 1);
+  };
 
   const [coords, setCoords] = useState<{
     top?: number;
@@ -185,8 +191,17 @@ export const TableDatePicker: FC<TableDatePickerProps> = ({
   };
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const text = e.target.value;
+    const raw = e.currentTarget.value;
+    const { value: text, cursorPosition } = formatDateInput(
+      raw,
+      e.currentTarget.selectionStart ?? raw.length
+    );
     setInputValue(text);
+    if (text !== raw) {
+      requestAnimationFrame(() => {
+        inputRef.current?.setSelectionRange(cursorPosition, cursorPosition);
+      });
+    }
 
     if (!text.trim()) {
       setSelectedDate('');
@@ -196,19 +211,13 @@ export const TableDatePicker: FC<TableDatePickerProps> = ({
     const parsed = parseDateString(text);
     if (parsed) {
       setSelectedDate(parsed);
-      const parts = parsed.split('-');
-      if (parts.length === 3) {
-        const y = parseInt(parts[0], 10);
-        const m = parseInt(parts[1], 10);
-        if (!isNaN(y) && !isNaN(m) && m >= 1 && m <= 12) {
-          setNavYear(y);
-          setNavMonth(m - 1);
-        }
-      }
+      navigateToDate(parsed);
     }
   };
 
   const handleInputKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    skipDateSeparatorOnDelete(e.currentTarget, e.key);
+
     if (e.key === 'Enter') {
       e.preventDefault();
       if (!inputValue.trim()) {
