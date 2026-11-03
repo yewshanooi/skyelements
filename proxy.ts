@@ -1,4 +1,5 @@
 import { createServerClient } from "@supabase/ssr";
+import { getSupabasePublishableKey, getSupabaseUrl } from "@/lib/supabase/config";
 import { type NextRequest, NextResponse } from "next/server";
 
 export async function proxy(request: NextRequest): Promise<NextResponse> {
@@ -7,8 +8,8 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   });
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    getSupabaseUrl(),
+    getSupabasePublishableKey(),
     {
       cookies: {
         getAll() {

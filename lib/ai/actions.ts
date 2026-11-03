@@ -8,6 +8,7 @@ import {
   type ThinkingEffort,
 } from '@/lib/models';
 import { getAuthenticatedClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { AI_DAILY_REQUEST_LIMITS, type AiDailyUsage, type AiModelId } from './limits';
 import { AI_TOOLS, executeAiTool } from './tools';
 import { loadUserSalesOptions } from '@/sales/lib/optionLookup';
@@ -81,11 +82,12 @@ class AiDailyLimitError extends Error {
 
 class AiUsageUnavailableError extends Error {}
 
-async function reserveAiRequest(
-  supabase: Awaited<ReturnType<typeof getAuthenticatedClient>>['supabase'],
-  model: string,
-) {
-  const { data, error } = await supabase.rpc('reserve_ai_daily_request', { p_model_id: model });
+async function reserveAiRequest(userId: string, model: string) {
+  const admin = createAdminClient();
+  const { data, error } = await admin.rpc('reserve_ai_daily_request', {
+    p_model_id: model,
+    p_user_id: userId,
+  });
   if (error) {
     console.error('[AI Actions] Failed to reserve daily AI usage:', error);
     throw new AiUsageUnavailableError();
@@ -259,7 +261,7 @@ export async function generateAiResponse(
       },
     });
 
-    return quotaReserved ? request() : reserveAiRequest(supabase, model).then(request);
+    return quotaReserved ? request() : reserveAiRequest(user.id, model).then(request);
   };
 
   try {
@@ -279,7 +281,7 @@ export async function generateAiResponse(
       }
 
       // Reserve the next model call before running tools, since tools can mutate user data.
-      await reserveAiRequest(supabase, model);
+      await reserveAiRequest(user.id, model);
 
       const toolExecutions = await Promise.all(
         functionCalls.map(async (call: any) => {
@@ -488,7 +490,7 @@ export async function generateSalesInsight(
     }
 
     const ai = getAIClient();
-    await reserveAiRequest(supabase, model);
+    await reserveAiRequest(user.id, model);
     const response = await ai.models.generateContent({
       model,
       contents: [{
