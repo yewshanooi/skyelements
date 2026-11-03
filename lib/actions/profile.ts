@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation';
 import { getAuthenticatedClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { getUserProfile, CUSTOM_AVATAR_METADATA_KEY, type UserProfile } from '@/lib/profile';
 
 const MAX_DISPLAY_NAME_LENGTH = 80;
@@ -96,6 +97,7 @@ export async function updateProfile(input: {
 
 export async function deleteAccount(): Promise<void> {
   const { supabase, user } = await getAuthenticatedClient();
+  const admin = createAdminClient();
 
   try {
     await deleteUserStorage(supabase, user.id);
@@ -104,7 +106,7 @@ export async function deleteAccount(): Promise<void> {
     throw new Error(`Failed to delete your account files: ${error instanceof Error ? error.message : 'Storage cleanup failed.'}`);
   }
 
-  const { error } = await supabase.rpc('delete_current_user');
+  const { error } = await admin.rpc('delete_current_user', { p_user_id: user.id });
 
   if (error) {
     console.error('[profile-actions] delete account error:', {

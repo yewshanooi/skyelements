@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { SupabaseClient, User } from "@supabase/supabase-js";
+import { getSupabasePublishableKey, getSupabaseUrl } from "./config";
 
 /**
  * Creates a server-side Supabase client supporting both Server Components
@@ -10,8 +11,8 @@ export async function createClient(): Promise<SupabaseClient> {
     const cookieStore = await cookies();
 
     return createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+        getSupabaseUrl(),
+        getSupabasePublishableKey(),
         {
             cookies: {
                 getAll() {
