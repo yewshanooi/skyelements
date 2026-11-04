@@ -83,7 +83,7 @@ interface ChartViewProps {
 const ALL_WIDGET_CONFIGS: WidgetConfig[] = [
   {
     id: 'ai_insights',
-    title: 'Sales Insight',
+    title: 'Sales Insights',
     subtitle: 'A quick read of your current sales data',
     category: 'overview',
     description: 'AI-generated summary based on the current sales data.',

@@ -563,7 +563,7 @@ export function SettingsDialog({
               }
             />
             <SettingsRow
-              label="User ID"
+              label="ID"
               action={
                 <div className="flex items-center gap-2">
                   <span

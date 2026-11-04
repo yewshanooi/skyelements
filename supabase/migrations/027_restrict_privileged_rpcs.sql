@@ -3,6 +3,7 @@
 -- server-only Supabase secret key and the verified user's ID.
 
 DROP FUNCTION IF EXISTS public.delete_current_user();
+DROP FUNCTION IF EXISTS public.delete_current_user(uuid);
 CREATE FUNCTION public.delete_current_user(p_user_id uuid)
 RETURNS void
 LANGUAGE plpgsql
@@ -30,6 +31,7 @@ REVOKE ALL ON FUNCTION public.delete_current_user(uuid)
 GRANT EXECUTE ON FUNCTION public.delete_current_user(uuid) TO service_role;
 
 DROP FUNCTION IF EXISTS public.reserve_ai_daily_request(text);
+DROP FUNCTION IF EXISTS public.reserve_ai_daily_request(text, uuid);
 CREATE FUNCTION public.reserve_ai_daily_request(p_model_id text, p_user_id uuid)
 RETURNS jsonb
 LANGUAGE plpgsql
