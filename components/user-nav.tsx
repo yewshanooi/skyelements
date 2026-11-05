@@ -189,11 +189,10 @@ export function UserNav({
       ) : (
         <Button
           variant="outline"
-          size="sm"
           onClick={handleOpenSignIn}
-          className={cn("cursor-pointer gap-1.5 text-xs font-medium rounded-md h-8 px-2.5", className)}
+          className={cn("cursor-pointer gap-1.5 text-sm font-medium rounded-md h-8 px-2", className)}
         >
-          <LogIn className="h-3.5 w-3.5" />
+          <LogIn className="h-4 w-4" />
           <span>Sign in</span>
         </Button>
       )}
