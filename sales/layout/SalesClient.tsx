@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef, useCallback, Suspense } from 'react';
 import dynamic from 'next/dynamic';
-import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import type { User } from '@supabase/supabase-js';
 import { LoaderCircle, Trash2 } from 'lucide-react';
 import { AuthProvider, useAuth } from '@/sales/context/AuthContext';
@@ -92,8 +92,6 @@ interface DashboardContentProps {
 
 function DashboardContent({ initialSales, initialSalesInsight, activeView }: DashboardContentProps) {
   const { user } = useAuth();
-  const router = useRouter();
-  const pathname = usePathname();
   const searchParams = useSearchParams();
 
   const [currentView, setCurrentView] = useState<ViewMode>(activeView);
@@ -455,12 +453,6 @@ function DashboardContent({ initialSales, initialSalesInsight, activeView }: Das
       }
     });
   }, [onOptionRenamed, filters, syncFiltersToUrl]);
-
-  useEffect(() => {
-    if (!user && pathname && pathname !== '/sales') {
-      router.replace('/sales');
-    }
-  }, [user, pathname, router]);
 
   if (!user) {
     return (
