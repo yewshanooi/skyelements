@@ -153,6 +153,10 @@ const MODAL_ACTION_CONTROL_CLASS =
 const MODAL_ACTION_ICON_CLASS = 'w-3.5 h-3.5 shrink-0 text-neutral-400';
 const MODAL_INPUT_CONTROL_CLASS =
   'h-8 w-full min-w-0 rounded-md border border-neutral-200 bg-neutral-50 px-2.5 text-xs text-neutral-900 outline-hidden transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-neutral-700 dark:bg-neutral-900/60 dark:text-neutral-100';
+const MODAL_OPTION_CONTROL_CLASS =
+  'relative flex h-8 min-w-0 flex-1 cursor-pointer items-center rounded-md border border-neutral-200 bg-neutral-50 px-0.5 text-xs text-neutral-900 transition-colors dark:border-neutral-700 dark:bg-neutral-900/60 dark:text-neutral-100';
+const MODAL_SALES_CONTROL_CLASS =
+  'relative flex h-8 min-w-0 flex-1 cursor-pointer items-center rounded-md border border-emerald-200/60 bg-emerald-50/30 px-2.5 font-mono text-xs font-medium text-emerald-700 transition-colors hover:bg-emerald-100/50 dark:border-emerald-900/60 dark:bg-emerald-950/10 dark:text-emerald-400 dark:hover:bg-emerald-900/30';
 
 const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
   onClose,
@@ -356,12 +360,12 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
                   setIsLocationPickerOpen(false);
                   setActiveOptionPicker(activeOptionPicker === 'category' ? null : 'category');
                 }}
-                className="flex-1 relative cursor-pointer min-w-0 flex items-center"
+                className={MODAL_OPTION_CONTROL_CLASS}
               >
                 {formData.category ? (
-                  <TagPill text={formData.category} type="category" className="hover:opacity-85 transition-opacity" />
+                  <TagPill text={formData.category} type="category" className="ml-1 hover:opacity-85 transition-opacity" />
                 ) : (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs text-neutral-400 dark:text-neutral-500 italic hover:bg-neutral-100 dark:hover:bg-neutral-800/80 transition-colors pr-1.5">
+                  <span className="ml-1 inline-flex items-center px-2 py-0.5 rounded text-xs text-neutral-400 dark:text-neutral-500 italic hover:bg-neutral-100 dark:hover:bg-neutral-800/80 transition-colors pr-1.5">
                     Empty
                   </span>
                 )}
@@ -580,12 +584,12 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
                     activeOptionPicker === 'marketplace' ? null : 'marketplace'
                   );
                 }}
-                className="flex-1 relative cursor-pointer min-w-0 flex items-center"
+                className={MODAL_OPTION_CONTROL_CLASS}
               >
                 {formData.marketplace ? (
-                  <TagPill text={formData.marketplace} type="marketplace" className="hover:opacity-85 transition-opacity" />
+                  <TagPill text={formData.marketplace} type="marketplace" className="ml-1 hover:opacity-85 transition-opacity" />
                 ) : (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs text-neutral-400 dark:text-neutral-500 italic hover:bg-neutral-100 dark:hover:bg-neutral-800/80 transition-colors pr-1.5">
+                  <span className="ml-1 inline-flex items-center px-2 py-0.5 rounded text-xs text-neutral-400 dark:text-neutral-500 italic hover:bg-neutral-100 dark:hover:bg-neutral-800/80 transition-colors pr-1.5">
                     Empty
                   </span>
                 )}
@@ -620,12 +624,12 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
                     activeOptionPicker === 'order_status' ? null : 'order_status'
                   );
                 }}
-                className="flex-1 relative cursor-pointer min-w-0 flex items-center"
+                className={MODAL_OPTION_CONTROL_CLASS}
               >
                 {formData.order_status ? (
-                  <TagPill text={formData.order_status} type="order_status" className="hover:opacity-85 transition-opacity" />
+                  <TagPill text={formData.order_status} type="order_status" className="ml-1 hover:opacity-85 transition-opacity" />
                 ) : (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs text-neutral-400 dark:text-neutral-500 italic hover:bg-neutral-100 dark:hover:bg-neutral-800/80 transition-colors pr-1.5">
+                  <span className="ml-1 inline-flex items-center px-2 py-0.5 rounded text-xs text-neutral-400 dark:text-neutral-500 italic hover:bg-neutral-100 dark:hover:bg-neutral-800/80 transition-colors pr-1.5">
                     Empty
                   </span>
                 )}
@@ -660,12 +664,12 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
                     activeOptionPicker === 'payment_method' ? null : 'payment_method'
                   );
                 }}
-                className="flex-1 relative cursor-pointer min-w-0 flex items-center"
+                className={MODAL_OPTION_CONTROL_CLASS}
               >
                 {formData.payment_method ? (
-                  <TagPill text={formData.payment_method} type="payment_method" className="hover:opacity-85 transition-opacity" />
+                  <TagPill text={formData.payment_method} type="payment_method" className="ml-1 hover:opacity-85 transition-opacity" />
                 ) : (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs text-neutral-400 dark:text-neutral-500 italic hover:bg-neutral-100 dark:hover:bg-neutral-800/80 transition-colors pr-1.5">
+                  <span className="ml-1 inline-flex items-center px-2 py-0.5 rounded text-xs text-neutral-400 dark:text-neutral-500 italic hover:bg-neutral-100 dark:hover:bg-neutral-800/80 transition-colors pr-1.5">
                     Empty
                   </span>
                 )}
@@ -700,12 +704,12 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
                     activeOptionPicker === 'payment_status' ? null : 'payment_status'
                   );
                 }}
-                className="flex-1 relative cursor-pointer min-w-0 flex items-center"
+                className={MODAL_OPTION_CONTROL_CLASS}
               >
                 {formData.payment_status ? (
-                  <TagPill text={formData.payment_status} type="payment_status" className="hover:opacity-85 transition-opacity" />
+                  <TagPill text={formData.payment_status} type="payment_status" className="ml-1 hover:opacity-85 transition-opacity" />
                 ) : (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs text-neutral-400 dark:text-neutral-500 italic hover:bg-neutral-100 dark:hover:bg-neutral-800/80 transition-colors pr-1.5">
+                  <span className="ml-1 inline-flex items-center px-2 py-0.5 rounded text-xs text-neutral-400 dark:text-neutral-500 italic hover:bg-neutral-100 dark:hover:bg-neutral-800/80 transition-colors pr-1.5">
                     Empty
                   </span>
                 )}
@@ -750,14 +754,12 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
                 <Coins className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
                 <span>Sales (in MYR)</span>
               </div>
-              <div className="flex-1 flex items-center min-w-0">
-                <div
-                  onClick={() => setIsFormulaModalOpen(true)}
-                  className="cursor-pointer inline-flex items-center px-2 py-0.5 rounded font-mono font-semibold text-xs text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/60 dark:border-emerald-900/60 hover:bg-emerald-100/70 dark:hover:bg-emerald-900/50 transition-colors"
-                  title="Click to edit formula for Sales"
-                >
-                  {(typeof calculatedSales === 'number' && !isNaN(calculatedSales) ? calculatedSales : 0).toFixed(2)}
-                </div>
+              <div
+                onClick={() => setIsFormulaModalOpen(true)}
+                className={MODAL_SALES_CONTROL_CLASS}
+                title="Click to edit formula for Sales"
+              >
+                {(typeof calculatedSales === 'number' && !isNaN(calculatedSales) ? calculatedSales : 0).toFixed(2)}
               </div>
             </div>
 
@@ -790,7 +792,7 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
 
           {/* Notion Content Area Divider & Notes */}
           <div className="pt-4 border-t border-neutral-200/70 dark:border-neutral-800 space-y-2">
-            <label className="text-xs font-semibold text-neutral-400 uppercase tracking-wider block">
+            <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 block">
               Notes
             </label>
             <textarea

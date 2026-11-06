@@ -98,7 +98,8 @@ export const TableLocationPicker: FC<TableLocationPickerProps> = ({
 
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
-    const popoverWidth = containerRef.current?.offsetWidth || 320;
+    const preferredWidth = viewportWidth < 640 ? 270 : 285;
+    const popoverWidth = containerRef.current?.offsetWidth || preferredWidth;
     const popoverHeight = containerRef.current?.offsetHeight || 320;
 
     const spaceBelow = viewportHeight - parentRect.bottom;
@@ -304,7 +305,7 @@ export const TableLocationPicker: FC<TableLocationPickerProps> = ({
               left: `${position.left}px`,
               zIndex: 99999,
             }}
-            className="w-72 sm:w-80 max-w-[calc(100vw-24px)] bg-white dark:bg-[#202020] border border-neutral-200 dark:border-neutral-700 rounded-xl shadow-xl overflow-hidden animate-in fade-in-50 zoom-in-95 duration-100 text-xs select-none"
+            className="w-[270px] sm:w-[285px] max-w-[calc(100vw-24px)] bg-white dark:bg-[#202020] border border-neutral-200 dark:border-neutral-700 rounded-xl shadow-xl overflow-hidden animate-in fade-in-50 zoom-in-95 duration-100 text-xs select-none"
           >
             {viewMode === 'preview' ? (
               /* Preview Mini-Map Card */
@@ -385,7 +386,7 @@ export const TableLocationPicker: FC<TableLocationPickerProps> = ({
                     value={searchQuery}
                     onChange={(e) => handleQueryChange(e.target.value)}
                     onKeyDown={handleInputKeyDown}
-                    className="w-full h-8 pl-8 pr-7 text-xs bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 focus:outline-hidden focus:ring-1 focus:ring-blue-500/40"
+                    className="w-full h-7.5 pl-8 pr-7 text-xs bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 focus:outline-hidden focus:ring-1 focus:ring-blue-500/40"
                     autoFocus={typeof window !== 'undefined' ? window.innerWidth >= 768 : false}
                   />
                   {searchQuery && (
@@ -452,7 +453,7 @@ export const TableLocationPicker: FC<TableLocationPickerProps> = ({
                 <button
                   onClick={handleUseCurrentLocation}
                   disabled={isLocating}
-                  className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-300 transition-colors text-left cursor-pointer text-xs disabled:opacity-60"
+                  className="w-full h-7.5 flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-300 transition-colors text-left cursor-pointer text-xs disabled:opacity-60"
                 >
                   {isLocating ? (
                     <Loader2 className="w-3.5 h-3.5 text-blue-500 animate-spin" />

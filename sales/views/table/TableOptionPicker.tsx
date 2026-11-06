@@ -223,16 +223,16 @@ export const TableOptionPicker: FC<TableOptionPickerProps> = ({
           <div className="flex items-center justify-between pb-1 border-b border-neutral-100 dark:border-neutral-800">
             <button
               type="button"
+              aria-label="Back to options"
               onClick={() => setEditingOption(null)}
               className="flex items-center gap-1 text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100 py-0.5 px-1 -ml-1 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer text-xs"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
-              <span className="font-medium">Back</span>
             </button>
             <span className="font-semibold text-neutral-800 dark:text-neutral-200">
               Edit option
             </span>
-            <div className="w-8" />
+            <div className="w-5" />
           </div>
 
           <input
