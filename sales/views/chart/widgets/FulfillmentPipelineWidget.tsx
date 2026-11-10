@@ -21,7 +21,7 @@ const StatusCards: FC<{ title: string; type: OptionType; rows: StatusBreakdownPo
 
   return (
     <section className="space-y-2.5 min-w-0">
-      <h3 className="text-[10px] sm:text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">
+      <h3 className="text-xs font-medium text-neutral-500 dark:text-neutral-400 block">
         {title}
       </h3>
       {rows.length === 0 ? (
@@ -70,8 +70,8 @@ export const FulfillmentPipelineWidget: FC<FulfillmentPipelineWidgetProps> = ({
 
   return (
     <div className={`min-w-0 ${isTwoColumn ? 'grid grid-cols-1 md:grid-cols-2 gap-3' : 'space-y-3'} ${isModal ? '' : 'max-h-105 overflow-y-auto pr-1 pb-3'}`}>
-      <StatusCards title="Order Status" type="order_status" rows={data.orderStatuses} />
-      <StatusCards title="Payment Status" type="payment_status" rows={data.paymentStatuses} />
+      <StatusCards title="Order" type="order_status" rows={data.orderStatuses} />
+      <StatusCards title="Payment" type="payment_status" rows={data.paymentStatuses} />
     </div>
   );
 };

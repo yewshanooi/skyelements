@@ -25,15 +25,6 @@ interface MiniAppItem {
 
 const MINI_APPS: MiniAppItem[] = [
   {
-    id: "notes",
-    name: "Notes",
-    emoji: "📝",
-    version: "v1.0.0",
-    description: "Note-taking app with markdown editing and clean organization.",
-    tags: ["Notes", "Markdown", "Organization"],
-    href: "/notes",
-  },
-  {
     id: "sales",
     name: "Sales Dashboard",
     emoji: "📊",
@@ -41,6 +32,15 @@ const MINI_APPS: MiniAppItem[] = [
     description: "Manage sales, track revenue, and organize orders across channels.",
     tags: ["Analytics", "Multi-view", "PDF Export"],
     href: "/sales",
+  },
+  {
+    id: "notes",
+    name: "Notes",
+    emoji: "📝",
+    version: "v1.0.0",
+    description: "Note-taking app with markdown editing and clean organization.",
+    tags: ["Notes", "Markdown", "Organization"],
+    href: "/notes",
   },
   {
     id: "skye",

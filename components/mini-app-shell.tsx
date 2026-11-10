@@ -26,8 +26,8 @@ type AppItem = {
 };
 
 const APPS: AppItem[] = [
-  { id: "notes", name: "Notes", emoji: "📝", href: "/notes" },
   { id: "sales", name: "Sales Dashboard", emoji: "📊", href: "/sales" },
+  { id: "notes", name: "Notes", emoji: "📝", href: "/notes" },
   {
     id: "skye",
     name: "Skye",
