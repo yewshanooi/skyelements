@@ -82,7 +82,7 @@ export const RevenueTrendWidget: FC<RevenueTrendWidgetProps> = ({
   currentWidth = '2/4',
   isModal = false,
 }) => {
-  const heightClass = isModal ? 'h-[250px] sm:h-[380px]' : currentWidth === '1/4' ? 'h-[220px]' : 'h-[280px]';
+  const heightClass = isModal ? 'h-[250px] sm:h-[380px]' : currentWidth === '1/4' ? 'h-[200px]' : 'h-[250px]';
   const yAxisWidth = currentWidth === '1/4' ? 32 : 36;
   const leftMargin = currentWidth === '1/4' ? -10 : 0;
 

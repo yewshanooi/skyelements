@@ -69,7 +69,7 @@ export const FulfillmentPipelineWidget: FC<FulfillmentPipelineWidgetProps> = ({
   const isTwoColumn = currentWidth === '4/4' || isModal;
 
   return (
-    <div className={`min-w-0 ${isTwoColumn ? 'grid grid-cols-1 md:grid-cols-2 gap-3' : 'space-y-3'} ${isModal ? '' : 'max-h-105 overflow-y-auto pr-1 pb-3'}`}>
+    <div className={`min-w-0 ${isTwoColumn ? 'grid grid-cols-1 md:grid-cols-2 gap-3' : 'space-y-3'}`}>
       <StatusCards title="Order" type="order_status" rows={data.orderStatuses} />
       <StatusCards title="Payment" type="payment_status" rows={data.paymentStatuses} />
     </div>

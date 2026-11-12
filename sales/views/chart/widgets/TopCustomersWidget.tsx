@@ -24,7 +24,7 @@ export const TopCustomersWidget: FC<TopCustomersWidgetProps> = ({
 
   return (
     <div className="space-y-3 min-w-0">
-      <div className={`${layoutClass} ${isModal ? '' : 'max-h-[340px] overflow-y-auto pr-1 pb-3'}`}>
+      <div className={layoutClass}>
         {itemsToDisplay.map((cust, idx) => {
         const rankBadgeClass =
           idx === 0

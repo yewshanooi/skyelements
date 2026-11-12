@@ -51,6 +51,14 @@ export const WIDTH_COL_SPAN_CLASS: Record<WidgetWidth, string> = {
   '4/4': 'col-span-12',
 };
 
+/** Fixed dashboard card heights by semantic width. The card body owns overflow. */
+export const WIDTH_CARD_HEIGHT_CLASS: Record<WidgetWidth, string> = {
+  '1/4': 'h-[420px]',
+  '2/4': 'h-[420px]',
+  '3/4': 'h-[420px]',
+  '4/4': 'h-[420px]',
+};
+
 export const normalizeWidgetWidth = (w: unknown, fallback: WidgetWidth = '4/4'): WidgetWidth => {
   if (w === '1/4' || w === 'third' || w === 'fourth') return '1/4';
   if (w === '2/4' || w === 'half') return '2/4';
@@ -310,9 +318,7 @@ export const DEFAULT_KPI_SIZES: Record<string, KpiCardSize> = Object.fromEntries
 );
 
 const DEFAULT_KPI_HIDDEN: Record<string, boolean> = {
-  total_cost: true,
   roi: true,
-  total_orders: true,
   avg_price_per_item: true,
   avg_profit_per_order: true,
   items_per_order: true,

@@ -39,9 +39,6 @@ interface MiniCardProps {
   onRemove?: () => void;
   onResizeStart?: (e: ReactPointerEvent<HTMLDivElement>) => void;
   onDragStart?: (e: ReactDragEvent<HTMLDivElement>) => void;
-  onDragOver?: (e: ReactDragEvent<HTMLDivElement>) => void;
-  onDragLeave?: (e: ReactDragEvent<HTMLDivElement>) => void;
-  onDrop?: (e: ReactDragEvent<HTMLDivElement>) => void;
   cardRef?: (node: HTMLDivElement | null) => void;
 }
 
@@ -57,9 +54,6 @@ const MiniKpiCard: FC<MiniCardProps> = ({
   onRemove,
   onResizeStart,
   onDragStart,
-  onDragOver,
-  onDragLeave,
-  onDrop,
   cardRef,
 }) => {
   const Icon = config.icon;
@@ -72,10 +66,16 @@ const MiniKpiCard: FC<MiniCardProps> = ({
   const isMedium = currentWidth === '2/4' && !isModal;
 
   const paddingClass = isCompact
-    ? 'p-2.5 min-h-[92px]'
+    ? 'p-2.5'
     : isMedium
-    ? 'p-3 min-h-[100px]'
-    : 'p-3.5 sm:p-4 min-h-[106px]';
+    ? 'p-3'
+    : 'p-3.5 sm:p-4';
+
+  const cardHeightClass = isCompact
+    ? 'h-[92px]'
+    : isMedium
+    ? 'h-[100px]'
+    : 'h-[106px]';
 
   const stateClass = isDragging
     ? 'opacity-40 scale-[0.97] border-dashed border-blue-500 shadow-none'
@@ -91,10 +91,7 @@ const MiniKpiCard: FC<MiniCardProps> = ({
   return (
     <div
       ref={cardRef}
-      onDragOver={onDragOver}
-      onDragLeave={onDragLeave}
-      onDrop={onDrop}
-      className={`group relative w-full rounded-xl bg-neutral-100/90 dark:bg-[#282828] border transition-all duration-150 min-w-0 flex flex-col justify-between select-none ${paddingClass} h-full ${stateClass}`}
+      className={`group relative w-full rounded-xl bg-neutral-100/90 dark:bg-[#282828] border transition-all duration-150 min-w-0 flex flex-col justify-between select-none ${paddingClass} ${cardHeightClass} ${stateClass}`}
     >
       {/* Edit Mode Remove Badge: (-) */}
       {isEditMode && onRemove && (
@@ -165,34 +162,30 @@ const MiniKpiCard: FC<MiniCardProps> = ({
           </div>
         </div>
       ) : (
-        <div className="flex flex-col justify-between h-full min-w-0">
-          <div className="flex items-center justify-between text-neutral-500 dark:text-neutral-400 text-xs min-w-0">
-            <div className={`flex items-center gap-2 min-w-0 flex-1 ${isEditMode ? 'pr-6' : 'pr-1'}`}>
-              <div className={iconContainerClass}>
-                <Icon className={iconSizeClass} />
-              </div>
-              <span className="truncate font-semibold text-neutral-800 dark:text-neutral-200">
-                {config.title}
-              </span>
+        <div className="flex items-center justify-between gap-3 h-full min-w-0">
+          <div className={`flex items-center gap-2 min-w-0 flex-1 ${isEditMode ? 'pr-6' : 'pr-1'}`}>
+            <div className={iconContainerClass}>
+              <Icon className={iconSizeClass} />
             </div>
+            <span className="truncate font-semibold text-neutral-800 dark:text-neutral-200 text-xs sm:text-sm">
+              {config.title}
+            </span>
           </div>
 
-          <div
-            className={`${
-              isCompact
-                ? 'text-sm sm:text-base my-0.5'
-                : isMedium
-                ? 'text-base sm:text-lg my-1'
-                : 'text-base sm:text-lg lg:text-xl my-1'
-            } font-bold font-mono text-neutral-900 dark:text-neutral-100 truncate tracking-tight`}
-            title={fullVal}
-          >
-            {val}
-          </div>
+          <div className="text-right shrink-0 min-w-0 max-w-[52%]">
+            <div
+              className={`${
+                isCompact ? 'text-xs sm:text-[13px]' : isMedium ? 'text-sm sm:text-base' : 'text-base sm:text-lg'
+              } font-bold font-mono text-neutral-900 dark:text-neutral-100 truncate tracking-tight`}
+              title={fullVal}
+            >
+              {val}
+            </div>
 
-          <div className={`text-[10px] sm:text-[11px] flex items-center gap-1 min-w-0 truncate ${isEditMode ? 'pr-6' : 'pr-1'} ${sub.colorClass || 'text-neutral-400'}`}>
-            {SubIcon && <SubIcon className="w-3 h-3 shrink-0" />}
-            <span className="truncate">{sub.label}</span>
+            <div className={`${isCompact ? 'text-[10px]' : 'text-[11px]'} flex items-center justify-end gap-1 min-w-0 truncate mt-0.5 ${isEditMode ? 'pl-1' : ''} ${sub.colorClass || 'text-neutral-400'}`}>
+              {SubIcon && <SubIcon className="w-3 h-3 shrink-0" />}
+              <span className="truncate">{sub.label}</span>
+            </div>
           </div>
         </div>
       )}
@@ -312,42 +305,45 @@ export const OverviewControlCenter: FC<OverviewControlCenterProps> = ({
   }, [layout, onChangeLayout]);
 
   const handleAddCard = useCallback((id: KpiCardId, targetIndex?: number) => {
-    const newHidden = { ...layout.hidden, [id]: false };
-    let newOrder = [...layout.order];
+    onChangeLayout((prev) => {
+      const newHidden = { ...prev.hidden, [id]: false };
+      let newOrder = [...prev.order];
 
-    if (!newOrder.includes(id)) {
-      newOrder.push(id);
-    }
+      if (!newOrder.includes(id)) {
+        newOrder.push(id);
+      }
 
-    if (targetIndex !== undefined && targetIndex >= 0) {
-      newOrder = newOrder.filter((cardId) => cardId !== id);
-      newOrder.splice(targetIndex, 0, id);
-    }
+      if (targetIndex !== undefined && targetIndex >= 0) {
+        newOrder = newOrder.filter((cardId) => cardId !== id);
+        newOrder.splice(targetIndex, 0, id);
+      }
 
-    const cardDef = KPI_CONFIG_MAP.get(id);
-    const newSizes = {
-      ...currentSizes,
-      [id]: currentSizes[id] || cardDef?.defaultSize || '1x1',
-    };
+      const cardDef = KPI_CONFIG_MAP.get(id);
+      const sizes = prev.sizes || DEFAULT_KPI_SIZES;
+      const newSizes = {
+        ...sizes,
+        [id]: sizes[id] || cardDef?.defaultSize || '1x1',
+      };
 
-    const newActiveIds = newOrder.filter((cardId) => !newHidden[cardId]);
-    if (calculateTotalRows(newActiveIds, newSizes, 6) > MAX_OVERVIEW_ROWS) {
-      return;
-    }
+      const newActiveIds = newOrder.filter((cardId) => !newHidden[cardId]);
+      if (calculateTotalRows(newActiveIds, newSizes, 6) > MAX_OVERVIEW_ROWS) {
+        return prev;
+      }
 
-    onChangeLayout({
-      order: newOrder,
-      hidden: newHidden,
-      sizes: newSizes,
+      return {
+        order: newOrder,
+        hidden: newHidden,
+        sizes: newSizes,
+      };
     });
-  }, [layout, currentSizes, onChangeLayout]);
+  }, [onChangeLayout]);
 
   const handleRemoveCard = useCallback((id: KpiCardId) => {
-    onChangeLayout({
-      ...layout,
-      hidden: { ...layout.hidden, [id]: true },
-    });
-  }, [layout, onChangeLayout]);
+    onChangeLayout((prev) => ({
+      ...prev,
+      hidden: { ...prev.hidden, [id]: true },
+    }));
+  }, [onChangeLayout]);
 
   // Drag-to-Resize Handler
   const handleResizeStart = (e: ReactPointerEvent<HTMLDivElement>, id: KpiCardId) => {
@@ -451,7 +447,6 @@ export const OverviewControlCenter: FC<OverviewControlCenterProps> = ({
 
   const handleDragOverCard = (e: ReactDragEvent<HTMLDivElement>, targetId: KpiCardId) => {
     e.preventDefault();
-    e.stopPropagation();
     e.dataTransfer.dropEffect = 'move';
     if (!draggedCardId || draggedCardId === targetId) return;
 
@@ -488,29 +483,42 @@ export const OverviewControlCenter: FC<OverviewControlCenterProps> = ({
         handleDragEnd();
         return;
       }
-      const fromIndex = currentOrder.indexOf(draggedCardId);
-      let toIndex = targetIdx;
 
-      if (fromIndex === -1 || toIndex === -1) {
-        handleDragEnd();
-        return;
-      }
+      onChangeLayout((prev) => {
+        const currentOrder = [...prev.order];
+        const targetIdx = currentOrder.indexOf(targetId);
+        const fromIndex = currentOrder.indexOf(draggedCardId);
+        let toIndex = targetIdx;
 
-      if (dropPosition === 'after' && fromIndex > toIndex) toIndex += 1;
-      else if (dropPosition === 'before' && fromIndex < toIndex) toIndex -= 1;
+        if (fromIndex === -1 || toIndex === -1) return prev;
 
-      currentOrder.splice(fromIndex, 1);
-      currentOrder.splice(Math.max(0, Math.min(currentOrder.length, toIndex)), 0, draggedCardId);
+        if (dropPosition === 'after' && fromIndex > toIndex) toIndex += 1;
+        else if (dropPosition === 'before' && fromIndex < toIndex) toIndex -= 1;
 
-      onChangeLayout({ ...layout, order: currentOrder });
+        currentOrder.splice(fromIndex, 1);
+        currentOrder.splice(Math.max(0, Math.min(currentOrder.length, toIndex)), 0, draggedCardId);
+
+        return { ...prev, order: currentOrder };
+      });
     }
 
     handleDragEnd();
   };
 
+  const handleCanvasDragOver = (e: ReactDragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setIsCanvasDragOver(true);
+  };
+
   const handleDropOnCanvasEnd = (e: ReactDragEvent<HTMLDivElement>) => {
     e.preventDefault();
-    if (draggedCardId && dragSource === 'gallery') {
+    if (!draggedCardId) {
+      handleDragEnd();
+      return;
+    }
+
+    if (dragSource === 'gallery') {
       handleAddCard(draggedCardId);
     }
     handleDragEnd();
@@ -523,12 +531,10 @@ export const OverviewControlCenter: FC<OverviewControlCenterProps> = ({
     return 'grid-cols-2 gap-2';
   }, [isModal, currentWidth]);
 
-  const scrollContainerClass = isModal
-    ? ''
-    : 'max-h-[415px] overflow-y-auto overflow-x-hidden pr-1 pb-1 scrollbar-thin flex-1';
+  const scrollContainerClass = 'flex-1 min-h-0';
 
   return (
-    <div className="space-y-4 flex-1 flex flex-col min-h-0">
+    <div className={`space-y-4 flex-1 min-h-0 flex flex-col ${isEditMode ? 'h-full' : ''}`}>
       {/* TOP ZONE: Controls Gallery (Shown in Customize / Edit Mode) */}
       {isEditMode && (
         <div
@@ -543,12 +549,9 @@ export const OverviewControlCenter: FC<OverviewControlCenterProps> = ({
             }
             handleDragEnd();
           }}
-          className="p-4 sm:p-5 rounded-3xl bg-neutral-50/90 dark:bg-[#181818] border border-neutral-200/90 dark:border-neutral-800 shadow-sm space-y-3.5 transition-all animate-in fade-in slide-in-from-top-2 duration-200"
+          className="h-[260px] shrink-0 overflow-y-auto no-scrollbar flex flex-col p-4 sm:p-5 rounded-3xl bg-neutral-50/90 dark:bg-[#181818] border border-neutral-200/90 dark:border-neutral-800 shadow-sm space-y-3.5 animate-in fade-in slide-in-from-top-2 duration-200"
         >
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h3 className="text-xs sm:text-sm font-semibold text-neutral-900 dark:text-neutral-100">
-              All Metrics
-            </h3>
+          <div className="flex flex-wrap items-center justify-end gap-3">
             <button
               type="button"
               onClick={onReset}
@@ -560,7 +563,7 @@ export const OverviewControlCenter: FC<OverviewControlCenterProps> = ({
           </div>
 
           {inactiveCardIds.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2.5 pt-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 pt-1">
               {inactiveCardIds.map((id) => {
                 const cardDef = KPI_CONFIG_MAP.get(id);
                 if (!cardDef) return null;
@@ -581,7 +584,7 @@ export const OverviewControlCenter: FC<OverviewControlCenterProps> = ({
               })}
             </div>
           ) : (
-            <div className="p-3 rounded-xl border border-dashed border-neutral-300 dark:border-neutral-700 text-center text-xs text-neutral-500 dark:text-neutral-400 flex items-center justify-center gap-2 bg-neutral-100/50 dark:bg-neutral-900/40">
+            <div className="flex flex-1 min-h-0 w-full items-center justify-center p-3 rounded-xl border border-dashed border-neutral-300 dark:border-neutral-700 text-center text-xs text-neutral-500 dark:text-neutral-400 gap-2 bg-neutral-100/50 dark:bg-neutral-900/40">
               <span>All metrics are currently active on your dashboard.</span>
             </div>
           )}
@@ -589,7 +592,11 @@ export const OverviewControlCenter: FC<OverviewControlCenterProps> = ({
       )}
 
       {/* BOTTOM ZONE: Active Metrics Canvas */}
-      <div className="space-y-2.5 flex-1 flex flex-col min-h-0">
+      <div
+        className="space-y-2.5 flex-1 min-h-0 flex flex-col"
+        onDragOver={handleCanvasDragOver}
+        onDrop={handleDropOnCanvasEnd}
+      >
         {isEditMode && (
           <div className="flex items-center justify-between text-xs text-neutral-500 dark:text-neutral-400 px-1">
             <span className="font-semibold text-neutral-800 dark:text-neutral-200">
@@ -600,13 +607,7 @@ export const OverviewControlCenter: FC<OverviewControlCenterProps> = ({
 
         {activeCardIds.length === 0 ? (
           <div
-            onDragOver={(e) => {
-              e.preventDefault();
-              setIsCanvasDragOver(true);
-            }}
-            onDragLeave={() => setIsCanvasDragOver(false)}
-            onDrop={handleDropOnCanvasEnd}
-            className={`p-8 text-center rounded-3xl border-2 border-dashed transition-all ${
+            className={`flex-1 min-h-0 w-full flex flex-col items-center justify-center p-8 text-center rounded-3xl border-2 border-dashed transition-all ${
               isCanvasDragOver
                 ? 'border-blue-500 bg-blue-500/10 scale-[1.01]'
                 : 'border-neutral-300 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/30'
@@ -617,21 +618,14 @@ export const OverviewControlCenter: FC<OverviewControlCenterProps> = ({
               No active metrics
             </h4>
             <p className="text-xs text-neutral-400 mt-1 max-w-sm mx-auto">
-              Drag metrics down from the Controls Gallery above or tap + to add.
+              Add a metric to view at a glance.
             </p>
           </div>
         ) : (
           <div className={scrollContainerClass}>
             <div
               ref={gridContainerRef}
-              onDragOver={(e) => {
-                e.preventDefault();
-                e.dataTransfer.dropEffect = 'move';
-              }}
-              onDrop={handleDropOnCanvasEnd}
-              className={`grid ${gridColsClass} transition-all ${
-                isEditMode ? 'p-3 rounded-3xl bg-neutral-50/40 dark:bg-[#181818]/40 border border-blue-500/20' : ''
-              }`}
+              className={`grid ${gridColsClass} ${isEditMode ? 'p-3 rounded-3xl bg-neutral-50/40 dark:bg-[#181818]/40 border border-blue-500/20' : ''}`}
             >
               {activeCardIds.map((id) => {
                 const cardDef = KPI_CONFIG_MAP.get(id);
@@ -682,6 +676,7 @@ export const OverviewControlCenter: FC<OverviewControlCenterProps> = ({
                 );
               })}
             </div>
+            {isEditMode && <div className="h-6 shrink-0" aria-hidden="true" />}
           </div>
         )}
       </div>

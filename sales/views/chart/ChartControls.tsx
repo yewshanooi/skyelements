@@ -138,6 +138,7 @@ interface ChartModalProps {
   onClose: () => void;
   headerActions?: ReactNode;
   children: ReactNode;
+  lockHeight?: boolean;
 }
 
 export const ChartModal: FC<ChartModalProps> = ({
@@ -147,6 +148,7 @@ export const ChartModal: FC<ChartModalProps> = ({
   onClose,
   headerActions,
   children,
+  lockHeight = false,
 }) => {
   useBodyScrollLock(isOpen && Boolean(widget));
 
@@ -157,6 +159,7 @@ export const ChartModal: FC<ChartModalProps> = ({
 
   const isCompactListWidget = widget.id === 'top_items' || widget.id === 'top_customers';
   const isPaymentWidget = widget.id === 'payment_methods';
+  const isKpiWidget = widget.id === 'kpi_metrics';
   const isListWidget = isCompactListWidget || isPaymentWidget;
 
   return (
@@ -170,7 +173,9 @@ export const ChartModal: FC<ChartModalProps> = ({
     >
       <div
         className={`bg-white dark:bg-[#1a1a1a] rounded-xl sm:rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-2xl w-full max-w-6xl ${
-          isCompactListWidget
+          lockHeight && isKpiWidget
+            ? 'h-[700px] max-h-[calc(100dvh-2rem)] sm:max-h-[calc(100dvh-3rem)]'
+            : isCompactListWidget
             ? 'max-h-[420px] sm:max-h-[470px]'
             : isPaymentWidget
             ? 'max-h-[460px] sm:max-h-[515px]'
@@ -210,7 +215,7 @@ export const ChartModal: FC<ChartModalProps> = ({
           </div>
         </div>
 
-        <div className={`p-3.5 ${isListWidget ? 'sm:p-5' : 'sm:p-6'} overflow-y-auto overscroll-contain flex-1 scrollbar-thin`}>
+        <div className={`p-3.5 ${isListWidget ? 'sm:p-5' : 'sm:p-6'} overflow-y-auto overscroll-contain flex-1 min-h-0 flex flex-col scrollbar-thin`}>
           {children}
         </div>
       </div>

@@ -385,7 +385,7 @@ export const TableOptionPicker: FC<TableOptionPickerProps> = ({
                             setEditingOption(opt);
                             setEditName(opt);
                           }}
-                          className="btn-more-options p-1 rounded-md text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-200/70 dark:hover:bg-neutral-700 opacity-0 group-hover/opt:opacity-100 transition-opacity cursor-pointer"
+                          className="btn-more-options p-1 rounded-md text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-200/70 dark:hover:bg-neutral-700 opacity-100 sm:opacity-0 sm:group-hover/opt:opacity-100 transition-opacity cursor-pointer"
                           title="Edit option name, color, or delete"
                         >
                           <MoreHorizontal className="w-3.5 h-3.5" />

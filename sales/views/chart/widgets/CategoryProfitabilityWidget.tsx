@@ -31,7 +31,7 @@ export const CategoryProfitabilityWidget: FC<CategoryProfitabilityWidgetProps> =
   currentWidth = '2/4',
   isModal = false,
 }) => {
-  const heightClass = isModal ? 'h-[280px] sm:h-[380px]' : currentWidth === '1/4' ? 'h-[230px]' : 'h-[270px]';
+  const heightClass = isModal ? 'h-[280px] sm:h-[380px]' : currentWidth === '1/4' ? 'h-[190px]' : 'h-[250px]';
   const yAxisWidth = currentWidth === '1/4' ? 65 : 80;
 
   return (

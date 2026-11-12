@@ -62,7 +62,7 @@ export const SalesDonutWidget: FC<SalesDonutWidgetProps> = ({
   const isMobileScreen = typeof window !== 'undefined' ? window.innerWidth < 640 : false;
   const innerRadius = isModal ? (isMobileScreen ? 60 : 100) : currentWidth === '1/4' ? 48 : currentWidth === '2/4' ? 62 : 78;
   const outerRadius = isModal ? (isMobileScreen ? 88 : 140) : currentWidth === '1/4' ? 70 : currentWidth === '2/4' ? 90 : 110;
-  const heightClass = isModal ? 'h-[250px] sm:h-[380px]' : currentWidth === '1/4' ? 'h-[240px]' : 'h-[280px]';
+  const heightClass = isModal ? 'h-[250px] sm:h-[380px]' : currentWidth === '1/4' ? 'h-[180px]' : 'h-[220px]';
 
   const centerTextClass = isModal
     ? 'text-base sm:text-2xl font-extrabold'
@@ -156,7 +156,7 @@ export const SalesDonutWidget: FC<SalesDonutWidgetProps> = ({
       </div>
 
       {/* Quick legend pills */}
-      <div className={`flex flex-wrap gap-1.5 justify-center max-h-24 overflow-y-auto pt-1 scrollbar-thin`}>
+      <div className="flex flex-wrap gap-1.5 justify-center pt-1">
         {legendItems.map((entry, idx) => (
           <div
             key={entry.name}

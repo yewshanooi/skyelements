@@ -38,6 +38,7 @@ import type { SalesInsightData } from '@/sales/types/ai';
 import {
   ALL_WIDGET_WIDTHS,
   WIDTH_COL_SPAN_CLASS,
+  WIDTH_CARD_HEIGHT_CLASS,
   normalizeWidgetWidth,
   DEFAULT_OVERVIEW_KPI_LAYOUT,
   ALL_KPI_DEFINITIONS,
@@ -204,9 +205,43 @@ const ALL_WIDGET_CONFIGS: WidgetConfig[] = [
   },
 ];
 
+const WIDGETS_WITHOUT_DASHBOARD_SCROLL = new Set([
+  'revenue_trend',
+  'sales_donut',
+  'category_profitability',
+  'basket_tiers',
+  'day_of_week',
+]);
+
 const DEFAULT_LAYOUT: WidgetLayoutState = {
-  order: ALL_WIDGET_CONFIGS.map((w) => w.id),
-  widths: Object.fromEntries(ALL_WIDGET_CONFIGS.map((w) => [w.id, w.defaultWidth])),
+  order: [
+    'ai_insights',
+    'kpi_metrics',
+    'revenue_trend',
+    'sales_donut',
+    'category_profitability',
+    'store_comparison',
+    'payment_methods',
+    'top_customers',
+    'fulfillment_pipeline',
+    'day_of_week',
+    'top_items',
+    'basket_tiers',
+  ],
+  widths: {
+    ai_insights: '1/4',
+    kpi_metrics: '3/4',
+    revenue_trend: '2/4',
+    sales_donut: '2/4',
+    category_profitability: '2/4',
+    store_comparison: '1/4',
+    payment_methods: '1/4',
+    top_customers: '1/4',
+    fulfillment_pipeline: '1/4',
+    day_of_week: '2/4',
+    top_items: '2/4',
+    basket_tiers: '2/4',
+  },
   hidden: {},
 };
 
@@ -617,8 +652,8 @@ export const ChartView: FC<ChartViewProps> = ({
       setLayout({
         order: ['kpi_metrics', 'revenue_trend', 'category_profitability', 'top_items'],
         widths: {
-          kpi_metrics: '4/4',
-          revenue_trend: '4/4',
+          kpi_metrics: '2/4',
+          revenue_trend: '2/4',
           category_profitability: '2/4',
           top_items: '2/4',
         },
@@ -635,13 +670,13 @@ export const ChartView: FC<ChartViewProps> = ({
       });
     } else if (presetKey === 'operations') {
       setLayout({
-        order: ['kpi_metrics', 'store_comparison', 'fulfillment_pipeline', 'payment_methods', 'day_of_week'],
+        order: ['kpi_metrics', 'store_comparison', 'payment_methods', 'day_of_week', 'fulfillment_pipeline'],
         widths: {
-          kpi_metrics: '4/4',
+          kpi_metrics: '2/4',
           store_comparison: '2/4',
-          fulfillment_pipeline: '2/4',
           payment_methods: '2/4',
           day_of_week: '2/4',
+          fulfillment_pipeline: '4/4',
         },
         hidden: {
           ai_insights: true,
@@ -655,13 +690,13 @@ export const ChartView: FC<ChartViewProps> = ({
       });
     } else if (presetKey === 'customer_mix') {
       setLayout({
-        order: ['kpi_metrics', 'top_customers', 'basket_tiers', 'sales_donut', 'top_items'],
+        order: ['kpi_metrics', 'top_customers', 'top_items', 'basket_tiers', 'sales_donut'],
         widths: {
-          kpi_metrics: '4/4',
+          kpi_metrics: '2/4',
           top_customers: '2/4',
+          top_items: '4/4',
           basket_tiers: '2/4',
           sales_donut: '2/4',
-          top_items: '2/4',
         },
         hidden: {
           ai_insights: true,
@@ -870,13 +905,14 @@ export const ChartView: FC<ChartViewProps> = ({
         </div>
       ) : (
         /* Re-organizable Grid */
-        <div ref={gridContainerRef} className="grid grid-cols-12 gap-3.5 sm:gap-5">
+        <div ref={gridContainerRef} className="grid grid-cols-12 items-start gap-3.5 sm:gap-5">
           {orderedVisibleWidgets.map((widget) => {
             const currentWidth = layout.widths[widget.id] || widget.defaultWidth;
             const colSpanClass = WIDTH_COL_SPAN_CLASS[currentWidth];
             const isDragging = draggedWidgetId === widget.id;
             const isTarget = dragOverWidgetId === widget.id;
             const isResizing = resizingWidgetId === widget.id;
+            const isScrollableWidget = !WIDGETS_WITHOUT_DASHBOARD_SCROLL.has(widget.id);
 
             return (
               <div
@@ -888,7 +924,7 @@ export const ChartView: FC<ChartViewProps> = ({
                 onDragOver={(e) => handleDragOver(e, widget.id)}
                 onDragLeave={handleDragLeave}
                 onDrop={(e) => handleDrop(e, widget.id)}
-                className={`${colSpanClass} transition-all duration-200 relative group min-w-0`}
+                className={`${colSpanClass} self-start transition-all duration-200 relative group min-w-0`}
               >
                 {/* Drop Indicator Bar */}
                 {isTarget && (
@@ -899,7 +935,7 @@ export const ChartView: FC<ChartViewProps> = ({
                 )}
 
                 <div
-                  className={`p-3.5 sm:p-5 rounded-xl bg-white dark:bg-[#202020] border shadow-2xs transition-all h-full flex flex-col justify-between relative ${isDragging
+                  className={`${WIDTH_CARD_HEIGHT_CLASS[currentWidth]} p-3.5 sm:p-5 rounded-xl bg-white dark:bg-[#202020] border shadow-2xs transition-all flex flex-col justify-between relative overflow-hidden ${isDragging
                     ? 'opacity-40 border-dashed border-blue-500 scale-[0.98]'
                     : isResizing
                       ? 'border-blue-500 ring-2 ring-blue-500/25 shadow-lg'
@@ -916,7 +952,7 @@ export const ChartView: FC<ChartViewProps> = ({
                     />
 
                     {/* Widget Body Content with dynamic responsive width */}
-                    <div className="flex-1 flex flex-col min-h-0">
+                    <div className={`flex-1 flex flex-col min-h-0 ${isScrollableWidget ? 'overflow-y-auto overscroll-contain scrollbar-thin' : 'overflow-hidden'}`}>
                       {renderWidgetContent(widget.id, false, currentWidth)}
                     </div>
                   </div>
@@ -992,6 +1028,7 @@ export const ChartView: FC<ChartViewProps> = ({
             </button>
           ) : undefined
         }
+        lockHeight={expandedWidgetId === 'kpi_metrics' && isCustomizingOverviewInModal}
       >
         {expandedWidgetId && renderWidgetContent(expandedWidgetId, true, '4/4')}
       </ChartModal>

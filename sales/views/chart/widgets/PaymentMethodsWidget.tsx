@@ -24,7 +24,7 @@ export const PaymentMethodsWidget: FC<PaymentMethodsWidgetProps> = ({
 
   return (
     <div className="space-y-3 min-w-0">
-      <div className={`${layoutClass} ${isModal ? '' : 'max-h-[300px] overflow-y-auto pr-1 pb-3'}`}>
+      <div className={layoutClass}>
         {itemsToDisplay.map((item, idx) => (
           <div
             key={item.method}
