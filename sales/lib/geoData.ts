@@ -10,6 +10,23 @@ export interface LocationSuggestion {
   displayName: string;
   lat: number;
   lng: number;
+  /** Optional fields supplied by Photon when the OSM feature contains them. */
+  name?: string;
+  category?: string;
+  street?: string;
+  housenumber?: string;
+  postcode?: string;
+  city?: string;
+  district?: string;
+  locality?: string;
+  state?: string;
+  country?: string;
+  website?: string;
+  phone?: string;
+  openingHours?: string;
+  cuisine?: string;
+  osmType?: string;
+  osmId?: number;
 }
 
 // Bounding box for Southeast Asia / Malaysia region

@@ -128,7 +128,7 @@ export function mergeSuggestions(
     out.push(item);
     if (out.length >= limit) break;
   }
-  return out.map(({ s }) => ({ displayName: s.displayName, lat: s.lat, lng: s.lng }));
+  return out.map(({ s }) => s);
 }
 
 export { searchLocal };

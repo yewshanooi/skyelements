@@ -306,7 +306,7 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-white dark:bg-[#202020] text-neutral-800 dark:text-neutral-200 rounded-2xl shadow-2xl border border-neutral-200/90 dark:border-neutral-700 w-full max-w-2xl max-h-[76dvh] sm:max-h-[85vh] flex flex-col overflow-hidden select-text overscroll-contain my-auto"
+        className="bg-white dark:bg-[#202020] text-neutral-800 dark:text-neutral-200 rounded-2xl shadow-2xl border border-neutral-200/90 dark:border-neutral-700 w-full max-w-xl max-h-[76dvh] sm:max-h-[85vh] flex flex-col overflow-hidden select-text overscroll-contain my-auto"
       >
         {/* Top Notion Actions Bar */}
         <div className="px-4 sm:px-6 py-3 flex items-center justify-between border-b border-neutral-200/70 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/50 text-neutral-400">
@@ -350,7 +350,7 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
           <div className="space-y-1.5 pt-2 text-xs">
             {/* 1. Category */}
             <div className={`flex items-center min-h-[34px] py-0.5 ${activeOptionPicker === 'category' ? 'relative z-30' : 'relative'}`}>
-              <div className="w-28 sm:w-44 shrink-0 flex items-center gap-2 text-neutral-500 dark:text-neutral-400 font-medium">
+              <div className="w-28 sm:w-40 shrink-0 flex items-center gap-2 text-neutral-500 dark:text-neutral-400 font-medium">
                 <Tag className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
                 <span>Category</span>
               </div>
@@ -385,7 +385,7 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
 
             {/* 2. Cost(s) */}
             <div className="flex items-center min-h-[34px] py-0.5 relative">
-              <div className="w-28 sm:w-44 shrink-0 flex items-center gap-2 text-neutral-500 dark:text-neutral-400 font-medium">
+              <div className="w-28 sm:w-40 shrink-0 flex items-center gap-2 text-neutral-500 dark:text-neutral-400 font-medium">
                 <DollarSign className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
                 <span>Cost(s)</span>
               </div>
@@ -411,7 +411,7 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
 
             {/* 3. Customer */}
             <div className="flex items-center min-h-[34px] py-0.5 relative">
-              <div className="w-28 sm:w-44 shrink-0 flex items-center gap-2 text-neutral-500 dark:text-neutral-400 font-medium">
+              <div className="w-28 sm:w-40 shrink-0 flex items-center gap-2 text-neutral-500 dark:text-neutral-400 font-medium">
                 <User className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
                 <span>Customer</span>
               </div>
@@ -427,7 +427,7 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
 
             {/* 4. Date */}
             <div className={`flex items-center min-h-[34px] py-0.5 ${isDatePickerOpen ? 'relative z-30' : 'relative'}`}>
-              <div className="w-28 sm:w-44 shrink-0 flex items-center gap-2 text-neutral-500 dark:text-neutral-400 font-medium">
+              <div className="w-28 sm:w-40 shrink-0 flex items-center gap-2 text-neutral-500 dark:text-neutral-400 font-medium">
                 <Calendar className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
                 <span>Date</span>
               </div>
@@ -462,7 +462,7 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
 
             {/* 5. Invoice */}
             <div className="flex items-center min-h-[34px] py-0.5 relative">
-              <div className="w-28 sm:w-44 shrink-0 flex items-center gap-2 text-neutral-500 dark:text-neutral-400 font-medium">
+              <div className="w-28 sm:w-40 shrink-0 flex items-center gap-2 text-neutral-500 dark:text-neutral-400 font-medium">
                 <FileText className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
                 <span>Invoice</span>
               </div>
@@ -509,7 +509,7 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
 
             {/* 6. Location (Notion Location Picker) */}
             <div className={`flex items-center min-h-[34px] py-0.5 ${isLocationPickerOpen ? 'relative z-30' : 'relative'}`}>
-              <div className="w-28 sm:w-44 shrink-0 flex items-center gap-2 text-neutral-500 dark:text-neutral-400 font-medium">
+              <div className="w-28 sm:w-40 shrink-0 flex items-center gap-2 text-neutral-500 dark:text-neutral-400 font-medium">
                 <MapPin className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
                 <span>Location</span>
               </div>
@@ -572,7 +572,7 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
 
             {/* 7. Store */}
             <div className={`flex items-center min-h-[34px] py-0.5 ${activeOptionPicker === 'marketplace' ? 'relative z-30' : 'relative'}`}>
-              <div className="w-28 sm:w-44 shrink-0 flex items-center gap-2 text-neutral-500 dark:text-neutral-400 font-medium">
+              <div className="w-28 sm:w-40 shrink-0 flex items-center gap-2 text-neutral-500 dark:text-neutral-400 font-medium">
                 <ShoppingBag className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
                 <span>Store</span>
               </div>
@@ -612,7 +612,7 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
 
             {/* 8. Order Status */}
             <div className={`flex items-center min-h-[34px] py-0.5 ${activeOptionPicker === 'order_status' ? 'relative z-30' : 'relative'}`}>
-              <div className="w-28 sm:w-44 shrink-0 flex items-center gap-2 text-neutral-500 dark:text-neutral-400 font-medium">
+              <div className="w-28 sm:w-40 shrink-0 flex items-center gap-2 text-neutral-500 dark:text-neutral-400 font-medium">
                 <Truck className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
                 <span>Order Status</span>
               </div>
@@ -652,7 +652,7 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
 
             {/* 9. Payment Method */}
             <div className={`flex items-center min-h-[34px] py-0.5 ${activeOptionPicker === 'payment_method' ? 'relative z-30' : 'relative'}`}>
-              <div className="w-28 sm:w-44 shrink-0 flex items-center gap-2 text-neutral-500 dark:text-neutral-400 font-medium">
+              <div className="w-28 sm:w-40 shrink-0 flex items-center gap-2 text-neutral-500 dark:text-neutral-400 font-medium">
                 <CreditCard className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
                 <span>Payment Method</span>
               </div>
@@ -692,7 +692,7 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
 
             {/* 10. Payment Status */}
             <div className={`flex items-center min-h-[34px] py-0.5 ${activeOptionPicker === 'payment_status' ? 'relative z-30' : 'relative'}`}>
-              <div className="w-28 sm:w-44 shrink-0 flex items-center gap-2 text-neutral-500 dark:text-neutral-400 font-medium">
+              <div className="w-28 sm:w-40 shrink-0 flex items-center gap-2 text-neutral-500 dark:text-neutral-400 font-medium">
                 <Building2 className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
                 <span>Payment<span className="hidden sm:inline"> </span><span className="block sm:inline">Status</span></span>
               </div>
@@ -732,7 +732,7 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
 
             {/* 11. Quantity */}
             <div className="flex items-center min-h-[34px] py-0.5 relative">
-              <div className="w-28 sm:w-44 shrink-0 flex items-center gap-2 text-neutral-500 dark:text-neutral-400 font-medium">
+              <div className="w-28 sm:w-40 shrink-0 flex items-center gap-2 text-neutral-500 dark:text-neutral-400 font-medium">
                 <Binary className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
                 <span>Quantity</span>
               </div>
@@ -750,7 +750,7 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
 
             {/* 12. Sales - Formula Driven without comment */}
             <div className="flex items-center min-h-[34px] py-0.5 relative">
-              <div className="w-28 sm:w-44 shrink-0 flex items-center gap-2 text-neutral-500 dark:text-neutral-400 font-medium">
+              <div className="w-28 sm:w-40 shrink-0 flex items-center gap-2 text-neutral-500 dark:text-neutral-400 font-medium">
                 <Coins className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
                 <span>Sales</span>
               </div>
@@ -765,7 +765,7 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
 
             {/* 13. Subtotal */}
             <div className="flex items-center min-h-[34px] py-0.5 relative">
-              <div className="w-28 sm:w-44 shrink-0 flex items-center gap-2 text-neutral-500 dark:text-neutral-400 font-medium">
+              <div className="w-28 sm:w-40 shrink-0 flex items-center gap-2 text-neutral-500 dark:text-neutral-400 font-medium">
                 <DollarSign className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
                 <span>Subtotal</span>
               </div>

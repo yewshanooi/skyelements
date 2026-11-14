@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, useMemo, useCallback } from 'react';
 import type { FC } from 'react';
 import { Map as MapLibreMap, Marker, Popup, NavigationControl, LngLatBounds, setWorkerUrl } from 'maplibre-gl';
 import {
@@ -17,10 +17,10 @@ import {
   Edit2,
 } from 'lucide-react';
 import type { SaleItem } from '@/sales/types';
-import { geocodeAddress } from '@/sales/lib/geocoder';
+import { geocodeAddress, type LocationSuggestion } from '@/sales/lib/geocoder';
 import { useLocationSearch } from '@/sales/hooks/useLocationSearch';
 import { normalizeCoordinates, extractEmbeddedCoordinates } from '@/sales/lib/locationParser';
-import { MAPLIBRE_WORKER_URL, MAP_STYLE, createPinElement } from '@/sales/lib/mapShared';
+import { MAPLIBRE_WORKER_URL, MAP_STYLE, createPinElement, createSearchPinElement } from '@/sales/lib/mapShared';
 import { NotionFilterBar } from '@/sales/filters/NotionFilterBar';
 import { filterSales, type FilterState } from '@/sales/lib/filterUtils';
 import { formatDateDisplay } from '@/sales/lib/dateUtils';
@@ -54,6 +54,41 @@ interface MarkerEntry {
 }
 
 const BATCH_CONCURRENCY = 3;
+const MAP_CONTROL_CLASS = 'bg-white/95 dark:bg-[#202020]/95 backdrop-blur-xs rounded-lg shadow-md border border-neutral-200 dark:border-neutral-700';
+const MAP_CONTROL_SIZE_CLASS = 'h-[26px] sm:h-[30px]';
+
+interface ScrollSnapshot {
+  container: HTMLElement | null;
+  containerTop: number;
+  windowTop: number;
+}
+
+function findScrollContainer(element: HTMLElement | null): HTMLElement | null {
+  let parent = element?.parentElement ?? null;
+  while (parent) {
+    const styles = window.getComputedStyle(parent);
+    if (/(auto|scroll|overlay)/.test(styles.overflowY) && parent.scrollHeight > parent.clientHeight) {
+      return parent;
+    }
+    parent = parent.parentElement;
+  }
+  return null;
+}
+
+function captureScrollPosition(element: HTMLElement | null): ScrollSnapshot {
+  const container = findScrollContainer(element);
+  return {
+    container,
+    containerTop: container?.scrollTop ?? 0,
+    windowTop: window.scrollY,
+  };
+}
+
+function restoreScrollPosition(snapshot: ScrollSnapshot | null) {
+  if (!snapshot) return;
+  if (snapshot.container) snapshot.container.scrollTop = snapshot.containerTop;
+  if (window.scrollY !== snapshot.windowTop) window.scrollTo(0, snapshot.windowTop);
+}
 
 function buildPopupContent(sale: SaleItem): HTMLDivElement {
   const popupContent = document.createElement('div');
@@ -85,6 +120,64 @@ function buildPopupContent(sale: SaleItem): HTMLDivElement {
             </div>`
       : ''
     }
+    </div>
+  `;
+  return popupContent;
+}
+
+function buildPlaceAddress(place: LocationSuggestion): string {
+  const street = [place.housenumber, place.street].filter(Boolean).join(' ');
+  const area = [place.postcode, place.city || place.district || place.locality]
+    .filter(Boolean)
+    .join(' ');
+  return [street, area, place.state, place.country]
+    .filter(Boolean)
+    .filter((part, index, parts) => parts.indexOf(part) === index)
+    .join(', ');
+}
+
+function buildPlacePopupContent(place: LocationSuggestion): HTMLDivElement {
+  const popupContent = document.createElement('div');
+  popupContent.className = 'p-3.5 min-w-[230px] max-w-[270px] text-xs font-sans bg-white dark:bg-[#202020] text-neutral-900 dark:text-neutral-100 transition-colors';
+
+  const title = place.name || place.displayName.split(',')[0].trim() || 'Selected location';
+  const typeLabel = place.category
+    ? place.category
+      .replace(/[_-]+/g, ' ')
+      .toLowerCase()
+      .replace(/\b\w/g, (character) => character.toUpperCase())
+    : 'Location';
+  const address = buildPlaceAddress(place) || place.displayName;
+  const osmUrl = `https://www.openstreetmap.org/?mlat=${place.lat}&mlon=${place.lng}#map=18/${place.lat}/${place.lng}`;
+  const googleSearchUrl = `https://www.google.com/search?q=${encodeURIComponent([title, address].filter(Boolean).join(', '))}`;
+  const website = place.website && /^https?:\/\/\S+$/i.test(place.website) ? place.website : null;
+  const detailRows = [
+    address ? `<div class="text-[11px] text-neutral-600 dark:text-neutral-400 flex items-start gap-1.5 leading-relaxed">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-rose-500 shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
+        <circle cx="12" cy="10" r="3"/>
+      </svg>
+      <span class="line-clamp-2">${escapeHtml(address)}</span>
+    </div>` : '',
+    place.openingHours ? `<div><span class="text-neutral-400 dark:text-neutral-500">Hours:</span> ${escapeHtml(place.openingHours)}</div>` : '',
+    place.phone ? `<div><span class="text-neutral-400 dark:text-neutral-500">Phone:</span> ${escapeHtml(place.phone)}</div>` : '',
+    place.cuisine ? `<div><span class="text-neutral-400 dark:text-neutral-500">Cuisine:</span> ${escapeHtml(place.cuisine.replace(/_/g, ' '))}</div>` : '',
+  ].filter(Boolean).join('');
+
+  popupContent.innerHTML = `
+    <div class="flex items-start justify-between gap-2 border-b pb-2.5 pr-6 border-neutral-100 dark:border-neutral-800">
+      <div class="min-w-0">
+        <div class="font-semibold text-neutral-900 dark:text-neutral-100 leading-snug">${escapeHtml(title)}</div>
+        <div class="mt-0.5 text-[10px] tracking-wide text-orange-600 dark:text-orange-400">${escapeHtml(typeLabel)}</div>
+      </div>
+    </div>
+    <div class="space-y-1.5 pt-2 text-neutral-600 dark:text-neutral-300 leading-relaxed">
+      ${detailRows}
+      <div class="flex flex-wrap gap-x-3 gap-y-1 pt-2 mt-2 border-t border-neutral-100 dark:border-neutral-800">
+        <a href="${escapeHtml(osmUrl)}" target="_blank" rel="noreferrer" class="text-blue-600 dark:text-blue-400 hover:underline">OpenStreetMap</a>
+        <a href="${escapeHtml(googleSearchUrl)}" target="_blank" rel="noreferrer" class="text-blue-600 dark:text-blue-400 hover:underline">Google</a>
+        ${website ? `<a href="${escapeHtml(website)}" target="_blank" rel="noreferrer" class="text-blue-600 dark:text-blue-400 hover:underline">Website</a>` : ''}
+      </div>
     </div>
   `;
   return popupContent;
@@ -141,6 +234,49 @@ export const MapView: FC<MapViewProps> = ({
     manualAddressInput !== null
   );
 
+  // Search uses the same location autocomplete and geocoding logic as the location drawer.
+  const [isMapSearchOpen, setIsMapSearchOpen] = useState(false);
+  const [mapSearchQuery, setMapSearchQuery] = useState('');
+  const [isMapSearchPending, setIsMapSearchPending] = useState(false);
+  const [mapSearchError, setMapSearchError] = useState(false);
+  const mapSearchControllerRef = useRef<AbortController | null>(null);
+  const mapSearchInputRef = useRef<HTMLInputElement>(null);
+  const mapSearchScrollSnapshotRef = useRef<ScrollSnapshot | null>(null);
+  const searchedPlaceMarkerRef = useRef<Marker | null>(null);
+  const [mapSearchPlace, setMapSearchPlace] = useState<LocationSuggestion | null>(null);
+  const { suggestions: mapSearchSuggestions, isLoading: isMapSearchLoading } = useLocationSearch(
+    mapSearchQuery,
+    isMapSearchOpen,
+    false
+  );
+  const cancelMapSearch = useCallback(() => {
+    mapSearchControllerRef.current?.abort();
+    mapSearchControllerRef.current = null;
+    setIsMapSearchPending(false);
+  }, []);
+
+  // Focus the search field without allowing mobile browsers to scroll the page to it.
+  useLayoutEffect(() => {
+    if (!isMapSearchOpen) {
+      mapSearchScrollSnapshotRef.current = null;
+      return;
+    }
+
+    const snapshot = mapSearchScrollSnapshotRef.current ?? captureScrollPosition(mapWrapperRef.current);
+    mapSearchScrollSnapshotRef.current = snapshot;
+    let restoreFrame: number | null = null;
+    const focusFrame = requestAnimationFrame(() => {
+      mapSearchInputRef.current?.focus({ preventScroll: true });
+      restoreScrollPosition(snapshot);
+      restoreFrame = requestAnimationFrame(() => restoreScrollPosition(snapshot));
+    });
+
+    return () => {
+      cancelAnimationFrame(focusFrame);
+      if (restoreFrame !== null) cancelAnimationFrame(restoreFrame);
+    };
+  }, [isMapSearchOpen]);
+
   // Filtered dataset
   const filteredSales = useMemo(() => {
     return filterSales(sales, filters);
@@ -190,6 +326,9 @@ export const MapView: FC<MapViewProps> = ({
 
     const markers = markersRef.current;
     return () => {
+      cancelMapSearch();
+      searchedPlaceMarkerRef.current?.remove();
+      searchedPlaceMarkerRef.current = null;
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
@@ -201,6 +340,39 @@ export const MapView: FC<MapViewProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+
+  // Keep the current Photon/OSM search result separate from sales pins.
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    searchedPlaceMarkerRef.current?.remove();
+    searchedPlaceMarkerRef.current = null;
+
+    if (!map || !mapSearchPlace) return;
+
+    const popup = new Popup({
+      offset: {
+        'center': [0, 0],
+        'top': [0, 8],
+        'top-left': [0, 8],
+        'top-right': [0, 8],
+        'bottom': [0, -42],
+        'bottom-left': [0, -42],
+        'bottom-right': [0, -42],
+        'left': [20, -20],
+        'right': [-20, -20],
+      },
+      closeButton: true,
+      maxWidth: '280px',
+    }).setDOMContent(buildPlacePopupContent(mapSearchPlace));
+
+    const marker = new Marker({ element: createSearchPinElement(), anchor: 'bottom' })
+      .setLngLat([mapSearchPlace.lng, mapSearchPlace.lat])
+      .setPopup(popup)
+      .addTo(map);
+
+    searchedPlaceMarkerRef.current = marker;
+    marker.togglePopup();
+  }, [mapSearchPlace]);
 
   // Sync markers with located sales. Only added, changed or removed sales touch the DOM.
   useEffect(() => {
@@ -352,6 +524,54 @@ export const MapView: FC<MapViewProps> = ({
     }
   };
 
+  const handleMapSearchSelection = (place: LocationSuggestion) => {
+    const map = mapInstanceRef.current;
+    const norm = normalizeCoordinates(place.lat, place.lng);
+    if (!map || !norm) return;
+
+    cancelMapSearch();
+    setMapSearchPlace({ ...place, lat: norm.lat, lng: norm.lng });
+    map.flyTo({ center: [norm.lng, norm.lat], zoom: 13.5, duration: 800 });
+    setMapSearchQuery(place.displayName);
+    setMapSearchError(false);
+    setIsMapSearchOpen(false);
+  };
+
+  const handleMapSearch = async () => {
+    const query = mapSearchQuery.trim();
+    if (!query || isMapSearchPending) return;
+
+    const firstSuggestion = mapSearchSuggestions[0];
+    if (firstSuggestion) {
+      handleMapSearchSelection(firstSuggestion);
+      return;
+    }
+
+    cancelMapSearch();
+    const controller = new AbortController();
+    mapSearchControllerRef.current = controller;
+    setIsMapSearchPending(true);
+    setMapSearchError(false);
+    try {
+      const coords = await geocodeAddress(query, { signal: controller.signal });
+      if (controller.signal.aborted) return;
+
+      const norm = coords ? normalizeCoordinates(coords.lat, coords.lng) : null;
+      if (norm) {
+        handleMapSearchSelection({ displayName: query, lat: norm.lat, lng: norm.lng });
+      } else {
+        setMapSearchError(true);
+      }
+    } catch {
+      if (!controller.signal.aborted) setMapSearchError(true);
+    } finally {
+      if (mapSearchControllerRef.current === controller) {
+        mapSearchControllerRef.current = null;
+        setIsMapSearchPending(false);
+      }
+    }
+  };
+
   // Suggestions are derived from this input by useLocationSearch.
   const handleAddressInputChange = (saleId: string, value: string) => {
     setManualAddressInput({ id: saleId, address: value });
@@ -471,26 +691,127 @@ export const MapView: FC<MapViewProps> = ({
       {/* Map Card */}
       <div
         ref={mapWrapperRef}
-        className={`relative rounded-xl border border-neutral-200/80 dark:border-neutral-800 bg-white dark:bg-[#191919] shadow-2xs overflow-hidden flex flex-col transition-all duration-200 isolate [mask-image:radial-gradient(white,black)] [-webkit-mask-image:-webkit-radial-gradient(white,black)] ${isFullscreen
+        className={`relative overscroll-contain rounded-xl border border-neutral-200/80 dark:border-neutral-800 bg-white dark:bg-[#191919] shadow-2xs overflow-hidden flex flex-col transition-all duration-200 isolate [mask-image:radial-gradient(white,black)] [-webkit-mask-image:-webkit-radial-gradient(white,black)] ${isFullscreen
             ? 'fixed inset-0 z-50 h-screen w-screen rounded-none border-none [mask-image:none] [-webkit-mask-image:none]'
             : 'h-[60vh] min-h-[380px] sm:h-[520px] md:h-[620px] rounded-xl'
           }`}
       >
+        {/* Map location search */}
+        <div
+          className="absolute top-2 left-2 sm:top-3 sm:left-3 z-30 pointer-events-auto transition-[top] duration-300 ease-out"
+        >
+          <div
+            className={`relative ${MAP_CONTROL_SIZE_CLASS} ${isMapSearchOpen ? 'w-[min(280px,calc(100vw-24px))] sm:w-[280px]' : 'w-[26px] sm:w-[30px]'} ${MAP_CONTROL_CLASS} transition-[width] duration-300 ease-out overflow-visible`}
+          >
+            <button
+              type="button"
+              onClick={() => {
+                if (!isMapSearchOpen) {
+                  mapSearchScrollSnapshotRef.current = captureScrollPosition(mapWrapperRef.current);
+                }
+                cancelMapSearch();
+                setIsMapSearchOpen((open) => !open);
+                setMapSearchError(false);
+              }}
+              className="absolute left-0 top-0 z-10 h-full w-[26px] sm:w-[30px] shrink-0 flex items-center justify-center text-neutral-700 dark:text-neutral-300 cursor-pointer"
+              title={isMapSearchOpen ? 'Close search' : 'Search location'}
+              aria-label={isMapSearchOpen ? 'Close search' : 'Search location'}
+            >
+              {isMapSearchPending || isMapSearchLoading ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-500" />
+              ) : (
+                <Search className="w-3.5 h-3.5" />
+              )}
+            </button>
+
+            {!isMapSearchOpen ? null : (
+              <>
+                <form
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    void handleMapSearch();
+                  }}
+                  className="flex h-full w-full items-center pl-[26px] sm:pl-[30px]"
+                >
+                  <input
+                    type="text"
+                    value={mapSearchQuery}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      cancelMapSearch();
+                      setMapSearchQuery(value);
+                      if (!value.trim()) setMapSearchPlace(null);
+                      setMapSearchError(false);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Escape') {
+                        cancelMapSearch();
+                        setIsMapSearchOpen(false);
+                      }
+                    }}
+                    placeholder="Search..."
+                    aria-label="Search a location"
+                    ref={mapSearchInputRef}
+                    className="min-w-0 flex-1 h-full px-1 text-xs bg-transparent text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 focus:outline-hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      cancelMapSearch();
+                      setMapSearchQuery('');
+                      setMapSearchPlace(null);
+                      setMapSearchError(false);
+                    }}
+                    className="mr-1 shrink-0 p-0.5 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 cursor-pointer"
+                    title="Clear search"
+                    aria-label="Clear search"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </form>
+
+                {(mapSearchSuggestions.length > 0 || isMapSearchLoading || mapSearchError) && (
+                  <div className="absolute left-0 right-0 top-full mt-1 max-h-48 overflow-y-auto rounded-lg border border-neutral-200 bg-white/95 p-1 shadow-md backdrop-blur-xs dark:border-neutral-800 dark:bg-[#202020]/95">
+                    {mapSearchSuggestions.map((suggestion, index) => (
+                      <button
+                        key={`${suggestion.lat}-${suggestion.lng}-${index}`}
+                        type="button"
+                        onClick={() => handleMapSearchSelection(suggestion)}
+                        className="w-full flex items-start gap-2 px-2 py-1.5 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 text-left cursor-pointer"
+                      >
+                        <MapPin className="w-3.5 h-3.5 mt-0.5 text-neutral-400 shrink-0" />
+                        <span className="text-[11px] text-neutral-800 dark:text-neutral-200 truncate">
+                          {suggestion.displayName}
+                        </span>
+                      </button>
+                    ))}
+                    {mapSearchError && mapSearchSuggestions.length === 0 && (
+                      <p className="px-2 py-1.5 text-[11px] text-neutral-500 dark:text-neutral-400">
+                        No location found. Try another search.
+                      </p>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+
         {/* Top Floating Action Bar */}
-        <div className="absolute top-2 sm:top-3 right-12 sm:right-16 z-20 flex items-center gap-1.5 sm:gap-2 pointer-events-none max-w-[calc(100%-60px)]">
+        <div className={`${isMapSearchOpen ? 'hidden sm:flex' : 'flex'} absolute top-2 sm:top-3 right-12 sm:right-16 z-20 items-center gap-1.5 sm:gap-2 pointer-events-none max-w-[calc(100%-60px)]`}>
           {/* Notion "No location (X)" Counter Pill */}
           <button
             onClick={() => setShowNoPlaceDrawer(true)}
-            className="pointer-events-auto px-2.5 sm:px-3 py-1 sm:py-1.5 text-xs font-medium bg-white/95 dark:bg-[#202020]/95 backdrop-blur-xs hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 rounded-lg shadow-md border border-neutral-200 dark:border-neutral-700 transition-colors flex items-center gap-1.5 cursor-pointer shrink-0"
+            className={`pointer-events-auto ${MAP_CONTROL_SIZE_CLASS} ${MAP_CONTROL_CLASS} hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 transition-colors flex items-center gap-1.5 px-2.5 sm:px-3 text-xs font-medium cursor-pointer shrink-0`}
           >
-            <MapPin className="w-3.5 h-3.5 text-neutral-400" />
+            <MapPin className="w-3.5 h-3.5 text-neutral-700 dark:text-neutral-300" />
             <span>No location ({unlocatedSales.length})</span>
           </button>
 
           {/* Fit all pins / Center map button */}
           <button
             onClick={handleFitBounds}
-            className="pointer-events-auto p-1.5 sm:p-2 bg-white/95 dark:bg-[#202020]/95 backdrop-blur-xs hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 rounded-lg shadow-md border border-neutral-200 dark:border-neutral-700 transition-colors cursor-pointer shrink-0"
+            className={`pointer-events-auto ${MAP_CONTROL_SIZE_CLASS} ${MAP_CONTROL_CLASS} hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 transition-colors cursor-pointer shrink-0 px-1.5 sm:px-2 flex items-center justify-center`}
             title="Fit to center / show all pins"
           >
             <LocateFixed className="w-3.5 h-3.5" />
@@ -499,7 +820,7 @@ export const MapView: FC<MapViewProps> = ({
           {/* Fullscreen toggle button */}
           <button
             onClick={toggleFullscreen}
-            className="pointer-events-auto p-1.5 sm:p-2 bg-white/95 dark:bg-[#202020]/95 backdrop-blur-xs hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 rounded-lg shadow-md border border-neutral-200 dark:border-neutral-700 transition-colors cursor-pointer shrink-0"
+            className={`pointer-events-auto ${MAP_CONTROL_SIZE_CLASS} ${MAP_CONTROL_CLASS} hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 transition-colors cursor-pointer shrink-0 px-1.5 sm:px-2 flex items-center justify-center`}
             title={isFullscreen ? 'Exit Full Screen' : 'Full Screen'}
           >
             {isFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}

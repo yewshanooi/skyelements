@@ -14,15 +14,20 @@ interface RemoteState {
 }
 
 /**
- * Location autocomplete shared by the table picker and the map drawer.
+ * Location autocomplete shared by the table picker and map searches.
  *
  * - Offline matches are derived synchronously on every keystroke, so the list is never empty
  *   while the network is still working.
  * - Photon is debounced, cancellable (stale responses can never overwrite newer input) and
  *   served from an in-memory cache when the same query was seen before.
- * - Previous remote results stay visible while the next ones load, which avoids list flicker.
+ * - Previous remote results stay visible while the next ones load, which avoids list flicker unless a
+ *   caller opts out for a search view where stale places would be misleading.
  */
-export function useLocationSearch(query: string, remoteEnabled = true) {
+export function useLocationSearch(
+  query: string,
+  remoteEnabled = true,
+  keepPreviousRemoteResults = true
+) {
   const trimmed = query.trim();
   const wantsRemote = remoteEnabled && trimmed.length >= MIN_REMOTE_CHARS;
 
@@ -47,7 +52,9 @@ export function useLocationSearch(query: string, remoteEnabled = true) {
     };
   }, [trimmed, wantsRemote]);
 
-  const remote = !wantsRemote ? EMPTY : cached ?? remoteState.results;
+  const remote = !wantsRemote
+    ? EMPTY
+    : cached ?? (keepPreviousRemoteResults || remoteState.query === trimmed ? remoteState.results : EMPTY);
   const isLoading = wantsRemote && !cached && remoteState.query !== trimmed;
 
   const suggestions = useMemo(() => mergeSuggestions(local, remote), [local, remote]);

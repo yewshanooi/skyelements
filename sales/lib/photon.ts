@@ -65,6 +65,15 @@ interface PhotonProps {
   locality?: string;
   state?: string;
   country?: string;
+  osm_key?: string;
+  osm_value?: string;
+  osm_type?: string;
+  osm_id?: number;
+  website?: string;
+  contact?: string;
+  phone?: string;
+  opening_hours?: string;
+  cuisine?: string;
 }
 
 interface PhotonFeature {
@@ -87,6 +96,12 @@ function buildDisplayName(p: PhotonProps): string {
   return parts.join(', ');
 }
 
+function buildCategory(p: PhotonProps): string | undefined {
+  const value = p.osm_value?.replace(/_/g, ' ').trim();
+  if (!value) return undefined;
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
 function parseFeatures(features: PhotonFeature[]): LocationSuggestion[] {
   const out: LocationSuggestion[] = [];
   const seen = new Set<string>();
@@ -96,12 +111,33 @@ function parseFeatures(features: PhotonFeature[]): LocationSuggestion[] {
     const norm = normalizeCoordinates(c[1], c[0]);
     if (!norm || !isReasonableCoordinates(norm.lat, norm.lng)) continue;
 
-    const displayName = buildDisplayName(f.properties ?? {});
+    const props = f.properties ?? {};
+    const displayName = buildDisplayName(props);
     if (!displayName) continue;
     const dedupeKey = displayName.toLowerCase();
     if (seen.has(dedupeKey)) continue;
     seen.add(dedupeKey);
-    out.push({ displayName, lat: norm.lat, lng: norm.lng });
+    out.push({
+      displayName,
+      name: props.name,
+      lat: norm.lat,
+      lng: norm.lng,
+      category: buildCategory(props),
+      street: props.street,
+      housenumber: props.housenumber,
+      postcode: props.postcode,
+      city: props.city,
+      district: props.district,
+      locality: props.locality,
+      state: props.state,
+      country: props.country,
+      website: props.website,
+      phone: props.phone ?? props.contact,
+      openingHours: props.opening_hours,
+      cuisine: props.cuisine,
+      osmType: props.osm_type,
+      osmId: props.osm_id,
+    });
   }
   return out;
 }
