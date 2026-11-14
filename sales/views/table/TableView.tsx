@@ -62,11 +62,11 @@ const DEFAULT_COLUMN_WIDTHS: Record<ColumnId, number> = {
   payment_method: 180,
   customer: 130,
   date: 120,
-  subtotal: 140,
-  cost: 110,
-  sales: 140,
+  subtotal: 130,
+  cost: 130,
+  sales: 130,
   order_status: 130,
-  payment_status: 130,
+  payment_status: 145,
   invoice: 130,
   location: 180,
   actions: 80,
@@ -107,9 +107,9 @@ const TABLE_COLUMNS: {
     { id: 'payment_method', label: 'Payment Method', icon: '💳' },
     { id: 'customer', label: 'Customer', icon: '👤', sortField: 'customer' },
     { id: 'date', label: 'Date', icon: '📅', sortField: 'date' },
-    { id: 'subtotal', label: 'Subtotal (in MYR)', icon: '🏷️', sortField: 'subtotal', align: 'right' },
+    { id: 'subtotal', label: 'Subtotal', icon: '🏷️', sortField: 'subtotal', align: 'right' },
     { id: 'cost', label: 'Cost(s)', icon: '🏷️', sortField: 'cost', align: 'right' },
-    { id: 'sales', label: 'Sales (in MYR)', icon: '💰', align: 'right', isFormula: true },
+    { id: 'sales', label: 'Sales', icon: '💰', align: 'right', isFormula: true },
     { id: 'order_status', label: 'Order Status', icon: '🚚' },
     { id: 'payment_status', label: 'Payment Status', icon: '💳' },
     { id: 'invoice', label: 'Invoice', icon: '🧾' },
@@ -614,7 +614,7 @@ export const TableView: FC<TableViewProps> = ({
                         } ${isRight ? 'text-right' : ''}`}
                       title={
                         col.isFormula
-                          ? 'Click to edit formula for Sales (in MYR)'
+                          ? 'Click to edit formula for Sales'
                           : col.sortField
                             ? `Click to sort by ${col.label?.toLowerCase()}`
                             : undefined
@@ -672,7 +672,8 @@ export const TableView: FC<TableViewProps> = ({
                   const isRowActive =
                     activeOptionPicker?.saleId === sale.id ||
                     activeDatePickerSaleId === sale.id ||
-                    activeLocationPickerSaleId === sale.id;
+                    activeLocationPickerSaleId === sale.id ||
+                    activeInvoiceDialogSaleId === sale.id;
 
                   // Dynamically evaluate formula if custom formula is present
                   const displaySales = evaluateSalesFormula(customFormula, sale);
@@ -906,8 +907,12 @@ export const TableView: FC<TableViewProps> = ({
 
                       {/* Invoice */}
                       <td
-                        onClick={() => setActiveInvoiceDialogSaleId(sale.id)}
-                        className="px-3 py-2 border-r border-neutral-200/60 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 cursor-pointer hover:bg-neutral-100/60 dark:hover:bg-neutral-800/40 transition-colors"
+                        onClick={() =>
+                          setActiveInvoiceDialogSaleId((activeSaleId) =>
+                            activeSaleId === sale.id ? null : sale.id
+                          )
+                        }
+                        className={`px-3 py-2 border-r border-neutral-200/60 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 cursor-pointer select-none hover:bg-neutral-100/60 dark:hover:bg-neutral-800/40 transition-colors ${activeInvoiceDialogSaleId === sale.id ? 'relative z-30' : ''}`}
                       >
                         <div className="flex items-center min-h-[22px] max-w-full w-full">
                           {uploadingSaleId === sale.id ? (
@@ -918,8 +923,13 @@ export const TableView: FC<TableViewProps> = ({
                           ) : sale.invoice_name || sale.invoice_url ? (
                             <button
                               type="button"
-                              onClick={() => setActiveInvoiceDialogSaleId(sale.id)}
-                              className="inline-flex min-h-[22px] items-center gap-1 text-xs text-neutral-600 dark:text-neutral-400 focus:outline-hidden cursor-pointer max-w-full min-w-0"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setActiveInvoiceDialogSaleId((activeSaleId) =>
+                                  activeSaleId === sale.id ? null : sale.id
+                                );
+                              }}
+                              className="inline-flex min-h-[22px] items-center gap-1 text-xs text-neutral-600 dark:text-neutral-400 focus:outline-hidden cursor-pointer select-none max-w-full min-w-0"
                               title="Manage invoice"
                               aria-label={`Manage invoice ${sale.invoice_name || 'receipt.pdf'}`}
                             >
@@ -931,9 +941,11 @@ export const TableView: FC<TableViewProps> = ({
                               type="button"
                               onClick={(event) => {
                                 event.stopPropagation();
-                                setActiveInvoiceDialogSaleId(sale.id);
+                                setActiveInvoiceDialogSaleId((activeSaleId) =>
+                                  activeSaleId === sale.id ? null : sale.id
+                                );
                               }}
-                              className="h-[22px] w-full rounded focus-visible:outline-hidden cursor-pointer"
+                              className="h-[22px] w-full rounded focus-visible:outline-hidden cursor-pointer select-none"
                               aria-label="Add invoice"
                             >
                               <span className="sr-only">Add invoice</span>

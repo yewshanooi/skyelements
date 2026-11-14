@@ -46,91 +46,91 @@ const AVAILABLE_FUNCTIONS: FunctionDoc[] = [
     signature: 'round(value, decimals)',
     category: 'Math',
     description: 'Rounds a number to specified decimal places (default 0).',
-    example: 'round(# Subtotal (in MYR) - # Cost(s) , 2)',
+    example: 'round(# Subtotal - # Cost(s) , 2)',
   },
   {
     name: 'if',
     signature: 'if(condition, ifTrue, ifFalse)',
     category: 'Logic',
     description: 'Returns second argument if condition is true, otherwise third.',
-    example: 'if(# Subtotal (in MYR) > 100, # Subtotal (in MYR) * 0.9, # Subtotal (in MYR))',
+    example: 'if(# Subtotal > 100, # Subtotal * 0.9, # Subtotal)',
   },
   {
     name: 'min',
     signature: 'min(a, b, ...)',
     category: 'Math',
     description: 'Returns the minimum value from the given arguments.',
-    example: 'min(# Subtotal (in MYR), 50)',
+    example: 'min(# Subtotal, 50)',
   },
   {
     name: 'max',
     signature: 'max(a, b, ...)',
     category: 'Math',
     description: 'Returns the maximum value from the given arguments.',
-    example: 'max(0, # Subtotal (in MYR) - # Cost(s))',
+    example: 'max(0, # Subtotal - # Cost(s))',
   },
   {
     name: 'add',
     signature: 'add(a, b, ...)',
     category: 'Math',
     description: 'Adds two or more numbers together (or use + operator).',
-    example: 'add(# Subtotal (in MYR), 10)',
+    example: 'add(# Subtotal, 10)',
   },
   {
     name: 'subtract',
     signature: 'subtract(a, b)',
     category: 'Math',
     description: 'Subtracts second number from first (or use - operator).',
-    example: 'subtract(# Subtotal (in MYR), # Cost(s))',
+    example: 'subtract(# Subtotal, # Cost(s))',
   },
   {
     name: 'multiply',
     signature: 'multiply(a, b, ...)',
     category: 'Math',
     description: 'Multiplies two or more numbers (or use * operator).',
-    example: 'multiply(# Quantity, # Subtotal (in MYR))',
+    example: 'multiply(# Quantity, # Subtotal)',
   },
   {
     name: 'divide',
     signature: 'divide(a, b)',
     category: 'Math',
     description: 'Divides first number by second (or use / operator).',
-    example: 'divide(# Subtotal (in MYR), # Quantity)',
+    example: 'divide(# Subtotal, # Quantity)',
   },
   {
     name: 'abs',
     signature: 'abs(value)',
     category: 'Math',
     description: 'Returns the absolute (positive) value of a number.',
-    example: 'abs(# Subtotal (in MYR) - # Cost(s))',
+    example: 'abs(# Subtotal - # Cost(s))',
   },
   {
     name: 'ceil',
     signature: 'ceil(value)',
     category: 'Math',
     description: 'Rounds a number up to the nearest integer.',
-    example: 'ceil(# Subtotal (in MYR))',
+    example: 'ceil(# Subtotal)',
   },
   {
     name: 'floor',
     signature: 'floor(value)',
     category: 'Math',
     description: 'Rounds a number down to the nearest integer.',
-    example: 'floor(# Subtotal (in MYR))',
+    example: 'floor(# Subtotal)',
   },
   {
     name: 'sqrt',
     signature: 'sqrt(value)',
     category: 'Math',
     description: 'Returns the square root of a non-negative number.',
-    example: 'sqrt(# Subtotal (in MYR))',
+    example: 'sqrt(# Subtotal)',
   },
   {
     name: 'pow',
     signature: 'pow(base, exponent)',
     category: 'Math',
     description: 'Returns base raised to power of exponent (also power).',
-    example: 'pow(# Subtotal (in MYR), 2)',
+    example: 'pow(# Subtotal, 2)',
   },
 ];
 
@@ -284,7 +284,7 @@ function tokenizeFormula(formula: string): TokenSegment[] {
 
 const normalizeFormula = (f?: string) => {
   if (!f) return DEFAULT_FORMULA;
-  if (f === 'round( # Subtotal (in MYR) - # Cost(s) , 2)') return DEFAULT_FORMULA;
+  if (f === 'round( # Subtotal - # Cost(s) , 2)') return DEFAULT_FORMULA;
   return f.replace(/round\(\s+#/g, 'round(#');
 };
 
@@ -669,11 +669,11 @@ const FormulaModalContent: FC<Omit<FormulaModalProps, 'isOpen'>> = ({
           e.preventDefault();
         }
       }}
-      className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150 select-none overscroll-none"
+      className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150 select-none overscroll-none"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-xl max-h-[75dvh] sm:max-h-[85vh] bg-white dark:bg-[#1f1f1f] rounded-xl sm:rounded-2xl shadow-2xl border border-neutral-200 dark:border-neutral-700 overflow-hidden flex flex-col select-text overscroll-contain my-auto"
+        className="w-full max-w-xl max-h-[calc(100dvh-1.5rem)] sm:max-h-[85vh] min-h-0 bg-white dark:bg-[#1f1f1f] rounded-xl sm:rounded-2xl shadow-2xl border border-neutral-200 dark:border-neutral-700 overflow-hidden flex flex-col select-text overscroll-contain my-auto"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-4 sm:px-5 py-3 sm:py-3.5 border-b border-neutral-100 dark:border-neutral-800 rounded-t-xl sm:rounded-t-2xl shrink-0">
@@ -835,7 +835,7 @@ const FormulaModalContent: FC<Omit<FormulaModalProps, 'isOpen'>> = ({
           )}
 
         {/* Body Content */}
-        <div className="p-3.5 sm:p-5 space-y-3.5 sm:space-y-4 text-xs overflow-y-auto flex-1 overscroll-contain">
+        <div className="p-3.5 sm:p-5 space-y-3.5 sm:space-y-4 text-xs overflow-y-auto flex-1 min-h-0 overscroll-contain">
           {/* Formula Editor Container with Highlighted Backdrop and Autocomplete */}
           <div className="relative">
             <div
@@ -911,7 +911,7 @@ const FormulaModalContent: FC<Omit<FormulaModalProps, 'isOpen'>> = ({
                   })
                 ) : (
                   <span className="text-neutral-400 font-mono text-xs">
-                    Type formula (e.g. round(# Subtotal (in MYR) - # Cost(s) , 2) or type # for column options)
+                    Type formula (e.g. round(# Subtotal - # Cost(s) , 2) or type # for column options)
                   </span>
                 )}
               </div>
@@ -1016,8 +1016,8 @@ const FormulaModalContent: FC<Omit<FormulaModalProps, 'isOpen'>> = ({
           {/* Preview Row & Evaluated Result (Notion Sample Style) */}
           <div className="space-y-2 pt-0.5">
             {/* Preview With Dropdown Selector */}
-            <div className="flex items-center gap-2">
-              <span className="text-neutral-500 dark:text-neutral-400 text-xs">Preview with</span>
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="shrink-0 whitespace-nowrap text-neutral-500 dark:text-neutral-400 text-xs">Preview with</span>
               <button
                 ref={previewButtonRef}
                 type="button"
@@ -1025,10 +1025,10 @@ const FormulaModalContent: FC<Omit<FormulaModalProps, 'isOpen'>> = ({
                   setIsPreviewPickerOpen(!isPreviewPickerOpen);
                   setPreviewSearchQuery('');
                 }}
-                className="px-2.5 py-1 bg-transparent hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg text-xs font-medium text-neutral-700 dark:text-neutral-300 flex items-center gap-1.5 cursor-pointer max-w-[320px] transition-colors"
+                className="min-w-0 max-w-[320px] flex-1 overflow-hidden rounded-lg bg-transparent px-2.5 py-1 text-xs font-medium text-neutral-700 transition-colors hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800 cursor-pointer flex items-center gap-1.5"
               >
                 <FileText className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
-                <span className="truncate">{previewItem.item || 'Untitled Order'}</span>
+                <span className="min-w-0 truncate">{previewItem.item || 'Untitled Order'}</span>
                 <ChevronDown className="w-3.5 h-3.5 text-neutral-400 shrink-0 ml-0.5" />
               </button>
             </div>
@@ -1101,20 +1101,20 @@ const FormulaModalContent: FC<Omit<FormulaModalProps, 'isOpen'>> = ({
               )}
 
             {/* Evaluated Value & Type Badge */}
-            <div className="flex items-center justify-between pt-1">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold font-mono text-neutral-900 dark:text-neutral-100">
+            <div className="flex min-w-0 items-start justify-between gap-2 pt-1">
+              <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+                <span className="min-w-0 break-words text-sm font-semibold font-mono text-neutral-900 dark:text-neutral-100">
                   {evaluationDetails.formattedResult}
                 </span>
                 {!evaluationDetails.isValid && (
-                  <span className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400 font-sans">
+                  <span className="flex min-w-0 items-center gap-1 text-xs text-amber-600 dark:text-amber-400 font-sans">
                     <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                    <span>{evaluationDetails.error || 'Syntax warning'}</span>
+                    <span className="break-words">{evaluationDetails.error || 'Syntax warning'}</span>
                   </span>
                 )}
               </div>
 
-              <span className="px-2 py-0.5 bg-neutral-100 dark:bg-neutral-800 rounded-md text-[11px] font-mono text-neutral-500 dark:text-neutral-400">
+              <span className="shrink-0 whitespace-nowrap px-2 py-0.5 bg-neutral-100 dark:bg-neutral-800 rounded-md text-[11px] font-mono text-neutral-500 dark:text-neutral-400">
                 Type: {evaluationDetails.type}
               </span>
             </div>
@@ -1122,16 +1122,16 @@ const FormulaModalContent: FC<Omit<FormulaModalProps, 'isOpen'>> = ({
         </div>
 
         {/* Footer Actions */}
-        <div className="flex items-center justify-between px-5 py-3 border-t border-neutral-100 dark:border-neutral-800 bg-neutral-50/40 dark:bg-neutral-900/40 rounded-b-2xl">
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-x-2 gap-y-1.5 px-3 sm:px-5 py-3 border-t border-neutral-100 dark:border-neutral-800 bg-neutral-50/40 dark:bg-neutral-900/40 rounded-b-2xl">
           <button
             type="button"
             onClick={() => setFormula(DEFAULT_FORMULA)}
-            className="text-[11px] font-medium text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200 px-2 py-1 rounded-lg hover:bg-neutral-200/60 dark:hover:bg-neutral-800 transition-colors cursor-pointer inline-flex items-center gap-1"
+            className="shrink-0 text-[11px] font-medium text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200 px-2 py-1 rounded-lg hover:bg-neutral-200/60 dark:hover:bg-neutral-800 transition-colors cursor-pointer inline-flex items-center gap-1"
           >
             <RotateCcw className="w-3 h-3" />
             <span>Reset to Default</span>
           </button>
-          <div className="flex items-center gap-2">
+          <div className="ml-auto flex shrink-0 items-center gap-2">
             <button
               type="button"
               onClick={onClose}
@@ -1162,14 +1162,15 @@ export const FormulaModal: FC<FormulaModalProps> = ({
 }) => {
   useBodyScrollLock(isOpen);
 
-  if (!isOpen) return null;
+  if (!isOpen || typeof document === 'undefined') return null;
 
-  return (
+  return createPortal(
     <FormulaModalContent
       onClose={onClose}
       sales={sales}
       currentFormula={currentFormula}
       onSaveFormula={onSaveFormula}
-    />
+    />,
+    document.body
   );
 };

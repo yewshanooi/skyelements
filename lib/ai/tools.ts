@@ -227,8 +227,8 @@ export const AI_TOOLS = [
       properties: {
         item: { type: 'STRING', description: 'Name of the item sold.' },
         quantity: { type: 'NUMBER', description: 'Quantity sold (default 1).' },
-        subtotal: { type: 'NUMBER', description: 'Total selling price in MYR.' },
-        cost: { type: 'NUMBER', description: 'Total item cost in MYR (default 0).' },
+        subtotal: { type: 'NUMBER', description: 'Total selling price.' },
+        cost: { type: 'NUMBER', description: 'Total item cost (default 0).' },
         customer: { type: 'STRING', description: 'Customer name.' },
         marketplace: { type: 'STRING', description: `Store. ${USER_OPTION_NOTE} Omit if not specified.` },
         category: { type: 'STRING', description: `Category. ${USER_OPTION_NOTE} Omit if not specified.` },

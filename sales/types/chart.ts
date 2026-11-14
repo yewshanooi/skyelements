@@ -298,19 +298,35 @@ export const KPI_CONFIG_MAP = new Map<KpiCardId, KpiCardDefinition>(
   ALL_KPI_DEFINITIONS.map((c) => [c.id, c])
 );
 
-const DEFAULT_KPI_ORDER: KpiCardId[] = [
+/** Stable gallery order: totals and volume metrics first, then rates and averages. */
+export const KPI_GALLERY_ORDER: KpiCardId[] = [
   'net_profit',
   'gross_revenue',
-  'profit_margin',
-  'items_sold',
-  'avg_order_value',
-  'unique_buyers',
   'total_cost',
-  'roi',
   'total_orders',
+  'items_sold',
+  'unique_buyers',
+  'profit_margin',
+  'roi',
+  'avg_order_value',
   'avg_price_per_item',
   'avg_profit_per_order',
   'items_per_order',
+];
+
+const DEFAULT_KPI_ORDER: KpiCardId[] = [
+  'net_profit',
+  'total_cost',
+  'profit_margin',
+  'items_sold',
+  'total_orders',
+  'unique_buyers',
+  'avg_order_value',
+  'items_per_order',
+  'gross_revenue',
+  'roi',
+  'avg_price_per_item',
+  'avg_profit_per_order',
 ];
 
 export const DEFAULT_KPI_SIZES: Record<string, KpiCardSize> = Object.fromEntries(
@@ -318,10 +334,10 @@ export const DEFAULT_KPI_SIZES: Record<string, KpiCardSize> = Object.fromEntries
 );
 
 const DEFAULT_KPI_HIDDEN: Record<string, boolean> = {
+  gross_revenue: true,
   roi: true,
   avg_price_per_item: true,
   avg_profit_per_order: true,
-  items_per_order: true,
 };
 
 export interface OverviewKpiLayoutState {

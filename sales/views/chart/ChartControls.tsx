@@ -161,6 +161,9 @@ export const ChartModal: FC<ChartModalProps> = ({
   const isPaymentWidget = widget.id === 'payment_methods';
   const isKpiWidget = widget.id === 'kpi_metrics';
   const isListWidget = isCompactListWidget || isPaymentWidget;
+  const contentPaddingClass = isKpiWidget
+    ? 'px-3.5 sm:px-6 py-0'
+    : `p-3.5 ${isListWidget ? 'sm:p-5' : 'sm:p-6'}`;
 
   return (
     <div
@@ -215,7 +218,7 @@ export const ChartModal: FC<ChartModalProps> = ({
           </div>
         </div>
 
-        <div className={`p-3.5 ${isListWidget ? 'sm:p-5' : 'sm:p-6'} overflow-y-auto overscroll-contain flex-1 min-h-0 flex flex-col scrollbar-thin`}>
+        <div className={`${contentPaddingClass} overflow-y-auto overscroll-contain flex-1 min-h-0 flex flex-col scrollbar-thin`}>
           {children}
         </div>
       </div>

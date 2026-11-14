@@ -133,7 +133,7 @@ export const TableInvoiceDialog: FC<TableInvoiceDialogProps> = ({
               boxSizing: 'border-box',
               zIndex: 99999,
             }}
-            className="min-w-0 pointer-events-auto overflow-hidden p-3 bg-white dark:bg-[#202020] border border-neutral-200 dark:border-neutral-700 rounded-xl shadow-xl space-y-2 animate-in fade-in-50 zoom-in-95 duration-100 text-xs"
+            className="min-w-0 pointer-events-auto overflow-hidden p-3 bg-white dark:bg-[#202020] border border-neutral-200 dark:border-neutral-700 rounded-xl shadow-xl space-y-2 animate-in fade-in-50 zoom-in-95 duration-100 text-xs select-none"
           >
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-semibold text-neutral-900 dark:text-neutral-100">Invoice</h3>
@@ -156,7 +156,7 @@ export const TableInvoiceDialog: FC<TableInvoiceDialogProps> = ({
                     onViewInvoice();
                   }}
                   disabled={!sale.invoice_url}
-                  className="flex items-center gap-2 min-w-0 flex-1 text-left text-neutral-600 dark:text-neutral-400 hover:text-blue-600 dark:hover:text-blue-400 disabled:cursor-default disabled:hover:text-neutral-600 dark:disabled:hover:text-neutral-400 cursor-pointer"
+                  className="flex items-center gap-2 min-w-0 flex-1 text-left text-neutral-600 dark:text-neutral-400 hover:text-blue-600 dark:hover:text-blue-400 disabled:cursor-default disabled:hover:text-neutral-600 dark:disabled:hover:text-neutral-400 cursor-pointer select-none"
                   title={sale.invoice_url ? 'View invoice' : undefined}
                 >
                   <FileText className="w-3.5 h-3.5 shrink-0 text-neutral-400" />

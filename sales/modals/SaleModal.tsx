@@ -440,7 +440,7 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
                     setIsLocationPickerOpen(false);
                     setIsDatePickerOpen(!isDatePickerOpen);
                   }}
-                  className={`${MODAL_ACTION_CONTROL_CLASS} cursor-pointer`}
+                  className={`${MODAL_ACTION_CONTROL_CLASS} cursor-pointer select-none`}
                 >
                   <Calendar className={MODAL_ACTION_ICON_CLASS} />
                   <span className={formData.date ? 'truncate' : 'truncate text-neutral-400 dark:text-neutral-500'}>
@@ -475,9 +475,9 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
                 ) : formData.invoice_name || formData.invoice_url ? (
                   <button
                     type="button"
-                    onClick={() => setIsInvoiceDialogOpen(true)}
+                    onClick={() => setIsInvoiceDialogOpen((isOpen) => !isOpen)}
                     aria-label={`Manage invoice ${formData.invoice_name || 'receipt.pdf'}`}
-                    className={`${MODAL_ACTION_CONTROL_CLASS} cursor-pointer`}
+                    className={`${MODAL_ACTION_CONTROL_CLASS} cursor-pointer select-none`}
                   >
                     <FileText className={MODAL_ACTION_ICON_CLASS} />
                     <span className="truncate" title={formData.invoice_name || undefined}>
@@ -487,8 +487,8 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
                 ) : (
                   <button
                     type="button"
-                    onClick={() => setIsInvoiceDialogOpen(true)}
-                    className={`${MODAL_ACTION_CONTROL_CLASS} cursor-pointer`}
+                    onClick={() => setIsInvoiceDialogOpen((isOpen) => !isOpen)}
+                    className={`${MODAL_ACTION_CONTROL_CLASS} cursor-pointer select-none`}
                   >
                     <Upload className={MODAL_ACTION_ICON_CLASS} />
                     <span className="text-neutral-400 dark:text-neutral-500">Upload invoice</span>
@@ -522,7 +522,7 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
                     setIsDatePickerOpen(false);
                     setIsLocationPickerOpen(!isLocationPickerOpen);
                   }}
-                  className={`${MODAL_ACTION_CONTROL_CLASS} cursor-pointer`}
+                  className={`${MODAL_ACTION_CONTROL_CLASS} cursor-pointer select-none`}
                 >
                   <MapPin className={`${MODAL_ACTION_ICON_CLASS} ${formData.location ? 'text-red-500' : ''}`} />
                   <span
@@ -748,11 +748,11 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
               </div>
             </div>
 
-            {/* 12. Sales (in MYR) - Formula Driven without comment */}
+            {/* 12. Sales - Formula Driven without comment */}
             <div className="flex items-center min-h-[34px] py-0.5 relative">
               <div className="w-28 sm:w-44 shrink-0 flex items-center gap-2 text-neutral-500 dark:text-neutral-400 font-medium">
                 <Coins className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
-                <span>Sales (in MYR)</span>
+                <span>Sales</span>
               </div>
               <div
                 onClick={() => setIsFormulaModalOpen(true)}
@@ -763,11 +763,11 @@ const SaleModalContent: FC<Omit<SaleModalProps, 'isOpen'>> = ({
               </div>
             </div>
 
-            {/* 13. Subtotal (in MYR) */}
+            {/* 13. Subtotal */}
             <div className="flex items-center min-h-[34px] py-0.5 relative">
               <div className="w-28 sm:w-44 shrink-0 flex items-center gap-2 text-neutral-500 dark:text-neutral-400 font-medium">
                 <DollarSign className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
-                <span>Subtotal (in MYR)</span>
+                <span>Subtotal</span>
               </div>
               <div className="flex-1 min-w-0">
                 <input

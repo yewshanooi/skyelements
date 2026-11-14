@@ -14,14 +14,14 @@ export interface FormulaColumnDef {
 export const FORMULA_COLUMNS: FormulaColumnDef[] = [
   {
     id: 'subtotal',
-    name: 'Subtotal (in MYR)',
-    token: '# Subtotal (in MYR)',
+    name: 'Subtotal',
+    token: '# Subtotal',
     aliases: [
-      '# Subtotal (in MYR)',
-      '#Subtotal (in MYR)',
       '# Subtotal',
       '#Subtotal',
-      'Subtotal (in MYR)',
+      '# Subtotal',
+      '#Subtotal',
+      'Subtotal',
       'Subtotal',
       'subtotal',
     ],
@@ -60,14 +60,14 @@ export const FORMULA_COLUMNS: FormulaColumnDef[] = [
   },
   {
     id: 'sales',
-    name: 'Sales (in MYR)',
-    token: '# Sales (in MYR)',
+    name: 'Sales',
+    token: '# Sales',
     aliases: [
-      '# Sales (in MYR)',
-      '#Sales (in MYR)',
       '# Sales',
       '#Sales',
-      'Sales (in MYR)',
+      '# Sales',
+      '#Sales',
+      'Sales',
       'Sales',
       'sales',
     ],
@@ -163,13 +163,13 @@ export const FORMULA_COLUMNS: FormulaColumnDef[] = [
   },
 ];
 
-export const DEFAULT_FORMULA = 'round(# Subtotal (in MYR) - # Cost(s) , 2)';
+export const DEFAULT_FORMULA = 'round(# Subtotal - # Cost(s) , 2)';
 
 /**
  * Normalizes a saved formula string (legacy spacing fixes, empty -> default).
  */
 export function normalizeFormula(saved?: string | null): string {
-  if (!saved || saved === 'round( # Subtotal (in MYR) - # Cost(s) , 2)') return DEFAULT_FORMULA;
+  if (!saved || saved === 'round( # Subtotal - # Cost(s) , 2)') return DEFAULT_FORMULA;
   return saved.replace(/round\(\s+#/g, 'round(#');
 }
 

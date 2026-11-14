@@ -10,7 +10,7 @@ import {
   LayoutGrid,
 } from 'lucide-react';
 import {
-  ALL_KPI_DEFINITIONS,
+  KPI_GALLERY_ORDER,
   KPI_CONFIG_MAP,
   DEFAULT_KPI_SIZES,
   getCardColSpan,
@@ -115,7 +115,7 @@ const MiniKpiCard: FC<MiniCardProps> = ({
         <div
           draggable={!isResizing}
           onDragStart={onDragStart}
-          className="absolute right-1.5 top-1.5 p-1 rounded-md text-neutral-400 dark:text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-200/60 dark:hover:bg-neutral-700/60 cursor-grab active:cursor-grabbing shrink-0 transition-colors opacity-60 hover:opacity-100 group-hover:opacity-90 z-20 touch-none select-none"
+          className="hidden sm:flex absolute right-1.5 top-1.5 p-1 rounded-md text-neutral-400 dark:text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-200/60 dark:hover:bg-neutral-700/60 cursor-grab active:cursor-grabbing shrink-0 transition-colors opacity-60 hover:opacity-100 group-hover:opacity-90 z-20 touch-none select-none"
           title="Drag :: to rearrange"
         >
           <GripVertical className="w-3.5 h-3.5" />
@@ -224,7 +224,7 @@ const GalleryControlItem: FC<GalleryCardProps> = ({
           ? 'bg-neutral-100/50 dark:bg-[#1f1f1f] border-neutral-200/50 dark:border-neutral-800 opacity-40 cursor-not-allowed'
           : 'bg-white dark:bg-[#282828] border-neutral-200/90 dark:border-neutral-700/70 hover:border-blue-500/60 dark:hover:border-blue-500/60 shadow-2xs hover:shadow-md cursor-pointer active:scale-95'
       } flex items-center justify-between gap-2.5`}
-      title={disabled ? 'Cannot add: Maximum of 3 rows reached' : 'Drag down to canvas or tap + to add'}
+      title={disabled ? 'Cannot add: Maximum of 3 rows reached' : 'Drag down or tap + to add'}
     >
       <div className="flex items-center gap-2.5 min-w-0 flex-1">
         <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${config.iconBg} ${disabled ? '' : 'group-hover:scale-105'} transition-transform`}>
@@ -289,7 +289,7 @@ export const OverviewControlCenter: FC<OverviewControlCenterProps> = ({
   );
 
   const inactiveCardIds = useMemo(
-    () => ALL_KPI_DEFINITIONS.map((c) => c.id).filter((id) => layout.hidden[id]),
+    () => KPI_GALLERY_ORDER.filter((id) => layout.hidden[id]),
     [layout.hidden]
   );
 
@@ -307,15 +307,14 @@ export const OverviewControlCenter: FC<OverviewControlCenterProps> = ({
   const handleAddCard = useCallback((id: KpiCardId, targetIndex?: number) => {
     onChangeLayout((prev) => {
       const newHidden = { ...prev.hidden, [id]: false };
-      let newOrder = [...prev.order];
-
-      if (!newOrder.includes(id)) {
-        newOrder.push(id);
-      }
+      // A newly selected metric always joins at the end of the active grid.
+      // Only an explicit drag drop is allowed to choose another position.
+      const newOrder = prev.order.filter((cardId) => cardId !== id);
 
       if (targetIndex !== undefined && targetIndex >= 0) {
-        newOrder = newOrder.filter((cardId) => cardId !== id);
-        newOrder.splice(targetIndex, 0, id);
+        newOrder.splice(Math.min(targetIndex, newOrder.length), 0, id);
+      } else {
+        newOrder.push(id);
       }
 
       const cardDef = KPI_CONFIG_MAP.get(id);
@@ -531,10 +530,13 @@ export const OverviewControlCenter: FC<OverviewControlCenterProps> = ({
     return 'grid-cols-2 gap-2';
   }, [isModal, currentWidth]);
 
-  const scrollContainerClass = 'flex-1 min-h-0';
+  // Keep the modal's final row inside its scroll area so mobile has visible bottom spacing.
+  const scrollContainerClass = isModal && !isEditMode
+    ? 'flex-1 min-h-0 overflow-y-auto scrollbar-thin'
+    : 'flex-1 min-h-0';
 
   return (
-    <div className={`space-y-4 flex-1 min-h-0 flex flex-col ${isEditMode ? 'h-full' : ''}`}>
+    <div className={`space-y-4 flex-1 min-h-0 flex flex-col ${isEditMode ? 'h-full pt-4' : ''}`}>
       {/* TOP ZONE: Controls Gallery (Shown in Customize / Edit Mode) */}
       {isEditMode && (
         <div
@@ -623,6 +625,7 @@ export const OverviewControlCenter: FC<OverviewControlCenterProps> = ({
           </div>
         ) : (
           <div className={scrollContainerClass}>
+            {isModal && !isEditMode && <div className="h-4 shrink-0" aria-hidden="true" />}
             <div
               ref={gridContainerRef}
               className={`grid ${gridColsClass} ${isEditMode ? 'p-3 rounded-3xl bg-neutral-50/40 dark:bg-[#181818]/40 border border-blue-500/20' : ''}`}
@@ -676,7 +679,8 @@ export const OverviewControlCenter: FC<OverviewControlCenterProps> = ({
                 );
               })}
             </div>
-            {isEditMode && <div className="h-6 shrink-0" aria-hidden="true" />}
+            {isModal && !isEditMode && <div className="h-4 shrink-0" aria-hidden="true" />}
+            {isEditMode && <div className="h-4 shrink-0" aria-hidden="true" />}
           </div>
         )}
       </div>

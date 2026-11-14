@@ -44,7 +44,7 @@ interface NotionFilterBarProps {
 }
 
 const SORT_FIELD_OPTIONS: { id: SortField; label: string }[] = [
-  { id: 'sales', label: 'Sales (in MYR)' },
+  { id: 'sales', label: 'Sales' },
   { id: 'date', label: 'Date' },
   { id: 'item', label: 'Order' },
   { id: 'quantity', label: 'Quantity' },
