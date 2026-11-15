@@ -701,7 +701,7 @@ export const MapView: FC<MapViewProps> = ({
           className="absolute top-2 left-2 sm:top-3 sm:left-3 z-30 pointer-events-auto transition-[top] duration-300 ease-out"
         >
           <div
-            className={`relative ${MAP_CONTROL_SIZE_CLASS} ${isMapSearchOpen ? 'w-[min(280px,calc(100vw-24px))] sm:w-[280px]' : 'w-[26px] sm:w-[30px]'} ${MAP_CONTROL_CLASS} transition-[width] duration-300 ease-out overflow-visible`}
+            className={`relative ${MAP_CONTROL_SIZE_CLASS} ${isMapSearchOpen ? 'w-[min(240px,calc(100vw-24px))] sm:w-[280px]' : 'w-[26px] sm:w-[30px]'} ${MAP_CONTROL_CLASS} transition-[width] duration-300 ease-out overflow-visible`}
           >
             <button
               type="button"
@@ -718,9 +718,9 @@ export const MapView: FC<MapViewProps> = ({
               aria-label={isMapSearchOpen ? 'Close search' : 'Search location'}
             >
               {isMapSearchPending || isMapSearchLoading ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-500" />
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-neutral-700 dark:text-neutral-300" />
               ) : (
-                <Search className="w-3.5 h-3.5" />
+                <Search className="w-3.5 h-3.5 text-neutral-700 dark:text-neutral-300" />
               )}
             </button>
 
@@ -798,7 +798,7 @@ export const MapView: FC<MapViewProps> = ({
         </div>
 
         {/* Top Floating Action Bar */}
-        <div className={`${isMapSearchOpen ? 'hidden sm:flex' : 'flex'} absolute top-2 sm:top-3 right-12 sm:right-16 z-20 items-center gap-1.5 sm:gap-2 pointer-events-none max-w-[calc(100%-60px)]`}>
+        <div className={`flex absolute top-2 sm:top-3 right-12 sm:right-16 z-20 items-center gap-1.5 sm:gap-2 pointer-events-none max-w-[calc(100%-60px)] transition-[opacity,visibility] duration-500 ease-in-out ${isMapSearchOpen ? 'opacity-0 invisible sm:opacity-100 sm:visible' : 'opacity-100 visible'}`}>
           {/* Notion "No location (X)" Counter Pill */}
           <button
             onClick={() => setShowNoPlaceDrawer(true)}
