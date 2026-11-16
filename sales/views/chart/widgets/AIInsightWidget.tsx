@@ -126,11 +126,14 @@ export const AIInsightWidget = ({ insight, error, isLoading, isCheckingDailyInsi
       <div className="prose prose-sm dark:prose-invert max-w-none text-neutral-700 dark:text-neutral-200 [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5">
         <ReactMarkdown remarkPlugins={[remarkGfm]}>{insight}</ReactMarkdown>
       </div>
-    ) : isCheckingDailyInsight ? null : (
-      <p role={isLoading ? 'status' : undefined} className="text-sm leading-6 text-neutral-500 dark:text-neutral-400">
-        {isLoading
-          ? 'Generating a summary of the current sales…'
-          : 'Select Refresh in the header to generate an insight.'}
+    ) : isCheckingDailyInsight || isLoading ? (
+      <p role="status" className="flex items-center gap-2 text-sm leading-6 text-neutral-500 dark:text-neutral-400">
+        <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+        Loading sales insight…
+      </p>
+    ) : (
+      <p className="text-sm leading-6 text-neutral-500 dark:text-neutral-400">
+        Refresh the card to generate an insight.
       </p>
     )}
   </div>

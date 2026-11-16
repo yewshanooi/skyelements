@@ -480,13 +480,15 @@ export const ChartView: FC<ChartViewProps> = ({
     })),
   }), [categoryMatrixData, kpiStats, storeComparisonData, trendData]);
 
+  // Load the daily insight with the rest of the chart data, even when the card
+  // is hidden by a saved layout. This keeps it ready whenever the card is shown.
   const {
     insight: aiInsight,
     error: aiInsightError,
     isLoading: isGeneratingAiInsight,
     isCheckingDailyInsight,
     handleGenerateInsight,
-  } = useAIInsight(aiInsightData, !layout.hidden.ai_insights, initialSalesInsight);
+  } = useAIInsight(aiInsightData, true, initialSalesInsight);
 
   const handleResetFilters = () => {
     onFiltersChange(DEFAULT_EMPTY_FILTERS);

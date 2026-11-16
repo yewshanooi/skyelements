@@ -54,7 +54,9 @@ interface MarkerEntry {
 }
 
 const BATCH_CONCURRENCY = 3;
-const MAP_CONTROL_CLASS = 'bg-white/95 dark:bg-[#202020]/95 backdrop-blur-xs rounded-lg shadow-md border border-neutral-200 dark:border-neutral-700';
+// Keep every map control opaque so the map imagery beneath each control cannot change
+// its perceived color. This is especially noticeable for the search control over green tiles.
+const MAP_CONTROL_CLASS = 'bg-white dark:bg-[#202020] backdrop-blur-xs rounded-lg shadow-md border border-neutral-200 dark:border-neutral-700';
 const MAP_CONTROL_SIZE_CLASS = 'h-[26px] sm:h-[30px]';
 
 interface ScrollSnapshot {

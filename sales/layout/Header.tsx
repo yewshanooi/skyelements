@@ -14,7 +14,6 @@ import {
   Search,
   X,
   Trash2,
-  MoreVertical,
 } from 'lucide-react';
 import type { ViewMode } from '@/sales/types';
 
@@ -46,6 +45,11 @@ const VIEWS: ViewTabConfig[] = [
   { id: 'timeline', label: 'Timeline', Icon: Calendar },
   { id: 'map', label: 'Map', Icon: MapPin },
 ];
+
+// Use one surface definition for the mobile navigation capsule and its More button.
+// Keeping the surface opaque prevents the page behind each floating element from
+// making the two controls appear to have different colors.
+const MOBILE_FLOATING_SURFACE_CLASS = 'bg-white dark:bg-[#1c1c1e] backdrop-blur-xl border border-neutral-200/90 dark:border-neutral-800/90 shadow-[0_8px_32px_rgba(0,0,0,0.14)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.5)]';
 
 /* =========================================================================
    MOBILE FLOATING NAVIGATION + EXPANDING SEARCH
@@ -116,7 +120,7 @@ const MobileFloatingNav: FC<MobileFloatingNavProps> = ({
         <div className="relative flex items-center gap-2 max-w-full pointer-events-none">
           {/* Base: Navigation Capsule Pill */}
           <nav
-            className="pointer-events-auto h-12 flex items-center gap-0.5 p-1 bg-white dark:bg-[#1c1c1e] backdrop-blur-xl border border-neutral-200/90 dark:border-neutral-800/90 rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.14)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
+            className={`pointer-events-auto h-12 flex items-center gap-0.5 p-1 ${MOBILE_FLOATING_SURFACE_CLASS} rounded-full`}
             aria-label="Sales View Navigation"
           >
             {VIEWS.map((v) => {
@@ -147,7 +151,7 @@ const MobileFloatingNav: FC<MobileFloatingNavProps> = ({
             <button
               type="button"
               onClick={() => setIsMoreMenuOpen((prev) => !prev)}
-              className={`w-12 h-12 rounded-full bg-white dark:bg-[#1c1c1e] backdrop-blur-xl border border-neutral-200/90 dark:border-neutral-800/90 shadow-[0_8px_32px_rgba(0,0,0,0.14)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.5)] flex items-center justify-center cursor-pointer transition-all duration-150 active:scale-90 touch-manipulation relative ${isMoreMenuOpen
+              className={`w-12 h-12 rounded-full ${MOBILE_FLOATING_SURFACE_CLASS} flex items-center justify-center cursor-pointer transition-all duration-150 active:scale-90 touch-manipulation relative ${isMoreMenuOpen
                 ? 'bg-neutral-200/90 dark:bg-neutral-700/80 text-neutral-900 dark:text-white'
                 : 'hover:bg-white dark:hover:bg-[#1c1c1e] text-neutral-700 dark:text-neutral-300'
                 }`}
@@ -155,7 +159,7 @@ const MobileFloatingNav: FC<MobileFloatingNavProps> = ({
               title="More Options"
               aria-expanded={isMoreMenuOpen}
             >
-              <MoreVertical className="w-5 h-5" />
+              <Plus className="w-5 h-5" />
 
               {/* Status Badges: Selected Orders count or Search active indicator */}
               {selectedIdsCount > 0 ? (
