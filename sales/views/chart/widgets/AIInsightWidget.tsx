@@ -129,7 +129,7 @@ export const AIInsightWidget = ({ insight, error, isLoading, isCheckingDailyInsi
     ) : isCheckingDailyInsight || isLoading ? (
       <p role="status" className="flex items-center gap-2 text-sm leading-6 text-neutral-500 dark:text-neutral-400">
         <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
-        Loading sales insight…
+        Loading your sales insights…
       </p>
     ) : (
       <p className="text-sm leading-6 text-neutral-500 dark:text-neutral-400">
