@@ -147,7 +147,11 @@ export default function ImageComponent({
   )
 
   const $onEnter = useCallback(
-    (event: KeyboardEvent) => {
+    (event: KeyboardEvent | null) => {
+      if (event === null) {
+        return false
+      }
+
       const latestSelection = $getSelection()
       if (
         isSelected &&

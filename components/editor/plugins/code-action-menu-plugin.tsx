@@ -8,12 +8,11 @@
  *
  */
 import { JSX, useEffect, useRef, useState } from "react"
+import { $isCodeNode, CodeNode } from "@lexical/code"
 import {
-  $isCodeNode,
-  CodeNode,
   getLanguageFriendlyName,
-  normalizeCodeLang,
-} from "@lexical/code"
+  normalizeCodeLanguage,
+} from "@lexical/code-prism"
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext"
 import { $getNearestNodeFromDOMNode, isHTMLElement } from "lexical"
 import { createPortal } from "react-dom"
@@ -132,7 +131,7 @@ function CodeActionMenuContainer({
     )
   }, [editor])
 
-  const normalizedLang = normalizeCodeLang(lang)
+  const normalizedLang = normalizeCodeLanguage(lang)
   const codeFriendlyName = getLanguageFriendlyName(lang)
 
   return (

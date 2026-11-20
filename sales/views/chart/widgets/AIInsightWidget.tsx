@@ -133,7 +133,7 @@ export const AIInsightWidget = ({ insight, error, isLoading, isCheckingDailyInsi
       </p>
     ) : (
       <p className="text-sm leading-6 text-neutral-500 dark:text-neutral-400">
-        Refresh the card to generate an insight.
+        Refresh the card to generate insights.
       </p>
     )}
   </div>
