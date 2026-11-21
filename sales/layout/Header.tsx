@@ -358,7 +358,7 @@ const MobileFloatingNav: FC<MobileFloatingNavProps> = ({
           >
             <div
               aria-hidden="true"
-              className={`pointer-events-none absolute left-0 top-0 z-0 will-change-transform rounded-full bg-neutral-200/90 dark:bg-neutral-700/80 shadow-2xs scale-100 ${isDragging ? 'transition-none' : 'transition-[transform,width] duration-150 ease-out'}`}
+              className={`pointer-events-none absolute left-0 top-0 z-0 will-change-transform rounded-full bg-[#e8e8e8] dark:bg-[#393939] shadow-2xs scale-100 ${isDragging ? 'transition-none' : 'transition-[transform,width] duration-150 ease-out'}`}
               ref={indicatorRef}
             />
             {VIEWS.map((v) => {
