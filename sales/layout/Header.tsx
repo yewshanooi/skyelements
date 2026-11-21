@@ -46,6 +46,12 @@ const VIEWS: ViewTabConfig[] = [
   { id: 'map', label: 'Map', Icon: MapPin },
 ];
 
+const clamp = (value: number, min: number, max: number) =>
+  Math.max(min, Math.min(max, value));
+
+const isViewMode = (value: string | undefined): value is ViewMode =>
+  VIEWS.some(({ id }) => id === value);
+
 type ViewMetric = { left: number; width: number; height: number; top: number };
 
 interface DragMetrics {
@@ -63,6 +69,15 @@ interface DragState {
   view: ViewMode;
   hasMoved: boolean;
 }
+
+const getIndicatorLeft = (
+  previewX: number,
+  indicatorWidth: number,
+  metrics: DragMetrics
+) => clamp(previewX - indicatorWidth / 2, 0, metrics.navWidth - indicatorWidth);
+
+const getPreviewX = (clientX: number, metrics: DragMetrics) =>
+  clamp(clientX - metrics.navLeft, 0, metrics.navWidth);
 
 /* =========================================================================
    MOBILE FLOATING NAVIGATION + EXPANDING SEARCH
@@ -112,22 +127,18 @@ const MobileFloatingNav: FC<MobileFloatingNavProps> = ({
   const indicatorInitializedRef = useRef(false);
   const viewButtonRefs = useRef<Partial<Record<ViewMode, HTMLButtonElement | null>>>({});
   const dragMetricsRef = useRef<DragMetrics | null>(null);
-  const getIndicatorLeft = (
-    previewX: number,
-    indicatorWidth: number,
-    metrics: DragMetrics
-  ) => {
-    const minLeft = 0;
-    const maxLeft = metrics.navWidth - indicatorWidth;
-    const upperBound = Math.max(minLeft, maxLeft);
+  const setIndicatorGeometry = (width: number, height: number, left: number, top: number) => {
+    const indicator = indicatorRef.current;
+    if (!indicator) return;
 
-    return Math.max(minLeft, Math.min(upperBound, previewX - indicatorWidth / 2));
+    indicator.style.width = `${width}px`;
+    indicator.style.height = `${height}px`;
+    indicator.style.transform = `translate3d(${left}px, ${top}px, 0)`;
   };
 
   const updateIndicatorGeometry = (view: ViewMode, previewX: number | null) => {
-    const indicator = indicatorRef.current;
     const button = viewButtonRefs.current[view];
-    if (!indicator || !button) return;
+    if (!button) return;
 
     const width = button.offsetWidth;
     const metrics = dragMetricsRef.current;
@@ -135,9 +146,7 @@ const MobileFloatingNav: FC<MobileFloatingNavProps> = ({
       ? getIndicatorLeft(previewX, width, metrics)
       : button.offsetLeft;
 
-    indicator.style.width = `${width}px`;
-    indicator.style.height = `${button.offsetHeight}px`;
-    indicator.style.transform = `translate3d(${left}px, ${button.offsetTop}px, 0)`;
+    setIndicatorGeometry(width, button.offsetHeight, left, button.offsetTop);
   };
 
   useLayoutEffect(() => {
@@ -181,19 +190,14 @@ const MobileFloatingNav: FC<MobileFloatingNavProps> = ({
 
   const applyDragPreviewFrame = () => {
     dragFrameRef.current = null;
-    const indicator = indicatorRef.current;
     const metrics = dragMetricsRef.current;
     const dragState = dragStateRef.current;
-    if (!indicator || !metrics || !dragState || !dragState.hasMoved) return;
-
-    const metric = metrics.views[dragState.view];
     const previewX = dragPreviewXRef.current;
-    if (!metric || previewX === null) return;
+    const metric = dragState && metrics?.views[dragState.view];
+    if (!metrics || !metric || !dragState?.hasMoved || previewX === null) return;
 
     const left = getIndicatorLeft(previewX, metric.width, metrics);
-    indicator.style.width = `${metric.width}px`;
-    indicator.style.height = `${metric.height}px`;
-    indicator.style.transform = `translate3d(${left}px, ${metric.top}px, 0)`;
+    setIndicatorGeometry(metric.width, metric.height, left, metric.top);
   };
 
   const scheduleDragPreviewFrame = () => {
@@ -205,7 +209,7 @@ const MobileFloatingNav: FC<MobileFloatingNavProps> = ({
     const metrics = dragMetricsRef.current;
     if (!metrics) return;
 
-    dragPreviewXRef.current = Math.max(0, Math.min(metrics.navWidth, clientX - metrics.navLeft));
+    dragPreviewXRef.current = getPreviewX(clientX, metrics);
     scheduleDragPreviewFrame();
   };
 
@@ -217,7 +221,7 @@ const MobileFloatingNav: FC<MobileFloatingNavProps> = ({
 
     const tab = (event.target as Element).closest<HTMLElement>('[data-view]');
     const view = tab?.dataset.view;
-    if (!tab || !VIEWS.some((item) => item.id === view)) return;
+    if (!tab || !isViewMode(view)) return;
 
     const nav = mobileNavRef.current;
     if (!nav) return;
@@ -245,7 +249,7 @@ const MobileFloatingNav: FC<MobileFloatingNavProps> = ({
       pointerId: event.pointerId,
       startX: event.clientX,
       startY: event.clientY,
-      view: view as ViewMode,
+      view,
       hasMoved: false,
     };
     event.currentTarget.setPointerCapture(event.pointerId);
@@ -280,13 +284,7 @@ const MobileFloatingNav: FC<MobileFloatingNavProps> = ({
     const wasDragging = dragState.hasMoved;
     const selectedView = cancelled ? activeView : dragState.view;
     if (wasDragging && dragMetricsRef.current) {
-      dragPreviewXRef.current = Math.max(
-        0,
-        Math.min(
-          dragMetricsRef.current.navWidth,
-          event.clientX - dragMetricsRef.current.navLeft
-        )
-      );
+      dragPreviewXRef.current = getPreviewX(event.clientX, dragMetricsRef.current);
       if (dragFrameRef.current !== null) {
         window.cancelAnimationFrame(dragFrameRef.current);
         dragFrameRef.current = null;
@@ -295,7 +293,7 @@ const MobileFloatingNav: FC<MobileFloatingNavProps> = ({
       updateIndicatorGeometry(selectedView, null);
     }
 
-    if (!cancelled) {
+    if (wasDragging && !cancelled) {
       committedViewRef.current = selectedView;
       suppressClickRef.current = true;
       window.setTimeout(() => {
@@ -358,7 +356,7 @@ const MobileFloatingNav: FC<MobileFloatingNavProps> = ({
           >
             <div
               aria-hidden="true"
-              className={`pointer-events-none absolute left-0 top-0 z-0 will-change-transform rounded-full bg-[#e8e8e8] dark:bg-[#393939] shadow-2xs scale-100 ${isDragging ? 'transition-none' : 'transition-[transform,width] duration-150 ease-out'}`}
+              className={`mobile-nav-drag-indicator pointer-events-none absolute left-0 top-0 z-0 will-change-transform rounded-full shadow-2xs ${isDragging ? 'transition-none' : 'transition-[transform,width] duration-150 ease-out'}`}
               ref={indicatorRef}
             />
             {VIEWS.map((v) => {

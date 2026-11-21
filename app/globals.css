@@ -538,3 +538,12 @@ body[data-scroll-locked] {
   -webkit-overflow-scrolling: touch;
   scroll-behavior: smooth;
 }
+
+/* Keep the draggable mobile selection surface deterministic across Tailwind rebuilds. */
+.mobile-nav-drag-indicator {
+  background-color: #e8e8e8 !important;
+}
+
+:is(.dark, .dark *) .mobile-nav-drag-indicator {
+  background-color: #393939 !important;
+}
