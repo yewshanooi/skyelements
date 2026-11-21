@@ -46,6 +46,24 @@ const VIEWS: ViewTabConfig[] = [
   { id: 'map', label: 'Map', Icon: MapPin },
 ];
 
+type ViewMetric = { left: number; width: number; height: number; top: number };
+
+interface DragMetrics {
+  navLeft: number;
+  navWidth: number;
+  navTop: number;
+  navBottom: number;
+  views: Partial<Record<ViewMode, ViewMetric>>;
+}
+
+interface DragState {
+  pointerId: number;
+  startX: number;
+  startY: number;
+  view: ViewMode;
+  hasMoved: boolean;
+}
+
 /* =========================================================================
    MOBILE FLOATING NAVIGATION + EXPANDING SEARCH
    - Isolated state machine: opening/closing search won't re-render parent Header
@@ -82,64 +100,64 @@ const MobileFloatingNav: FC<MobileFloatingNavProps> = ({
 }) => {
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const [draggedView, setDraggedView] = useState<ViewMode | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const mobileNavRef = useRef<HTMLElement>(null);
-  const dragStateRef = useRef<{
-    pointerId: number;
-    startX: number;
-    startY: number;
-    view: ViewMode;
-    hasMoved: boolean;
-  } | null>(null);
+  const dragStateRef = useRef<DragState | null>(null);
+  const committedViewRef = useRef<ViewMode | null>(null);
   const suppressClickRef = useRef(false);
   const dragPreviewXRef = useRef<number | null>(null);
   const dragFrameRef = useRef<number | null>(null);
   const indicatorRef = useRef<HTMLDivElement>(null);
+  const indicatorInitializedRef = useRef(false);
   const viewButtonRefs = useRef<Partial<Record<ViewMode, HTMLButtonElement | null>>>({});
-  const dragMetricsRef = useRef<{
-    navLeft: number;
-    navWidth: number;
-    navTop: number;
-    navBottom: number;
-    views: Partial<Record<ViewMode, { left: number; width: number; height: number; top: number }>>;
-  } | null>(null);
-  const [activeIndicator, setActiveIndicator] = useState<{
-    left: number;
-    top: number;
-    width: number;
-    height: number;
-  } | null>(null);
+  const dragMetricsRef = useRef<DragMetrics | null>(null);
+  const getIndicatorLeft = (
+    previewX: number,
+    indicatorWidth: number,
+    metrics: DragMetrics
+  ) => {
+    const minLeft = 0;
+    const maxLeft = metrics.navWidth - indicatorWidth;
+    const upperBound = Math.max(minLeft, maxLeft);
+
+    return Math.max(minLeft, Math.min(upperBound, previewX - indicatorWidth / 2));
+  };
+
+  const updateIndicatorGeometry = (view: ViewMode, previewX: number | null) => {
+    const indicator = indicatorRef.current;
+    const button = viewButtonRefs.current[view];
+    if (!indicator || !button) return;
+
+    const width = button.offsetWidth;
+    const metrics = dragMetricsRef.current;
+    const left = previewX !== null && metrics
+      ? getIndicatorLeft(previewX, width, metrics)
+      : button.offsetLeft;
+
+    indicator.style.width = `${width}px`;
+    indicator.style.height = `${button.offsetHeight}px`;
+    indicator.style.transform = `translate3d(${left}px, ${button.offsetTop}px, 0)`;
+  };
 
   useLayoutEffect(() => {
-    const selectedView = draggedView ?? activeView;
-    const button = viewButtonRefs.current[selectedView];
-    if (!button) return;
+    const indicator = indicatorRef.current;
+    if (!indicator) return;
 
-    setActiveIndicator({
-      left: button.offsetLeft,
-      top: button.offsetTop,
-      width: button.offsetWidth,
-      height: button.offsetHeight,
-    });
+    const isInitialPosition = !indicatorInitializedRef.current;
+    if (isInitialPosition) indicator.style.transition = 'none';
+
+    const selectedView = committedViewRef.current ?? draggedView ?? activeView;
+    updateIndicatorGeometry(selectedView, dragPreviewXRef.current);
+    indicatorInitializedRef.current = true;
+    if (committedViewRef.current === activeView) committedViewRef.current = null;
+
+    if (isInitialPosition) {
+      window.requestAnimationFrame(() => {
+        indicator.style.removeProperty('transition');
+      });
+    }
   }, [activeView, draggedView]);
-
-  const dragPreviewX = dragPreviewXRef.current;
-  const renderedIndicator = activeIndicator
-    ? {
-        ...activeIndicator,
-        ...(dragPreviewX !== null && draggedView && mobileNavRef.current
-          ? {
-              left: Math.max(
-                0,
-                Math.min(
-                  mobileNavRef.current.clientWidth - activeIndicator.width,
-                  dragPreviewX - activeIndicator.width / 2
-                )
-              ),
-            }
-          : {}),
-      }
-    : null;
 
   const getViewAtPoint = (clientX: number, clientY: number): ViewMode | null => {
     const metrics = dragMetricsRef.current;
@@ -172,10 +190,7 @@ const MobileFloatingNav: FC<MobileFloatingNavProps> = ({
     const previewX = dragPreviewXRef.current;
     if (!metric || previewX === null) return;
 
-    const left = Math.max(
-      0,
-      Math.min(metrics.navWidth - metric.width, previewX - metric.width / 2)
-    );
+    const left = getIndicatorLeft(previewX, metric.width, metrics);
     indicator.style.width = `${metric.width}px`;
     indicator.style.height = `${metric.height}px`;
     indicator.style.transform = `translate3d(${left}px, ${metric.top}px, 0)`;
@@ -197,6 +212,7 @@ const MobileFloatingNav: FC<MobileFloatingNavProps> = ({
   const handleNavPointerDown = (event: PointerEvent<HTMLElement>) => {
     if (event.pointerType === 'mouse' && event.button !== 0) return;
     suppressClickRef.current = false;
+    committedViewRef.current = null;
     dragPreviewXRef.current = null;
 
     const tab = (event.target as Element).closest<HTMLElement>('[data-view]');
@@ -206,16 +222,15 @@ const MobileFloatingNav: FC<MobileFloatingNavProps> = ({
     const nav = mobileNavRef.current;
     if (!nav) return;
     const navRect = nav.getBoundingClientRect();
-    const views: Partial<Record<ViewMode, { left: number; width: number; height: number; top: number }>> = {};
+    const views: DragMetrics['views'] = {};
     for (const item of VIEWS) {
       const button = viewButtonRefs.current[item.id];
       if (!button) continue;
-      const buttonRect = button.getBoundingClientRect();
       views[item.id] = {
-        left: buttonRect.left - navRect.left,
-        top: buttonRect.top - navRect.top,
-        width: buttonRect.width,
-        height: buttonRect.height,
+        left: button.offsetLeft,
+        top: button.offsetTop,
+        width: button.offsetWidth,
+        height: button.offsetHeight,
       };
     }
     dragMetricsRef.current = {
@@ -247,7 +262,7 @@ const MobileFloatingNav: FC<MobileFloatingNavProps> = ({
       );
       if (distance < 6) return;
       dragState.hasMoved = true;
-      setDraggedView(dragState.view);
+      setIsDragging(true);
     }
 
     updateDragPreviewPosition(event.clientX);
@@ -262,22 +277,38 @@ const MobileFloatingNav: FC<MobileFloatingNavProps> = ({
     const dragState = dragStateRef.current;
     if (!dragState || dragState.pointerId !== event.pointerId) return;
 
+    const wasDragging = dragState.hasMoved;
+    const selectedView = cancelled ? activeView : dragState.view;
+    if (wasDragging && dragMetricsRef.current) {
+      dragPreviewXRef.current = Math.max(
+        0,
+        Math.min(
+          dragMetricsRef.current.navWidth,
+          event.clientX - dragMetricsRef.current.navLeft
+        )
+      );
+      if (dragFrameRef.current !== null) {
+        window.cancelAnimationFrame(dragFrameRef.current);
+        dragFrameRef.current = null;
+      }
+      applyDragPreviewFrame();
+      updateIndicatorGeometry(selectedView, null);
+    }
+
     if (!cancelled) {
+      committedViewRef.current = selectedView;
       suppressClickRef.current = true;
       window.setTimeout(() => {
         suppressClickRef.current = false;
       }, 0);
-      onSelectView(dragState.view);
+      onSelectView(selectedView);
     }
 
-    if (dragFrameRef.current !== null) {
-      window.cancelAnimationFrame(dragFrameRef.current);
-      dragFrameRef.current = null;
-    }
     dragStateRef.current = null;
     dragPreviewXRef.current = null;
     dragMetricsRef.current = null;
     setDraggedView(null);
+    setIsDragging(false);
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
@@ -325,18 +356,11 @@ const MobileFloatingNav: FC<MobileFloatingNavProps> = ({
             style={{ touchAction: 'pan-y' }}
             aria-label="Sales View Navigation. Press and drag across views to navigate."
           >
-            {renderedIndicator && (
-              <div
-                aria-hidden="true"
-                className={`pointer-events-none absolute left-0 top-0 z-0 will-change-transform rounded-full bg-neutral-200/90 dark:bg-neutral-700/80 shadow-2xs ${draggedView === null ? 'transition-[transform,width] duration-150 ease-out' : 'transition-none'}`}
-                ref={indicatorRef}
-                style={{
-                  width: renderedIndicator.width,
-                  height: renderedIndicator.height,
-                  transform: `translate(${renderedIndicator.left}px, ${renderedIndicator.top}px)`,
-                }}
-              />
-            )}
+            <div
+              aria-hidden="true"
+              className={`pointer-events-none absolute left-0 top-0 z-0 will-change-transform rounded-full bg-neutral-200/90 dark:bg-neutral-700/80 shadow-2xs scale-100 ${isDragging ? 'transition-none' : 'transition-[transform,width] duration-150 ease-out'}`}
+              ref={indicatorRef}
+            />
             {VIEWS.map((v) => {
               const isActive = (draggedView ?? activeView) === v.id;
               const TabIcon = v.Icon;
@@ -357,7 +381,7 @@ const MobileFloatingNav: FC<MobileFloatingNavProps> = ({
                   }}
                   aria-pressed={isActive}
                   className={`relative z-10 flex flex-col items-center justify-center h-full min-w-[46px] xs:min-w-[50px] sm:min-w-[56px] px-1.5 sm:px-2 rounded-full transition-colors duration-150 cursor-pointer touch-manipulation ${isActive
-                    ? 'text-[#2383e2] dark:text-[#388bfd] font-medium'
+                    ? 'text-[#2383e2] dark:text-[#388bfd] font-semibold'
                     : 'text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200 active:scale-90'
                     }`}
                   title={v.label}
