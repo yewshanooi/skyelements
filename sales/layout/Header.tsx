@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect } from 'react';
-import type { FC } from 'react';
+import { useState, useRef, useEffect, useLayoutEffect } from 'react';
+import type { FC, PointerEvent } from 'react';
 import {
   Table2,
   PieChart as PieIcon,
@@ -52,6 +52,7 @@ const VIEWS: ViewTabConfig[] = [
    - Outside click / key listeners registered ONLY when search is open
    - Synchronous input.blur() on dismiss for instant iOS/Android keyboard collapse
    - User taps search input to open keyboard (no auto open keyboard on mobile)
+   - Press-and-drag view navigation previews the target tab and continuously follows the pointer between tabs
    - Pixel-perfect h-12 (48px) circle and pill alignment with safe-area spacing
    ========================================================================= */
 interface MobileFloatingNavProps {
@@ -80,7 +81,207 @@ const MobileFloatingNav: FC<MobileFloatingNavProps> = ({
   onDeselectAll,
 }) => {
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
+  const [draggedView, setDraggedView] = useState<ViewMode | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const mobileNavRef = useRef<HTMLElement>(null);
+  const dragStateRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    view: ViewMode;
+    hasMoved: boolean;
+  } | null>(null);
+  const suppressClickRef = useRef(false);
+  const dragPreviewXRef = useRef<number | null>(null);
+  const dragFrameRef = useRef<number | null>(null);
+  const indicatorRef = useRef<HTMLDivElement>(null);
+  const viewButtonRefs = useRef<Partial<Record<ViewMode, HTMLButtonElement | null>>>({});
+  const dragMetricsRef = useRef<{
+    navLeft: number;
+    navWidth: number;
+    navTop: number;
+    navBottom: number;
+    views: Partial<Record<ViewMode, { left: number; width: number; height: number; top: number }>>;
+  } | null>(null);
+  const [activeIndicator, setActiveIndicator] = useState<{
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  } | null>(null);
+
+  useLayoutEffect(() => {
+    const selectedView = draggedView ?? activeView;
+    const button = viewButtonRefs.current[selectedView];
+    if (!button) return;
+
+    setActiveIndicator({
+      left: button.offsetLeft,
+      top: button.offsetTop,
+      width: button.offsetWidth,
+      height: button.offsetHeight,
+    });
+  }, [activeView, draggedView]);
+
+  const dragPreviewX = dragPreviewXRef.current;
+  const renderedIndicator = activeIndicator
+    ? {
+        ...activeIndicator,
+        ...(dragPreviewX !== null && draggedView && mobileNavRef.current
+          ? {
+              left: Math.max(
+                0,
+                Math.min(
+                  mobileNavRef.current.clientWidth - activeIndicator.width,
+                  dragPreviewX - activeIndicator.width / 2
+                )
+              ),
+            }
+          : {}),
+      }
+    : null;
+
+  const getViewAtPoint = (clientX: number, clientY: number): ViewMode | null => {
+    const metrics = dragMetricsRef.current;
+    if (!metrics || clientY < metrics.navTop || clientY > metrics.navBottom) return null;
+
+    let closestView: ViewMode | null = null;
+    let closestDistance = Number.POSITIVE_INFINITY;
+    for (const view of VIEWS) {
+      const metric = metrics.views[view.id];
+      if (!metric) continue;
+
+      const distance = Math.abs(clientX - (metrics.navLeft + metric.left + metric.width / 2));
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closestView = view.id;
+      }
+    }
+
+    return closestView;
+  };
+
+  const applyDragPreviewFrame = () => {
+    dragFrameRef.current = null;
+    const indicator = indicatorRef.current;
+    const metrics = dragMetricsRef.current;
+    const dragState = dragStateRef.current;
+    if (!indicator || !metrics || !dragState || !dragState.hasMoved) return;
+
+    const metric = metrics.views[dragState.view];
+    const previewX = dragPreviewXRef.current;
+    if (!metric || previewX === null) return;
+
+    const left = Math.max(
+      0,
+      Math.min(metrics.navWidth - metric.width, previewX - metric.width / 2)
+    );
+    indicator.style.width = `${metric.width}px`;
+    indicator.style.height = `${metric.height}px`;
+    indicator.style.transform = `translate3d(${left}px, ${metric.top}px, 0)`;
+  };
+
+  const scheduleDragPreviewFrame = () => {
+    if (dragFrameRef.current !== null) return;
+    dragFrameRef.current = window.requestAnimationFrame(applyDragPreviewFrame);
+  };
+
+  const updateDragPreviewPosition = (clientX: number) => {
+    const metrics = dragMetricsRef.current;
+    if (!metrics) return;
+
+    dragPreviewXRef.current = Math.max(0, Math.min(metrics.navWidth, clientX - metrics.navLeft));
+    scheduleDragPreviewFrame();
+  };
+
+  const handleNavPointerDown = (event: PointerEvent<HTMLElement>) => {
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    suppressClickRef.current = false;
+    dragPreviewXRef.current = null;
+
+    const tab = (event.target as Element).closest<HTMLElement>('[data-view]');
+    const view = tab?.dataset.view;
+    if (!tab || !VIEWS.some((item) => item.id === view)) return;
+
+    const nav = mobileNavRef.current;
+    if (!nav) return;
+    const navRect = nav.getBoundingClientRect();
+    const views: Partial<Record<ViewMode, { left: number; width: number; height: number; top: number }>> = {};
+    for (const item of VIEWS) {
+      const button = viewButtonRefs.current[item.id];
+      if (!button) continue;
+      const buttonRect = button.getBoundingClientRect();
+      views[item.id] = {
+        left: buttonRect.left - navRect.left,
+        top: buttonRect.top - navRect.top,
+        width: buttonRect.width,
+        height: buttonRect.height,
+      };
+    }
+    dragMetricsRef.current = {
+      navLeft: navRect.left,
+      navWidth: navRect.width,
+      navTop: navRect.top,
+      navBottom: navRect.bottom,
+      views,
+    };
+
+    dragStateRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      view: view as ViewMode,
+      hasMoved: false,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const handleNavPointerMove = (event: PointerEvent<HTMLElement>) => {
+    const dragState = dragStateRef.current;
+    if (!dragState || dragState.pointerId !== event.pointerId) return;
+
+    if (!dragState.hasMoved) {
+      const distance = Math.hypot(
+        event.clientX - dragState.startX,
+        event.clientY - dragState.startY
+      );
+      if (distance < 6) return;
+      dragState.hasMoved = true;
+      setDraggedView(dragState.view);
+    }
+
+    updateDragPreviewPosition(event.clientX);
+    const view = getViewAtPoint(event.clientX, event.clientY);
+    if (view && view !== dragState.view) {
+      dragState.view = view;
+      setDraggedView(view);
+    }
+  };
+
+  const finishNavDrag = (event: PointerEvent<HTMLElement>, cancelled = false) => {
+    const dragState = dragStateRef.current;
+    if (!dragState || dragState.pointerId !== event.pointerId) return;
+
+    if (!cancelled) {
+      suppressClickRef.current = true;
+      window.setTimeout(() => {
+        suppressClickRef.current = false;
+      }, 0);
+      onSelectView(dragState.view);
+    }
+
+    if (dragFrameRef.current !== null) {
+      window.cancelAnimationFrame(dragFrameRef.current);
+      dragFrameRef.current = null;
+    }
+    dragStateRef.current = null;
+    dragPreviewXRef.current = null;
+    dragMetricsRef.current = null;
+    setDraggedView(null);
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+  };
 
   // Close more menu on Escape key
   useEffect(() => {
@@ -115,19 +316,48 @@ const MobileFloatingNav: FC<MobileFloatingNavProps> = ({
         <div className="relative flex items-center gap-2 max-w-full pointer-events-none">
           {/* Base: Navigation Capsule Pill */}
           <nav
-            className="pointer-events-auto h-12 flex items-center gap-0.5 p-1 bg-white dark:bg-[#1c1c1e] backdrop-blur-xl border border-neutral-200/90 dark:border-neutral-800/90 rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.14)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
-            aria-label="Sales View Navigation"
+            ref={mobileNavRef}
+            onPointerDown={handleNavPointerDown}
+            onPointerMove={handleNavPointerMove}
+            onPointerUp={finishNavDrag}
+            onPointerCancel={(event) => finishNavDrag(event, true)}
+            className="pointer-events-auto relative h-12 flex items-center gap-0.5 p-1 bg-white dark:bg-[#1c1c1e] backdrop-blur-xl border border-neutral-200/90 dark:border-neutral-800/90 rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.14)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
+            style={{ touchAction: 'pan-y' }}
+            aria-label="Sales View Navigation. Press and drag across views to navigate."
           >
+            {renderedIndicator && (
+              <div
+                aria-hidden="true"
+                className={`pointer-events-none absolute left-0 top-0 z-0 will-change-transform rounded-full bg-neutral-200/90 dark:bg-neutral-700/80 shadow-2xs ${draggedView === null ? 'transition-[transform,width] duration-150 ease-out' : 'transition-none'}`}
+                ref={indicatorRef}
+                style={{
+                  width: renderedIndicator.width,
+                  height: renderedIndicator.height,
+                  transform: `translate(${renderedIndicator.left}px, ${renderedIndicator.top}px)`,
+                }}
+              />
+            )}
             {VIEWS.map((v) => {
-              const isActive = activeView === v.id;
+              const isActive = (draggedView ?? activeView) === v.id;
               const TabIcon = v.Icon;
               return (
                 <button
                   key={v.id}
+                  ref={(button) => {
+                    viewButtonRefs.current[v.id] = button;
+                  }}
                   type="button"
-                  onClick={() => onSelectView(v.id)}
-                  className={`flex flex-col items-center justify-center h-full min-w-[46px] xs:min-w-[50px] sm:min-w-[56px] px-1.5 sm:px-2 rounded-full transition-all duration-150 cursor-pointer touch-manipulation ${isActive
-                    ? 'bg-neutral-200/90 dark:bg-neutral-700/80 text-[#2383e2] dark:text-[#388bfd] font-semibold shadow-2xs scale-100'
+                  data-view={v.id}
+                  onClick={() => {
+                    if (suppressClickRef.current) {
+                      suppressClickRef.current = false;
+                      return;
+                    }
+                    onSelectView(v.id);
+                  }}
+                  aria-pressed={isActive}
+                  className={`relative z-10 flex flex-col items-center justify-center h-full min-w-[46px] xs:min-w-[50px] sm:min-w-[56px] px-1.5 sm:px-2 rounded-full transition-colors duration-150 cursor-pointer touch-manipulation ${isActive
+                    ? 'text-[#2383e2] dark:text-[#388bfd] font-medium'
                     : 'text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200 active:scale-90'
                     }`}
                   title={v.label}
