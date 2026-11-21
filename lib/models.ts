@@ -25,8 +25,8 @@ const GEMINI_THINKING_LEVELS: readonly ThinkingEffort[] = ['low', 'medium', 'hig
 
 export const MODELS: ModelDefinition[] = [
   { id: 'gemini-3.5-flash-lite', label: 'Gemini 3.5 Flash', icon: '/notes/google.svg', shortcut: 'Lite', thinking: GEMINI_THINKING_LEVELS },
-  { id: 'gemini-3.6-flash', label: 'Gemini 3.6 Flash', icon: '/notes/google.svg', shortcut: '', thinking: GEMINI_THINKING_LEVELS },
   { id: 'gemini-3.8-flash', label: 'Gemini 3.8 Flash', icon: '/notes/google.svg', shortcut: '', thinking: GEMINI_THINKING_LEVELS },
+  { id: 'gemini-4-hydrogen', label: 'Gemini 4 Hydrogen', icon: '/notes/google.svg', shortcut: '', thinking: GEMINI_THINKING_LEVELS },
 ];
 
 export const ALLOWED_MODEL_IDS = new Set(MODELS.map(m => m.id));

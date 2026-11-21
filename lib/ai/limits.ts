@@ -3,12 +3,12 @@ export const AI_DAILY_REQUEST_LIMITS = {
     label: 'Gemini 3.5 Flash Lite',
     user: 50,
   },
-  'gemini-3.6-flash': {
-    label: 'Gemini 3.6 Flash',
-    user: 5,
-  },
   'gemini-3.8-flash': {
     label: 'Gemini 3.8 Flash',
+    user: 5,
+  },
+  'gemini-4-hydrogen': {
+    label: 'Gemini 4 Hydrogen',
     user: 5,
   },
 } as const;
